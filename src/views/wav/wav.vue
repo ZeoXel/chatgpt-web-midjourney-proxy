@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { NButton,NInput, useMessage,NEmpty } from 'naive-ui';
 //import { WavRecorder, WavStreamPlayer } from '@/lib/wavtools/index.js';
-import { WavRecorder, WavStreamPlayer } from '@openai/realtime-wavtools';
-import { RealtimeClient } from '@openai/realtime-api-beta';
-import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
+// import { WavRecorder, WavStreamPlayer } from '@openai/realtime-wavtools';
+type WavRecorder = any;
+type WavStreamPlayer = any;
+// import { RealtimeClient } from '@openai/realtime-api-beta';
+type RealtimeClient = any;
+// import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
+type ItemType = any;
 import { ref,onMounted } from 'vue';
 import { mlog } from '@/api';
 import realtime from './realtime.vue';

@@ -78,7 +78,7 @@ const routes: RouteRecordRaw[] = [
 
     {
     path: '/music',
-    name: 'music',
+    name: 'RootMusic',
     component: sunoLayout,
     redirect: '/music/index',
     children: [
@@ -94,7 +94,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/video',
-    name: 'video',
+    name: 'RootVideo',
     component: lumaLayout,
     redirect: '/video/index',
     children: [
@@ -108,7 +108,7 @@ const routes: RouteRecordRaw[] = [
 
   {
     path: '/dance',
-    name: 'dance',
+    name: 'RootDance',
     component: lumaLayout,
     redirect: '/dance/index',
     children: [
@@ -122,7 +122,7 @@ const routes: RouteRecordRaw[] = [
 
   {
     path: '/wav',
-    name: 'wav',
+    name: 'RootWav',
     component: lumaLayout,
     redirect: '/wav/index',
     children: [

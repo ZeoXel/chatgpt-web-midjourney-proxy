@@ -5,7 +5,7 @@ import 'vue-waterfall-plugin-next/dist/style.css'
 import { KlingTask, klingStore } from '@/api/klingStore';
 import { nextTick, ref, watch } from 'vue';
 import {NEmpty ,NButton,NPopover, NButtonGroup,NSpin, NImage,NPopconfirm,useMessage} from "naive-ui"
-import { ViewCard } from 'vue-waterfall-plugin-next/dist/types/types/waterfall';
+import type { ViewCard } from 'vue-waterfall-plugin-next';
 import { useBasicLayout } from '@/hooks/useBasicLayout';
 import { homeStore } from '@/store';
 import { klingFeed } from '@/api/kling';

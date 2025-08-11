@@ -82,7 +82,7 @@ router.post('/session', async (req, res) => {
     const AUTH_SECRET_KEY = process.env.AUTH_SECRET_KEY
     const hasAuth = isNotEmptyString(AUTH_SECRET_KEY)
     const isUpload= isNotEmptyString(  process.env.API_UPLOADER )
-    const isHideServer= isNotEmptyString(  process.env.HIDE_SERVER );
+    const isHideServer = process.env.HIDE_SERVER === 'true';
     const amodel=   process.env.OPENAI_API_MODEL?? "gpt-3.5-turbo" ;
     const isApiGallery=  isNotEmptyString(  process.env.MJ_API_GALLERY );
     const cmodels =   process.env.CUSTOM_MODELS??'' ;
