@@ -63,7 +63,7 @@ const getContainerClass = computed(() => {
 </script>
 
 <template>
-  <div class="  dark:bg-[#24272e] transition-all p-0"  :class="[isMobile ? 'h55' : 'h-full' ]">
+  <div class="dark:bg-[#24272e] transition-all p-0 relative" :class="[isMobile ? 'h55' : 'h-full']">
     <div class="h-full overflow-hidden" :class="getMobileClass">
       <NLayout class="z-40 transition" :class="getContainerClass" has-sider>
         <aiSider v-if="!isMobile"/>
@@ -76,10 +76,11 @@ const getContainerClass = computed(() => {
       </NLayout>
     </div>
     <Permission :visible="needPermission" />
+    
+    <!-- 移动端组件移到根元素内 -->
+    <aiMobileMenu v-if="isMobile" class="absolute bottom-0 left-0 right-0 z-50" /> 
+    <aiFooter class="absolute bottom-0 left-0 right-0 z-10" />
   </div>
-   <aiMobileMenu v-if="isMobile"   /> 
-
-  <aiFooter/>
 </template>
 
 <style  >
