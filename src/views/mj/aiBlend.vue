@@ -41,9 +41,9 @@ const send= ()=>{
         st.value.isGo=false;
 }
 const drawlocalized = computed(() => {
-	let localizedConfig = {};
+	let localizedConfig: { [key: string]: any } = {};
 	Object.keys(config).forEach((key) => {
-		localizedConfig[key] = config[key].map((option) => {
+		localizedConfig[key] = (config as any)[key].map((option:any) => {
 			// 假设 labelKey 如 "draw.qualityList.general"
 			let path = option.labelKey; // 直接使用 labelKey 作为路径
 			return {
@@ -74,7 +74,7 @@ const drawlocalized = computed(() => {
         <SvgIcon icon="mdi:add-bold" class="text-[40px] text-[#fff]"></SvgIcon>
     </div>
 </div>
-<div   class="flex justify-end pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo">{{$t('mjchat.blendStart')}}</NButton> </div>
+<div   class="flex justify-end pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo" style="background-color: #445ff6;">{{$t('mjchat.blendStart')}}</NButton> </div>
 
 <ul class="pt-4" v-html="$t('mjchat.blendInfo')">
 

@@ -185,7 +185,7 @@ onMounted(() => {
     <div class="pt-2 flex justify-center items-center w-full relative">
         <input type="file"  @change="selectFile"  ref="fsRef" style="display: none" accept="image/jpeg, image/jpg, image/png, image/gif"/>
         <div class="absolute right-1 top-3 z-40"  v-if="st.imgSrc" >
-                    <NButton strong secondary round size="small" type="success" @click="clear(2)" >{{$t('common.clear')}}</NButton> 
+                    <NButton strong secondary round size="small" type="primary" @click="clear(2)" >{{$t('common.clear')}}</NButton> 
         </div>
         <div class="h-[180px] w-full overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer" @click=" fsRef.click()">
             <NImage :src="st.imgSrc" v-if="st.imgSrc" object-fit="contain" />
@@ -198,7 +198,7 @@ onMounted(() => {
     <div class="pt-2 " v-if="useTem">
          <div class="relative h-[180px]" > 
                 <div class="absolute right-1 top-1 z-40"  >
-                    <NButton strong secondary round size="small" type="success" @click="clear(1)" >{{$t('common.clear')}}</NButton> 
+                    <NButton strong secondary round size="small" type="primary" @click="clear(1)" >{{$t('common.clear')}}</NButton> 
                 </div>
                 <div class=" absolute w-full h-full top-0 left-0 z-1"   >
                 
@@ -210,7 +210,7 @@ onMounted(() => {
      <div class="pt-2 " v-else-if="st.vgSrc">
          <div class="relative h-[180px]" > 
                 <div class="absolute right-1 top-1 z-40"  >
-                    <NButton strong secondary round size="small" type="success" @click="clear(3)" >{{$t('common.clear')}}</NButton> 
+                    <NButton strong secondary round size="small" type="primary" @click="clear(3)" >{{$t('common.clear')}}</NButton> 
                 </div>
                 <div class=" absolute w-full h-full top-0 left-0 z-1"   >
                 
@@ -238,7 +238,7 @@ onMounted(() => {
     </div>
 
     <div class="pt-2 flex justify-center items-center w-full">
-         <NButton block :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()">
+         <NButton block :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;">
             <!-- <SvgIcon icon="ri:video-add-line"  />  -->
             {{$t('video.generate')}}
             <template v-if="st.fee>0">

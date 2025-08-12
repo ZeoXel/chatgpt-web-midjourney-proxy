@@ -104,7 +104,7 @@ const mvOption= [
     <section class="mb-2">
          <div class=" flex items-center justify-between space-x-1">
             <template  v-for="(item,index) in vf2"  v-if="f.model=='gen4_turbo'">
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':item.value==f.ratio}"  @click=" f.ratio=item.value ">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':item.value==f.ratio}"  @click=" f.ratio=item.value ">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -112,7 +112,7 @@ const mvOption= [
             </section>
             </template>
             <template  v-for="(item,index) in vf"  v-else>
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':item.value==f.ratio}"  @click=" f.ratio=item.value ">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':item.value==f.ratio}"  @click=" f.ratio=item.value ">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -155,11 +155,11 @@ const mvOption= [
     </section>  
     <section class="mb-4 flex justify-between items-end" >
         <div class="relative"> 
-            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="luma.image_end_url|| luma.image_url || f.promptText"><NTag type="success" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
+            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="luma.image_end_url|| luma.image_url || f.promptText"><NTag type="primary" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
         </div>
         <div class="text-right">
 
-            <NButton :loading="st.isLoading" type="primary" @click="create()"  :disabled="!canPost"  >{{$t('video.generate')}}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="create()"  :disabled="!canPost" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
         </div>
     </section>
 

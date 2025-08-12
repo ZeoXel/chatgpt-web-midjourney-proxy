@@ -59,7 +59,7 @@ async function  selectFile(input:any){
 }
 </script>
 <template>
-    <NTag   type="success" size="small" round  >
+    <NTag   type="primary" size="small" round  >
         <span class="cursor-pointer"   v-if="st.isUpload">Upload...</span>
         <span class="cursor-pointer" @click="fsRef.click()" v-else>{{ $t('suno.upMps') }}</span>
     </NTag>

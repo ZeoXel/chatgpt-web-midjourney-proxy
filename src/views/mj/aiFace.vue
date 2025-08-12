@@ -43,7 +43,7 @@ const send=()=>{
         <div class="text-center" v-else>{{ $t('mjchat.your2Head') }}</div> 
     </div>
 </div>
-<div   class="flex justify-center pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo">{{ $t('mjchat.submit') }}</NButton> </div>
+<div   class="flex justify-center pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo" style="background-color: #445ff6;">{{ $t('mjchat.submit') }}</NButton> </div>
 <ul class="pt-4" v-html="$t('mjchat.tipInfo')">
     
 </ul>

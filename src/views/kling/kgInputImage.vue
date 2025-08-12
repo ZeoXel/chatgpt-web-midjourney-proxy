@@ -66,7 +66,7 @@ klingFetch('https://api.openai-hk.com/v1/models').then(d=>mlog('models',d ) )
     <section class="mb-4">
          <div class=" flex items-center justify-between space-x-1">
             <template  v-for="(item,index) in vf" >
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':index==st.bili}"  @click="st.bili=index">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':index==st.bili}"  @click="st.bili=index">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -97,9 +97,9 @@ klingFetch('https://api.openai-hk.com/v1/models').then(d=>mlog('models',d ) )
             </div>
         </div>
         <div class="text-right">
-            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="f.image|| f.prompt "><NTag type="success" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
+            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="f.image|| f.prompt "><NTag type="primary" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
 
-            <NButton :loading="st.isLoading" type="primary" @click="createImg()" :disabled="!f.prompt"  >{{ $t('mjchat.imgcreate') }}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="createImg()" :disabled="!f.prompt" style="background-color: #445ff6;" >{{ $t('mjchat.imgcreate') }}</NButton>
         </div>
     </section>
 

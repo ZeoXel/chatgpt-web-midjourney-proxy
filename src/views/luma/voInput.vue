@@ -36,7 +36,7 @@ initLoad();
 
 <template>
 <div  >
-    <n-tabs type="line"  :tabs-padding="1" class="abc1234" animated :default-value="st.tab"  @update:value="handleUpdateValue">
+    <n-tabs type="line"  :tabs-padding="1" class="abc1234" animated :default-value="st.tab"  @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-border-color:#445ff6">
         <!-- <n-tab-pane name="" tab="">
         </n-tab-pane> -->
         <n-tab-pane name="luma" tab="Luma">

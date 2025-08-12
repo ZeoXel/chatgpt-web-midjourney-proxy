@@ -208,6 +208,7 @@ function handleImportButtonClick(): void {
               size="small"
               :type="item.key === theme ? 'primary' : undefined"
               @click="appStore.setTheme(item.key)"
+               :style="item.key === theme ? 'background-color: #445ff6' : ''"
             >
               <template #icon>
                 <SvgIcon :icon="item.icon" />

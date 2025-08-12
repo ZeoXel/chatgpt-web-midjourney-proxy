@@ -51,13 +51,13 @@ initLoad();
 <template>
 <div class="overflow-y-auto bg-[#fafbfc] pt-2 dark:bg-[#18181c] h-full ">
  
-<n-tabs type="line" animated :default-value="st.tab" @update:value="handleUpdateValue"  >
+<n-tabs type="line" animated :default-value="st.tab" @update:value="handleUpdateValue"  style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9">
     <n-tab-pane name="start" tab=""> 
 
     </n-tab-pane>
     <n-tab-pane name="midjourney" tab="MidJourney" >
       <!--  -->
-    <n-tabs type="segment" animated   default-value="draw23" size="small">
+    <n-tabs type="segment" animated   default-value="draw23" size="small" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color:#445ff6">
         <n-tab-pane name="draw23" :tab="$t('mjchat.draw')">
           <aiDrawInputItem @draw-sent="drawSent" @close="$emit('close')"></aiDrawInputItem>
         </n-tab-pane>

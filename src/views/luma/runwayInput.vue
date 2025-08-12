@@ -308,9 +308,9 @@ watch(()=>homeStore.myData.act, (n)=>{
 
                 <div class=" absolute bottom-[-5px] right-[-15px]" v-if="runway.image_prompt&&st.version!='gen2' ">
                      <a :href="runway.image_prompt" class="cursor-pointer" target="_blank" v-if="isMp4(runway.image_prompt) ">
-                      <NTag  type="success" size="small"  class="cursor-pointer" round :bordered="false">Vidoe</NTag>
+                      <NTag  type="primary" size="small"  class="cursor-pointer" round :bordered="false">Vidoe</NTag>
                      </a>
-                     <NSwitch v-model:value="st.image_as_end_frame" size="small" v-else>
+                     <NSwitch v-model:value="st.image_as_end_frame" size="small" v-else style="--n-rail-color-active: #445ff6;">
                         <template #checked>尾帧</template> 
                         <template #unchecked>首帧</template>
                     </NSwitch>
@@ -322,10 +322,10 @@ watch(()=>homeStore.myData.act, (n)=>{
                     
                        
                      
-                        <NTag v-if="runway.text_prompt!='' || runway.image_prompt!='' || exRunway" type="success" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
+                        <NTag v-if="runway.text_prompt!='' || runway.image_prompt!='' || exRunway" type="primary" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
                      
                 </div>
-                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
+                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
             </div>
         </div>
     </div>

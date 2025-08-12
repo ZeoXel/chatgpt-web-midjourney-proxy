@@ -25,7 +25,7 @@ initLoad();
 </script>
 <template>
 <div class="px-2">
-    <n-tabs type="segment"  animated :default-value="st.tab"  @update:value="handleUpdateValue">
+    <n-tabs type="segment"  animated :default-value="st.tab"  @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color:#445ff6">
         <n-tab-pane name="runway" tab="Website">
             <RunwayInput/>
         </n-tab-pane>

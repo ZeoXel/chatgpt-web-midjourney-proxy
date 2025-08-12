@@ -165,7 +165,7 @@ const pixCamera = computed(()=>{
 <div class="p-2">  
     <div class=" flex items-center justify-between space-x-1">
         <template  v-for="(item,index) in vf" >
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':f.aspect_ratio==item.value}"  @click="f.aspect_ratio=item.value">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':f.aspect_ratio==item.value}"  @click="f.aspect_ratio=item.value">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -246,8 +246,8 @@ const pixCamera = computed(()=>{
                 <template #trigger>
                     <div   class="h-[70px] w-[120px]  relative  overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer" >
                         <template v-if="f.camera_movement!='' ">
-                            <img :src="pixCamera.image[f.camera_movement]"  />
-                            <div class="absolute top-1 right-1 text-white/75 text-[14px]" >{{ pixCamera.name[f.camera_movement]??f.camera_movement }}</div>
+                            <img :src="pixCamera.image[f.camera_movement as keyof typeof pixCamera.image]"  />
+                            <div class="absolute top-1 right-1 text-white/75 text-[14px]" >{{ pixCamera.name[f.camera_movement as keyof typeof pixCamera.name]??f.camera_movement }}</div>
                         </template>
                         <div class="text-center" v-else>运镜</div> 
                     </div>
@@ -259,7 +259,7 @@ const pixCamera = computed(()=>{
                                 <!-- <video class="h-[72px] w-full rounded-md object-cover"  :src="item.video"  :poster="item.poster" 
                                  autoplay  loop  playsinline ></video> -->
                                   <img :src="item"  />
-                                <div class="absolute bottom-1 right-1 text-white/75 text-[14px]" >{{ pixCamera.name[index]??index }}</div>
+                                <div class="absolute bottom-1 right-1 text-white/75 text-[14px]" >{{ pixCamera.name[index as keyof typeof pixCamera.name]??index }}</div>
                             </div>
                         </div>
                     </div>
@@ -307,11 +307,11 @@ const pixCamera = computed(()=>{
 
      <section class="pt-2 flex justify-between items-end" >
         <div class="relative"> 
-            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="f.image|| f.prompt || f.image_tail||f.camera_movement"><NTag type="success" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
+            <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="f.image|| f.prompt || f.image_tail||f.camera_movement"><NTag type="primary" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
         </div>
         <div class="text-right">
 
-            <NButton :loading="st.isLoading" type="primary" @click="create()" :disabled="!f.prompt"  >{{$t('video.generate')}}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="create()" :disabled="!f.prompt" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
         </div>
     </section>
 

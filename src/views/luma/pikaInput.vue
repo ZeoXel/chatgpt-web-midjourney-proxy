@@ -126,7 +126,7 @@ const clearInput = ()=>{
     pika.value.pe_index= -1;
 }
 const createVideo = async()=>{
-    let sb= pika.value.image ? {...img2v} : {...txt2v};
+    let sb:any= pika.value.image ? {...img2v} : {...txt2v};
     sb.promptText= pika.value.prompt; 
     sb.options.parameters.negativePrompt= pika.value.negativePrompt;
     if( pika.value.image ){
@@ -162,7 +162,7 @@ const selecteffect = (i:number)=>{
 <div class="p-2"> 
     <div class=" flex items-center justify-between space-x-1">
         <template  v-for="(item,index) in vf" >
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':pika.aspectRatio==item.value}"  @click="pika.aspectRatio=item.value">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':pika.aspectRatio==item.value}"  @click="pika.aspectRatio=item.value">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -220,11 +220,11 @@ const selecteffect = (i:number)=>{
     </div>
     <section class="pt-2 flex justify-end items-end">
             
-            <div  class=" cursor-pointer pr-2" @click="clearInput"  v-if="pika.image|| pika.prompt"><NTag type="success" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
+            <div  class=" cursor-pointer pr-2" @click="clearInput"  v-if="pika.image|| pika.prompt"><NTag type="primary" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
             
             <div class="text-right">
 
-                    <NButton :loading="st.isLoading" type="primary" @click="createVideo()" :disabled="!pika.prompt"  >{{$t('video.generate')}}</NButton>
+                    <NButton :loading="st.isLoading" type="primary" @click="createVideo()" :disabled="!pika.prompt" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
             </div>
     </section>
 </div>

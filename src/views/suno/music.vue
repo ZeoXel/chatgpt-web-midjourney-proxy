@@ -40,7 +40,7 @@ initLoad();
 
 <div class="flex w-full h-full   ">
     <div class="w-[300px] h-full  overflow-y-auto ">
-        <n-tabs type="line" animated     :default-value="gptServerStore.myData.TAB_MUSIC??'suno'"  @update:value="handleUpdateValue"   >
+        <n-tabs type="line" animated     :default-value="gptServerStore.myData.TAB_MUSIC??'suno'"  @update:value="handleUpdateValue"  style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-border-color:#445ff6" >
          <n-tab-pane name="start" tab=""> 
             <McInput /> 
          </n-tab-pane>

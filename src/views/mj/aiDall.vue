@@ -184,7 +184,7 @@ const selectFile=(input:any)=>{
 
 <div class="mb-4 flex justify-end items-center">
     <div class="flex ">
-         <n-button type="primary" :block="true" :disabled="isDisabled" @click="create()"  >
+         <n-button type="primary" :block="true" :disabled="isDisabled" @click="create()" style="background-color: #445ff6;" >
             <SvgIcon icon="mingcute:send-plane-fill" />   
              {{ $t('mjchat.imgcreate') }} 
         </n-button>

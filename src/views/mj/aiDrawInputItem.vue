@@ -39,9 +39,9 @@ const farr= [
  ];
 
 const drawlocalized = computed(() => {
-	let localizedConfig = {};
+	let localizedConfig: { [key: string]: any } = {};
 	Object.keys(config).forEach((key) => {
-		localizedConfig[key] = config[key].map((option) => {
+		localizedConfig[key] = (config as any)[key].map((option:any) => {
 			// 假设 labelKey 如 "draw.qualityList.general"
 			let path = option.labelKey; // 直接使用 labelKey 作为路径
 			return {
@@ -105,7 +105,7 @@ function drawSent(rz:any){
         rz2.bot='NIJI_JOURNEY';
     }
     $emit('drawSent', rz2 )
-    st.value.fileBase64= [];
+    st.value.fileBase64= [] as any;
 }
 function createPrompt(rz:string){
     if( rz =='') {
@@ -132,7 +132,7 @@ function createPrompt(rz:string){
     let rzp='' //参数组合字符串
     let rzk=''; //描述词组合字符串
     for(let v of farr){
-        if( ! f.value[v.k] || f.value[v.k]==null || f.value[v.k]=='' ) continue;
+        if( ! (f.value as any)[v.k] || (f.value as any)[v.k]==null || (f.value as any)[v.k]=='' ) continue;
         mlog('k ', rz,  f.value  );
         if(v.k=='quality') rzp +=`  --q ${f.value.quality}`;
         else if(v.k=='styles') { if( f.value.styles ) rzp +=` ${f.value.styles} `;}
@@ -142,7 +142,7 @@ function createPrompt(rz:string){
                 st.value.bot= f.value.version ;
         } else   rzp +=` ${f.value.version}`;
         }
-        else if( f.value[v.k] ) rzk +=`${f.value[v.k]},`;
+        else if( (f.value as any)[v.k] ) rzk +=`${(f.value as any)[v.k]},`;
     }
 
     mlog('createPrompt ', rz,  f.value  );
@@ -169,12 +169,12 @@ function selectFile(input:any){
         return;
     }
     upImg(input.target.files[0]).then( (d:any )=>{
-        const index = st.value.fileBase64.findIndex(v=>v==d);
+        const index = st.value.fileBase64.findIndex((v:any)=>v==d);
         if(index>-1) {
             ms.error( t('mjchat.no2add'));
             return ;
         }
-        st.value.fileBase64.push(d);
+        st.value.fileBase64.push(d as never);
         fsRef.value.value='';
     }).catch(e=>msgRef.value.showError(e));
 
@@ -201,7 +201,7 @@ function selectFile2(input:any){
 }
 
 const same2=()=>{
-     st.value.text= homeStore.myData.actData.prompt;
+     st.value.text= (homeStore.myData.actData as any).prompt;
     f.value.version='';
     f.value.quality='';
 }
@@ -357,14 +357,14 @@ const selectFile3=  (input:any)=>{
     <n-collapse class="mb-4">
       <n-collapse-item :title="$t('mj.moreset')" name="1">
      
-        <section class="mb-4 flex justify-between items-center" v-for=" v in farr">
+                <section class="mb-4 flex justify-between items-center" v-for=" v in farr">
             <div>{{ v.v }}</div>
-            <n-select v-model:value="f[v.k]" :options="drawlocalized[v.k+'List']" size="small"  class="!w-[60%]" :clearable="true" />
+            <n-select v-model:value="(f as any)[v.k]" :options="drawlocalized[v.k+'List']" size="small"  class="!w-[60%]" :clearable="true" />
         </section>
      
         <section class="mb-4 flex justify-between items-center"  >
         <div  >cw(0-100)</div>
-        <NInputNumber :min="0" :max="100" v-model:value="f.cw" class="!w-[60%]" size="small" clearable placeholder="0-100 角色参考程度" />
+                <NInputNumber :min="0" :max="100" v-model:value="(f.cw as any)" class="!w-[60%]" size="small" clearable placeholder="0-100 角色参考程度" />
         </section >
     
         <section class="mb-4 flex justify-between items-center"  >
@@ -418,7 +418,7 @@ const selectFile3=  (input:any)=>{
                 <div  style="max-width: 240px;">
                 <p v-html="$t('mjchat.imgCInfo')"></p>
 
-                3.<a class="text-green-500 cursor-pointer"  @click="fsRef.click()" v-html="$t('mjchat.imgCadd')"></a><br/>
+                3.<a class="text-primary cursor-pointer"  @click="fsRef.click()" v-html="$t('mjchat.imgCadd')"></a><br/>
                 <div  v-if="st.fileBase64.length>0" class="flex justify-start items-baseline">
                     <div class="p-1" v-for="(v ) in st.fileBase64">
                         <img  class="w-[60px]" :src="v">
@@ -443,7 +443,7 @@ const selectFile3=  (input:any)=>{
                 </NPopover>
             </div>
             <div class="pt-1" >
-                <n-tag type="success" round size="small" style="cursor: pointer; " :bordered="false" @click="shorten()"   >
+                <n-tag type="primary" round size="small" style="cursor: pointer; " :bordered="false" @click="shorten()"   >
                      <div style="display: flex;">  <SvgIcon icon="game-icons:bouncing-spring" /> Shorten </div>
                 </n-tag>
             </div>
@@ -467,7 +467,7 @@ const selectFile3=  (input:any)=>{
 
 
         <div class="flex">
-            <n-button type="primary" :block="true" :disabled="isDisabled"  @click="create()">
+            <n-button type="primary" :block="true" :disabled="isDisabled"  @click="create()" style="background-color: #445ff6;">
             <SvgIcon icon="mingcute:send-plane-fill" />
 
             <template v-if="st.isLoad">{{$t('mjchat.traning')}} </template>
@@ -477,7 +477,7 @@ const selectFile3=  (input:any)=>{
         <div class="flex justify-start items-center py-1">
 
             <div >
-                <n-tag type="success" round size="small" style="cursor: pointer; " :bordered="false" @click="clearAll()"   >
+                <n-tag type="primary" round size="small" style="cursor: pointer; " :bordered="false" @click="clearAll()"   >
                      <div style="display: flex;">  <SvgIcon icon="ant-design:clear-outlined" />{{   $t('mj.clearAll')  }}  </div>
                 </n-tag>
             </div>
@@ -517,7 +517,6 @@ const selectFile3=  (input:any)=>{
 </template>
 <style>
     .aspect-item.active, .aspect-item.active .aspect-box{
-        border-color:#86dfba ;
-
+        border-color: #445ff6;
     }
 </style>

@@ -131,7 +131,7 @@ const mvOption= [
 <div class="p-2"> 
     <div class=" flex items-center justify-between space-x-1">
             <template  v-for="(item,index) in vf" >
-            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'active':luma.aspect_ratio==item.label}"  @click="luma.aspect_ratio=item.label">
+            <section class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"  :class="{'border-primary':luma.aspect_ratio==item.label}"  @click="luma.aspect_ratio=item.label">
                 <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                     <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
                 </div>
@@ -148,7 +148,7 @@ const mvOption= [
     <div class="pt-1">
         <div class="flex justify-between items-center">
             <div>
-                <n-switch v-model:value="luma.expand_prompt" size="small">
+                <n-switch v-model:value="luma.expand_prompt" size="small" style="--n-rail-color-active: #445ff6;">
                     <template #checked> 
                     Enhance prompt
                     </template>
@@ -181,7 +181,7 @@ const mvOption= [
             </div>
         </div>
         <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[5px] overflow-hidden aspect-[16/8.85] ">
-                <video v-if="exLuma.video?.url|| exLuma.video?.download_url" :src="exLuma.video?.download_url? exLuma.video?.download_url:exLuma.video?.url" @error="$event.target.src=exLuma.video?.url" loop  playsinline  controls class="w-full h-full object-cover"></video>    
+                <video v-if="exLuma.video?.url|| exLuma.video?.download_url" :src="exLuma.video?.download_url? exLuma.video?.download_url:exLuma.video?.url" @error="($event.target as HTMLVideoElement).src=exLuma.video?.url?exLuma.video?.url:''" loop  playsinline  controls class="w-full h-full object-cover"></video>    
         </div>
             
     </div>
@@ -212,10 +212,10 @@ const mvOption= [
      <div class="pt-1">
         <div class="flex justify-between items-end">
             <div class="pb-1 text-right">
-                <NTag v-if=" exLuma|| luma.user_prompt!=''||luma.image_url!=''||luma.image_end_url!=''" type="success" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
+                <NTag v-if=" exLuma|| luma.user_prompt!=''||luma.image_url!=''||luma.image_end_url!=''" type="primary" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
             </div>
             <div>
-                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
+                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
             </div>
         </div>  
     </div>

@@ -134,7 +134,7 @@ watch(()=>homeStore.myData.act, (n)=>{
 </script>
 <template>
 <div class="p-2"> 
-    <n-tabs type="segment" animated  v-model:value="st.type">
+    <n-tabs type="segment" animated  v-model:value="st.type" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color: #445ff6">
         <!-- <n-tab-pane name="start" tab=""> 
 
         </n-tab-pane> -->
@@ -150,7 +150,7 @@ watch(()=>homeStore.myData.act, (n)=>{
             <div  class="pt-4 flex justify-between">
                 <div>{{$t('suno.desc')}}:</div>
                 <div> 
-                    <n-switch v-model:value="des.make_instrumental" size="small">
+                    <n-switch v-model:value="des.make_instrumental" size="small" style="--n-rail-color-active: #445ff6;">
                         <template #checked>
                          {{ $t('suno.noneedly') }}
                         </template>
@@ -198,7 +198,7 @@ watch(()=>homeStore.myData.act, (n)=>{
             <div  class="pt-4 flex justify-between">
                 <div>{{$t('suno.ly')}} :</div>
                 <div> 
-                    <n-switch v-model:value="des.make_instrumental" size="small">
+                    <n-switch v-model:value="des.make_instrumental" size="small" style="--n-rail-color-active: #445ff6;">
                         <template #checked>
                         {{ $t('suno.noneedly') }}
                         </template>
@@ -220,7 +220,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                 <div  class="pt-5">
                     <div class="flex justify-between pb-3">
                         <div class="text-[12px]"> {{ $t('suno.extendAt') }} {{ cs.continue_at }}s</div>
-                        <NTag  type="success" size="small" round  ><span class="cursor-pointer" @click="cs.continue_clip_id=''" >清除</span></NTag>
+                        <NTag  type="primary" size="small" round  ><span class="cursor-pointer" @click="cs.continue_clip_id=''" >清除</span></NTag>
 
                     </div>
                     <n-slider v-model:value="cs.continue_at" :step="1" :max="Math.ceil( exSuno.metadata.duration)">
@@ -269,11 +269,11 @@ watch(()=>homeStore.myData.act, (n)=>{
     <div class="pt-4">
         <div class="flex justify-between items-start">
             <div class=" space-x-1">
-                  <NTag v-if="st.type=='custom'" type="success" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >{{ $t('suno.generately') }}</span></NTag>
+                  <NTag v-if="st.type=='custom'" type="primary" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >{{ $t('suno.generately') }}</span></NTag>
                   <!-- <NTag v-if="st.type=='custom'" type="success" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >上传音频</span></NTag> -->
                   <mcUploaderMp3 v-if="st.type=='custom'"/>
             </div>
-            <NButton type="primary" :disabled="!canPost" @click="generate()"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
+            <NButton type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
         </div>
         
        

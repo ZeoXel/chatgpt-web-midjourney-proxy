@@ -65,13 +65,13 @@ const canPost = computed(() => {
 </script>
 <template>
 <div class="p-2"> 
-    <n-tabs type="segment" animated  v-model:value="st.type">
+    <n-tabs type="segment" animated  v-model:value="st.type" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color: #445ff6">
         <n-tab-pane name="description" :tab="$t('suno.description')">
              
             <div  class="pt-4 flex justify-between">
                 <div>{{$t('suno.desc')}}:</div>
                 <div> 
-                    <n-switch v-model:value="des.instrumental" size="small">
+                    <n-switch v-model:value="des.instrumental" size="small" style="--n-rail-color-active: #445ff6;">
                         <template #checked>
                          {{ $t('suno.noneedly') }}
                         </template>
@@ -118,7 +118,7 @@ const canPost = computed(() => {
             <div  class="pt-4 flex justify-between">
                 <div>{{$t('suno.ly')}} :</div>
                 <div> 
-                    <n-switch v-model:value="cs.instrumental" size="small">
+                    <n-switch v-model:value="cs.instrumental" size="small" style="--n-rail-color-active: #445ff6;">
                         <template #checked>
                         {{ $t('suno.noneedly') }}
                         </template>
@@ -145,7 +145,7 @@ const canPost = computed(() => {
                   <!-- <NTag v-if="st.type=='custom'" type="success" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >上传音频</span></NTag> -->
                   <!-- <mcUploaderMp3 v-if="st.type=='custom'"/> -->
             </div>
-            <NButton type="primary" :disabled="!canPost" @click="generate()"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
+            <NButton type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
         </div>
         
        

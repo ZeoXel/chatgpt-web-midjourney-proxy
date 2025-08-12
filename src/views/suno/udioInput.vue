@@ -71,7 +71,7 @@ const generate=async ()=>{
                 "source_type": "song",
                 "song_id": f.value.continue_clip_id
             }
-        }
+        } as any
     }
     try {
         const d = await udioFetch('/udio/submit/music',data );
@@ -115,7 +115,7 @@ onMounted(() => {
         :autosize="{ minRows: 3, maxRows: 12  }"  /> 
     </div>
     <div class="pt-4">
-        <n-radio-group v-model:value="f.lyrics_type" name="radiobuttongroup1" size="small">
+        <n-radio-group v-model:value="f.lyrics_type" name="radiobuttongroup1" size="small" style="--n-radio-button-border-color-active: #445ff6;--n-radio-button-text-color-active:#445ff6">
         <n-radio-button   v-for="song in lyriceConfig"  :key="song.key" :value="song.key" :label="song.value">
         </n-radio-button>  
         </n-radio-group>
@@ -133,7 +133,7 @@ onMounted(() => {
 
     <div  class="pt-4">
         <div class="flex justify-end items-start">
-            <NButton v-bind:loading="st.loading" type="primary" :disabled="!canPost" @click="generate()"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
+            <NButton v-bind:loading="st.loading" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
         </div>
     </div>
 
@@ -141,7 +141,7 @@ onMounted(() => {
         <div  class="pt-5">
             <div class="flex justify-between pb-3">
                 <div class="text-[12px]"> {{ $t('suno.extendAt') }} {{ f.continue_at*100 }}%</div>
-                <NTag  type="success" size="small" round  ><span class="cursor-pointer" @click="f.continue_clip_id=''" >清除</span></NTag>
+                <NTag  type="primary" size="small" round  ><span class="cursor-pointer" @click="f.continue_clip_id=''" >清除</span></NTag>
 
             </div>
             <n-slider v-model:value="f.continue_at" :step="0.01" :max="1">
@@ -151,7 +151,7 @@ onMounted(() => {
             </n-slider>
         </div>
          <div  class="pt-1 flex justify-end">
-             <n-radio-group v-model:value="f.mode" name="radiobuttongroup1" size="small">
+             <n-radio-group v-model:value="f.mode" name="radiobuttongroup1" size="small" style="--n-radio-button-border-color-active: #445ff6;--n-radio-button-text-color-active:#445ff6">
                 <n-radio-button   v-for="song in modeConfig"  :key="song.value" :value="song.value" :label="song.label">
                 </n-radio-button>  
                 </n-radio-group>
