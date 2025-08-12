@@ -120,6 +120,8 @@ export interface gptServerType{
     PIXVERSE_KEY:string
     RIFF_SERVER:string
     RIFF_KEY:string
+    VIDU_SERVER:string
+    VIDU_KEY:string
     IS_SET_SYNC?:boolean
     GPTS_GX?:boolean
     IS_LUMA_PRO?:boolean
@@ -163,7 +165,11 @@ let v:gptServerType={
         UDIO_SERVER:'',
         UDIO_KEY:'',
         PIXVERSE_SERVER:'',
-        PIXVERSE_KEY:''
+        PIXVERSE_KEY:'',
+        RIFF_SERVER:'',
+        RIFF_KEY:'',
+        VIDU_SERVER:'',
+        VIDU_KEY:''
     }
     return v ;
 }

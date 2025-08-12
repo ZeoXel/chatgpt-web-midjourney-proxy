@@ -17,7 +17,7 @@ import FormData  from 'form-data'
 import axios from 'axios';
 import AWS  from 'aws-sdk';
 import { v4 as uuidv4} from 'uuid';
-import { viggleProxyFileDo,viggleProxy, lumaProxy, runwayProxy, ideoProxy, ideoProxyFileDo, klingProxy, pikaProxy, udioProxy, runwaymlProxy, pixverseProxy, sunoProxy } from './myfun'
+import { viggleProxyFileDo,viggleProxy, lumaProxy, runwayProxy, ideoProxy, ideoProxyFileDo, klingProxy, pikaProxy, udioProxy, runwaymlProxy, pixverseProxy, sunoProxy, viduProxy } from './myfun'
 
 
 const app = express()
@@ -106,6 +106,7 @@ router.post('/session', async (req, res) => {
     let  isHk= (process.env.OPENAI_API_BASE_URL??"").toLocaleLowerCase().indexOf('-hk')>0
     if(!isHk)  isHk= (process.env.LUMA_SERVER??"").toLocaleLowerCase().indexOf('-hk')>0
     if(!isHk)  isHk= (process.env.VIGGLE_SERVER??"").toLocaleLowerCase().indexOf('-hk')>0
+    if(!isHk)  isHk= (process.env.VIDU_SERVER??"").toLocaleLowerCase().indexOf('-hk')>0
     
 
     const data= { disableGpt4,isWsrv,uploadImgSize,theme,isCloseMdPreview,uploadType,
@@ -344,6 +345,10 @@ app.use('/pika' ,authV2, pikaProxy  );
 app.use('/udio' ,authV2, udioProxy  );
 
 app.use('/pixverse' ,authV2, pixverseProxy  );
+
+//代理vidu 接口 
+app.use('/vidu' ,authV2, viduProxy  );
+app.use('/pro/vidu' ,authV2, viduProxy );
 
 
 

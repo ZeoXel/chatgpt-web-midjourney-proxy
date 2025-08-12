@@ -161,6 +161,34 @@ export const udioProxy=proxy(process.env.UDIO_SERVER??  API_BASE_URL, {
   
 })
 
+export const viduProxy=proxy(process.env.VIDU_SERVER??  API_BASE_URL, {
+  https: false, limit: '10mb',
+  proxyReqPathResolver: function (req) {
+    let url = req.originalUrl;
+    let server = process.env.VIDU_SERVER ?? API_BASE_URL
+    
+    // 处理官方服务器路径映射
+    if (server.indexOf('vidu.com') > -1 || server.indexOf('302ai.cn') > -1) {
+      // 如果是官方 Vidu 服务器或 302ai 中转，保持原路径
+      url = req.originalUrl
+    }
+    
+    return url
+  },
+  proxyReqOptDecorator: function (proxyReqOpts, srcReq) {
+    // 设置认证头部
+    if ( process.env.VIDU_KEY ) proxyReqOpts.headers['Authorization'] ='Bearer '+process.env.VIDU_KEY;
+    else   proxyReqOpts.headers['Authorization'] ='Bearer '+process.env.OPENAI_API_KEY;  
+    
+    // 设置标准头部
+    proxyReqOpts.headers['Content-Type'] = 'application/json';
+    proxyReqOpts.headers['Mj-Version'] = pkg.version;
+    
+    return proxyReqOpts;
+  },
+  
+})
+
 
 
 //req, res, next
