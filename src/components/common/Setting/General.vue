@@ -124,19 +124,50 @@ function handleImportButtonClick(): void {
   const fileInput = document.getElementById('fileInput2') as HTMLElement
   if (fileInput)   fileInput.click()
 }
+
+function handleAvatarUpload(event: Event): void {
+  const target = event.target as HTMLInputElement
+  if (!target || !target.files)
+    return
+
+  const file: File = target.files[0]
+  if (!file)
+    return
+
+  const reader: FileReader = new FileReader()
+  reader.onload = () => {
+    try {
+      const avatarDataUrl = reader.result as string
+      updateUserInfo({ avatar: avatarDataUrl })
+      ms.success(t('common.success'))
+    }
+    catch (error) {
+      ms.error(t('common.invalidFileFormat'))
+    }
+  }
+  reader.readAsDataURL(file)
+}
+
+function handleAvatarButtonClick(): void {
+  const fileInput = document.getElementById('avatarInput') as HTMLElement
+  if (fileInput)   fileInput.click()
+}
 </script>
 
 <template>
   <div class="p-4 space-y-5 min-h-[200px]">
     <div class="space-y-6">
       <div class="flex items-center space-x-4">
-        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.avatarLink') }}</span>
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.avatar') }}</span>
         <div class="flex-1">
-          <NInput v-model:value="avatar" placeholder="" />
+          <input id="avatarInput" type="file" style="display:none" accept="image/jpeg, image/jpg, image/png, image/gif" @change="handleAvatarUpload">
+          <NButton size="small" @click="handleAvatarButtonClick">
+            <template #icon>
+              <SvgIcon icon="ri:upload-2-fill" />
+            </template>
+            {{ $t('common.import') }}
+          </NButton>
         </div>
-        <NButton size="tiny" text type="primary" @click="updateUserInfo({ avatar })">
-          {{ $t('common.save') }}
-        </NButton>
       </div>
       <div class="flex items-center space-x-4">
         <span class="flex-shrink-0 w-[100px]">{{ $t('setting.name') }}</span>

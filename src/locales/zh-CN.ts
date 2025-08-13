@@ -57,7 +57,7 @@ export default {
     general: '总览',
     advanced: '高级',
     config: '配置',
-    avatarLink: '头像链接',
+    avatar: '头像',
     name: '名称',
     description: '描述',
     backgroundImage: '背景图片',
@@ -100,7 +100,7 @@ export default {
     server:'服务端'
     ,about:'关于'
     ,model:'模型'
-    ,sysname:'AI绘图'
+    ,sysname:'零素觉醒AI工具平台'
   }
 
   ,mjtab:{
