@@ -1,0 +1,63 @@
+/* 全局颜色覆盖 - 将绿色改为蓝色 */
+
+/* Tailwind绿色类覆盖为蓝色 */
+.text-green-300 {
+  color: #93c5fd !important; /* 蓝色300 */
+}
+
+.text-green-400 {
+  color: #60a5fa !important; /* 蓝色400 */
+}
+
+.text-green-500 {
+  color: #3b82f6 !important; /* 蓝色500 */
+}
+
+.bg-green-300 {
+  background-color: #93c5fd !important;
+}
+
+.bg-green-400 {
+  background-color: #60a5fa !important;
+}
+
+.bg-green-500 {
+  background-color: #3b82f6 !important;
+}
+
+.border-green-300 {
+  border-color: #93c5fd !important;
+}
+
+.border-green-400 {
+  border-color: #60a5fa !important;
+}
+
+.border-green-500 {
+  border-color: #3b82f6 !important;
+}
+
+/* 覆盖项目中的具体绿色值 */
+.w-2.h-2.bg-green-500.rounded-full {
+  background-color: #3b82f6 !important;
+}
+
+/* 针对特定颜色值的覆盖 */
+[style*="#03D5B7"] {
+  color: #3b82f6 !important;
+  fill: #3b82f6 !important;
+  background-color: #3b82f6 !important;
+}
+
+/* SVG图标中的绿色覆盖 */
+svg [fill="#03D5B7"] {
+  fill: #3b82f6 !important;
+}
+
+/* Naive UI主题变量覆盖 */
+:root {
+  --n-color-success: #3b82f6 !important;
+  --n-color-success-hover: #2563eb !important;
+  --n-color-success-pressed: #1d4ed8 !important;
+  --n-color-success-suppl: #60a5fa !important;
+}

@@ -20,12 +20,28 @@ export function useTheme() {
   })
 
   const themeOverrides = computed<GlobalThemeOverrides>(() => {
-    if (isDark.value) {
-      return {
-        common: {},
+    const baseOverrides = {
+      common: {
+        primaryColor: '#3b82f6',
+        primaryColorHover: '#2563eb',
+        primaryColorPressed: '#1d4ed8',
+        primaryColorSuppl: '#60a5fa',
+        successColor: '#3b82f6',
+        successColorHover: '#2563eb',
+        successColorPressed: '#1d4ed8',
+        successColorSuppl: '#60a5fa',
       }
     }
-    return {}
+    
+    if (isDark.value) {
+      return {
+        ...baseOverrides,
+        common: {
+          ...baseOverrides.common,
+        },
+      }
+    }
+    return baseOverrides
   })
 
   watch(
