@@ -88,7 +88,7 @@
       "csp": null
     },
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": [
         "https://github.com/Dooy/chatgpt-web-midjourney-proxy/releases/latest/download/latest.json"
       ],

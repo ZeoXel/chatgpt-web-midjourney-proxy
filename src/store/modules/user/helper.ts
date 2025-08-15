@@ -1,13 +1,14 @@
 import { ss } from '@/utils/storage'
 import { t } from '@/locales'
-import { homeStore } from "@/store";
+import { homeStore } from '@/store'
+import defaultAvatar from '@/assets/avatar.jpg'
 const LOCAL_NAME = 'userStorage'
-const backgroundImage = homeStore.myData.session.backgroundImage ?? "https://t.alcy.cc/fj/"
+const backgroundImage = homeStore.myData.session.backgroundImage ?? 'https://t.alcy.cc/fj/'
 
 export interface UserInfo {
   avatar: string
   name: string
-  backgroundImage: string
+  backgroundImage?: string
   description: string
 }
 
@@ -18,9 +19,9 @@ export interface UserState {
 export function defaultSetting(): UserState {
   return {
     userInfo: {
-      avatar: 'https://raw.githubusercontent.com/Dooy/chatgpt-web-midjourney-proxy/main/src/assets/avatar.jpg',
-      name:  t('mjset.sysname'),//'零素觉醒AI工具平台',
-      description: '获取 <a href="https://github.com/Dooy/chatgpt-web-midjourney-proxy" class="text-blue-500" target="_blank" >API</a>',
+      avatar: defaultAvatar,
+      name: t('mjset.sysname'), // '零素觉醒AI工具平台',
+      description: 'AI工具平台',
     },
   }
 }
