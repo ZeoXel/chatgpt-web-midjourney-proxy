@@ -2,7 +2,7 @@
 
 import { homeStore } from '@/store';
 import {  computed ,ref } from 'vue'
-import aiSetServer from './aiSetServer.vue';
+import aiSetServer from './aiSetServerSimple.vue';
 import { NTag,NModal,NButton } from 'naive-ui'
 const isHideServer= computed( ()=>homeStore.myData.session.isHideServer )
 const st= ref({show:false})

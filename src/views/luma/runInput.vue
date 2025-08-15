@@ -1,37 +1,22 @@
 <script lang="ts" setup>
-import { NTabs, NTabPane } from 'naive-ui';
-
-import RunwayInput from './runwayInput.vue'
 import RunmlInput from './runmlInput.vue'
 import { gptServerStore } from '@/store';
 import { mlog } from '@/api';
-import { ref } from 'vue'; 
+import { onMounted } from 'vue'; 
 
-const st= ref({tab:'runway'});
-const handleUpdateValue=(v:string)=>{
-   mlog("handleUpdateValue",v)
-   gptServerStore.setMyData({TAB_VIDEO:v})
-}
-const initLoad=()=>{
-    st.value.tab='runway'
-    if( gptServerStore.myData.TAB_VIDEO=='runwayml'){
-         st.value.tab='runwayml'
-    }
+// 确保TAB_VIDEO设置为runwayml（API选项）
+const initLoad = () => {
+    mlog("runInput: Setting TAB_VIDEO to runwayml")
+    gptServerStore.setMyData({TAB_VIDEO: 'runwayml'})
 }
 
-initLoad();
-
-
+onMounted(() => {
+    initLoad();
+});
 </script>
 <template>
 <div class="px-2">
-    <n-tabs type="segment"  animated :default-value="st.tab"  @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color:#445ff6">
-        <n-tab-pane name="runway" tab="Website">
-            <RunwayInput/>
-        </n-tab-pane>
-        <n-tab-pane name="runwayml" tab="API">
-            <RunmlInput/>
-        </n-tab-pane>
-    </n-tabs> 
+    <!-- 直接显示API接口，移除WebSite选项 -->
+    <RunmlInput/>
 </div>
 </template>
