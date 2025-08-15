@@ -1,5 +1,14 @@
 /* 全局颜色覆盖 - 将绿色改为蓝色 */
 
+/* 对话气泡绿色背景覆盖 */
+.bg-\[\#d2f9d1\] {
+  background-color: #dbeafe !important; /* 浅蓝色替代浅绿色 */
+}
+
+.dark\:bg-\[\#a1dc95\]:is(.dark *) {
+  background-color: #3b82f6 !important; /* 暗色模式蓝色替代绿色 */
+}
+
 /* Tailwind绿色类覆盖为蓝色 */
 .text-green-300 {
   color: #93c5fd !important; /* 蓝色300 */
@@ -47,6 +56,20 @@
   color: #3b82f6 !important;
   fill: #3b82f6 !important;
   background-color: #3b82f6 !important;
+}
+
+/* 代码块复制按钮hover颜色覆盖 */
+.code-block-header__copy:hover {
+  color: #3b82f6 !important;
+}
+
+/* Markdown样式中的绿色覆盖 */
+.markdown-body.markdown-body-generate > *:last-child:after {
+  color: #3b82f6 !important;
+}
+
+html.dark .markdown-body.markdown-body-generate > *:last-child:after {
+  color: #3b82f6 !important;
 }
 
 /* SVG图标中的绿色覆盖 */
