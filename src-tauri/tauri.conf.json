@@ -67,7 +67,7 @@
         "../public/favicon.ico"
       ],
       "identifier": "com.github.Dooy.chatgpt-web-midjourney-proxy",
-      "longDescription": "GPT&Midjourney( GPT-MJ) is a cross-platform ChatGPT and Midjourney client, including Web/Win/Linux/OSX/PWA.",
+      "longDescription": "GPT&Midjourney( GPT-MJ) is a cross-platform SwiftEZ client, including Web/Win/Linux/OSX/PWA.",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
@@ -76,7 +76,7 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "ChatGPT and Midjourney App",
+      "shortDescription": "SwiftEZ App",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
@@ -104,7 +104,7 @@
         "fullscreen": false,
         "height": 640,
         "resizable": true,
-        "title": "ChatGPT and Midjourney",
+        "title": "SwiftEZ",
         "width": 960,
         "hiddenTitle": true,
         "titleBarStyle": "Overlay"
