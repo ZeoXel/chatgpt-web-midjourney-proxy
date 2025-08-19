@@ -21,7 +21,7 @@ export function defaultSetting(): UserState {
     userInfo: {
       avatar: defaultAvatar,
       name: t('mjset.sysname'), // '零素觉醒AI工具平台',
-      description: 'AI工具平台',
+      description: '获取 <a href="https://api.lsaigc.com" target="_blank" style="color: blue;">API密钥</a>',
     },
   }
 }
