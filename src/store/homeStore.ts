@@ -62,7 +62,7 @@ const getGptInt= ():gptConfigType =>{
 }
 
 const  getDefault=()=>{
-const amodel = homeStore.myData.session.amodel??'gpt-3.5-turbo'
+const amodel = homeStore.myData.session.amodel??'gpt-5'
 let v:gptConfigType={
         model: amodel,
         max_tokens:1024,
