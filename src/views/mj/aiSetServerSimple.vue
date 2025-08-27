@@ -8,7 +8,7 @@ import { t } from '@/locales'
 const emit = defineEmits(['close'])
 const ms = useMessage()
 
-const defaultUrl = 'https://api.lsaigc.com'
+const defaultUrl = 'https://api.lsaigc.chat'
 
 const save = () => {
   gptServerStore.setMyData(gptServerStore.myData)
