@@ -1,36 +1,38 @@
-import { ss } from '@/utils/storage'
-import { t } from '@/locales'
-import { homeStore } from '@/store'
-import defaultAvatar from '@/assets/avatar.jpg'
-const LOCAL_NAME = 'userStorage'
-const backgroundImage = homeStore.myData.session.backgroundImage ?? 'https://t.alcy.cc/fj/'
+import { ss } from "@/utils/storage";
+import { t } from "@/locales";
+import { homeStore } from "@/store";
+import defaultAvatar from "@/assets/avatar.jpg";
+const LOCAL_NAME = "userStorage";
+const backgroundImage =
+	homeStore.myData.session.backgroundImage ?? "https://t.alcy.cc/fj/";
 
 export interface UserInfo {
-  avatar: string
-  name: string
-  backgroundImage?: string
-  description: string
+	avatar: string;
+	name: string;
+	backgroundImage?: string;
+	description: string;
 }
 
 export interface UserState {
-  userInfo: UserInfo
+	userInfo: UserInfo;
 }
 
 export function defaultSetting(): UserState {
-  return {
-    userInfo: {
-      avatar: defaultAvatar,
-      name: t('mjset.sysname'), // '零素觉醒AI工具平台',
-      description: '获取 <a href="https://api.lsaigc.chat" target="_blank" style="color: blue;">API密钥</a>',
-    },
-  }
+	return {
+		userInfo: {
+			avatar: defaultAvatar,
+			name: t("mjset.sysname"), // '零素觉醒AI工具平台',
+			description:
+				'获取 <a href="https://api.lsaigc.chat" target="_blank" style="color: blue;">API密钥</a>',
+		},
+	};
 }
 
 export function getLocalState(): UserState {
-  const localSetting: UserState | undefined = ss.get(LOCAL_NAME)
-  return { ...defaultSetting(), ...localSetting }
+	const localSetting: UserState | undefined = ss.get(LOCAL_NAME);
+	return { ...defaultSetting(), ...localSetting };
 }
 
 export function setLocalState(setting: UserState): void {
-  ss.set(LOCAL_NAME, setting)
+	ss.set(LOCAL_NAME, setting);
 }
