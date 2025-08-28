@@ -3,384 +3,228 @@ import { mlog } from "./mjapi";
 import { ViduTask, viduStore } from "./viduStore";
 import { sleep } from "./suno";
 
-/**
- * Vidu V2 API 接口类型定义
- */
-export interface ViduV2Request {
-    model: string;
-    images: string[];
-    prompt: string;
-    duration?: number;
-    seed?: string;
-    aspect_ratio?: string;
-    resolution?: string;
-    movement_amplitude?: string;
-}
-
-export interface ViduV2Response {
-    id: string;
-    type: string;
-    state: string;
-    model: string;
-    style: string;
-    moderation: boolean;
-    input: {
-        creation_id: string;
-        prompts: Array<{
-            type: string;
-            content: string;
-            negative: boolean;
-        }>;
-        seed: number;
-        enhance: boolean;
-        multi_image_boost: boolean;
-    };
-    output_params: {
-        sample_count: number;
-        duration: number;
-        aspect_ratio: string;
-        resolution: string;
-        movement_amplitude: string;
-    };
-    err_code: string;
-    creations_count: number;
-    model_version: string;
-    created_at: string;
-    video?: {
-        download_url?: string;
-        thumbnail_url?: string;
-    };
-}
-
-/**
- * 获取认证头部信息
- * 支持多种认证方式：vtoken、API密钥、用户token
- */
+// 获取认证头部
 function getHeaderAuthorization() {
-    let headers = {}
-    
-    // VToken 认证（如果可用）
-    if (homeStore.myData.vtoken) {
-        const vtokenh = { 
-            'x-vtoken': homeStore.myData.vtoken, 
-            'x-ctoken': homeStore.myData.ctoken
-        };
-        headers = {...headers, ...vtokenh}
-    }
-    
-    // API 密钥认证
-    if (!gptServerStore.myData.VIDU_KEY) {
-        const authStore = useAuthStore()
-        if (authStore.token) {
-            const bmi = { 'x-ptoken': authStore.token };
-            headers = {...headers, ...bmi }
-            return headers;
-        }
-        return headers
-    }
-    
-    // Bearer Token 认证
-    const bmi = {
-        'Authorization': 'Bearer ' + gptServerStore.myData.VIDU_KEY
-    }
-    headers = {...headers, ...bmi }
-    return headers
-}
-
-/**
- * 获取完整的 API URL
- * 支持自定义服务器和 Pro 版本
- */
-const getUrl = (url: string) => {
-    if (url.indexOf('http') == 0) return url;
-    
-    // Pro 前缀处理
-    const pro_prefix = url.indexOf('/pro') > -1 ? '/pro' : '';
-    url = url.replaceAll('/pro', '')
-    
-    if (gptServerStore.myData.VIDU_SERVER) {
-        if (gptServerStore.myData.VIDU_SERVER.indexOf('/pro') > 0) {
-            return `${gptServerStore.myData.VIDU_SERVER}/vidu${url}`;
-        }
-        return `${gptServerStore.myData.VIDU_SERVER}${pro_prefix}/vidu${url}`;
-    }
-    return `${pro_prefix}/vidu${url}`;
-}
-
-/**
- * 统一的 Vidu API 请求方法
- * 支持 GET、POST 请求和文件上传
- */
-export const viduFetch = (url: string, data?: any, opt2?: any) => {
-    mlog('viduFetch', url);
-    let headers = opt2?.upFile ? {} : {'Content-Type': 'application/json'}
-    
-    if (opt2 && opt2.headers) headers = opt2.headers;
-    headers = {...headers, ...getHeaderAuthorization()}
-   
-    return new Promise<any>((resolve, reject) => {
-        let opt: RequestInit = {method: 'GET'};
-        opt.headers = headers;
-        
-        if (opt2?.upFile) {
-            opt.method = 'POST';
-            opt.body = data as FormData;
-        } else if (data) {
-            opt.body = JSON.stringify(data);
-            opt.method = 'POST';
-        }
-        
-        fetch(getUrl(url), opt)
-        .then(async (d) => {
-            if (!d.ok) { 
-                let msg = '发生错误: ' + d.status
-                try { 
-                    let bjson: any = await d.json();
-                    msg = '(' + d.status + ')发生错误: ' + (bjson?.error?.message ?? '')
-                } catch (e) { 
-                }
-                homeStore.myData.ms && homeStore.myData.ms.error(msg)
-                throw new Error(msg);
-            }
-     
-            d.json().then(d => resolve(d)).catch(e => { 
-                homeStore.myData.ms && homeStore.myData.ms.error('发生错误' + e)
-                reject(e) 
-            })
-        })
-        .catch(e => { 
-            if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
-                homeStore.myData.ms && homeStore.myData.ms.error('跨域|CORS error')
-            } else {
-                homeStore.myData.ms && homeStore.myData.ms.error('发生错误:' + e)
-            }
-            mlog('e', e.stat)
-            reject(e)
-        })
-    })
-}
-
-/**
- * 轮询 Vidu 任务状态
- * 持续检查任务完成情况，最多轮询120次
- */
-export const FeedViduTask = async (id: string) => {
-    if (id == '') return '';
-    
-    const viduS = new viduStore();
-    
-    for (let i = 0; i < 120; i++) {
-        let url = '/ent/v2/generations/' + id;
-        
-        try {
-            let d: ViduV2Response = await viduFetch(url);
-            if (d.id) {
-                // 转换为 ViduTask 格式
-                const task: ViduTask = {
-                    id: d.id,
-                    state: d.state,
-                    model: d.model,
-                    prompt: d.input?.prompts?.[0]?.content || '',
-                    video: d.video,
-                    created_at: d.created_at,
-                    last_feed: new Date().getTime(),
-                    duration: d.output_params?.duration || 4,
-                    aspect_ratio: d.output_params?.aspect_ratio || '16:9',
-                    resolution: d.output_params?.resolution || '720p',
-                    movement_amplitude: d.output_params?.movement_amplitude || 'auto'
-                };
-                
-                viduS.save(task);
-                homeStore.setMyData({act: 'FeedViduTask'});
-                
-                // 检查任务是否完成
-                if (d.state == 'completed' && d.video && d.video?.download_url) {
-                    break;
-                }
-                
-                // 检查任务是否失败
-                if (d.state == 'failed') {
-                    break;
-                }
-            }
-        } catch (e) {
-            console.error('Feed task error:', e);
-            break;
-        }
-        
-        await sleep(5 * 1000); // 5秒间隔轮询
-    }
-}
-
-/**
- * 创建 Vidu V2 参考主体生成视频任务
- * 根据 OpenAPI 规范实现
- */
-export const createViduV2ReferenceToVideo = async (params: ViduV2Request): Promise<ViduV2Response> => {
-    const url = '/ent/v2/reference2video';
-    
-    // 验证必需参数
-    if (!params.model || !params.images || !Array.isArray(params.images) || params.images.length === 0) {
-        throw new Error('model 和 images 是必需参数，且 images 必须是非空数组');
-    }
-    if (!params.prompt) {
-        throw new Error('prompt 是必需参数');
-    }
-    
-    // 构建请求数据
-    const requestData: ViduV2Request = {
-        model: params.model,
-        images: params.images,
-        prompt: params.prompt,
-        duration: params.duration || 4,
-        seed: params.seed || '0',
-        aspect_ratio: params.aspect_ratio || '16:9',
-        resolution: params.resolution || '720p',
-        movement_amplitude: params.movement_amplitude || 'auto'
+  let headers = {};
+  
+  // Token处理逻辑
+  if (homeStore.myData.vtoken) {
+    const vtokenh = { 
+      'x-vtoken': homeStore.myData.vtoken, 
+      'x-ctoken': homeStore.myData.ctoken 
     };
-    
-    try {
-        const result: ViduV2Response = await viduFetch(url, requestData);
-        
-        if (result.id) {
-            // 开始轮询任务状态
-            setTimeout(() => {
-                FeedViduTask(result.id);
-            }, 1000);
-        }
-        
-        return result;
-    } catch (error) {
-        console.error('Create Vidu V2 reference to video error:', error);
-        throw error;
+    headers = {...headers, ...vtokenh};
+  }
+  
+  if (!gptServerStore.myData.VIDU_KEY) {
+    const authStore = useAuthStore();
+    if (authStore.token) {
+      const bmi = { 'x-ptoken': authStore.token };
+      headers = {...headers, ...bmi};
+      return headers;
     }
+    return headers;
+  }
+  
+  const bmi = {
+    'Authorization': 'Token ' + gptServerStore.myData.VIDU_KEY
+  };
+  headers = {...headers, ...bmi};
+  return headers;
 }
 
-/**
- * 获取 Vidu 任务详情
- * @param taskId 任务 ID
- */
-export const getViduTask = async (taskId: string): Promise<ViduV2Response> => {
-    if (!taskId) {
-        throw new Error('taskId 是必需参数');
+// 获取API URL
+const getUrl = (url: string) => {
+  if (url.indexOf('http') === 0) return url;
+  
+  const pro_prefix = url.indexOf('/pro') > -1 ? '/pro' : '';
+  url = url.replaceAll('/pro', '');
+  
+  // 在开发环境中始终使用本地代理
+  if (import.meta.env.DEV) {
+    return `${pro_prefix}/vidu${url}`;
+  }
+  
+  if (gptServerStore.myData.VIDU_SERVER) {
+    if (gptServerStore.myData.VIDU_SERVER.indexOf('/pro') > 0) {
+      return `${gptServerStore.myData.VIDU_SERVER}/vidu${url}`;
     }
-    
-    try {
-        const result = await viduFetch(`/ent/v2/generations/${taskId}`);
-        return result;
-    } catch (error) {
-        console.error('Get Vidu task error:', error);
-        throw error;
-    }
+    return `${gptServerStore.myData.VIDU_SERVER}${pro_prefix}/vidu${url}`;
+  }
+  return `${pro_prefix}/vidu${url}`;
 }
 
-/**
- * 获取任务列表
- * @param page 页码
- * @param limit 每页数量
- */
-export const getViduTasks = async (page: number = 1, limit: number = 20) => {
-    try {
-        const result = await viduFetch(`/ent/v2/generations?page=${page}&limit=${limit}`);
-        return result;
-    } catch (error) {
-        console.error('Get Vidu tasks error:', error);
-        throw error;
-    }
-}
-
-/**
- * 删除任务
- * @param taskId 任务 ID
- */
-export const deleteViduTask = async (taskId: string) => {
-    if (!taskId) {
-        throw new Error('taskId 是必需参数');
-    }
-    
-    try {
-        const result = await viduFetch(`/ent/v2/generations/${taskId}`, null, {method: 'DELETE'});
-        
-        // 同时从本地存储删除
-        const viduS = new viduStore();
-        const tasks = viduS.getObjs();
-        const task = tasks.find(t => t.id === taskId);
-        if (task) {
-            viduS.delete(task);
-        }
-        
-        return result;
-    } catch (error) {
-        console.error('Delete Vidu task error:', error);
-        throw error;
-    }
-}
-
-/**
- * 检查服务器是否为香港服务器
- * 用于处理不同区域的 API 差异
- */
-export const isHkServer = () => {
-    const url = gptServerStore.myData.VIDU_SERVER?.toLowerCase() || '';
-    if (url !== '') {
-        return (url.indexOf('hk') > -1 && url.indexOf('pro') == -1);
-    }
-    return (homeStore.myData.session && homeStore.myData.session.isHk);
-}
-
-/**
- * 模型信息配置
- * 根据 API 文档提供的积分和价格信息
- */
-export const viduModels = {
-    'viduq1': {
-        name: 'Vidu Q1',
-        duration: '5S',
-        resolution: '1080p',
-        credits: 8,
-        price: 0.4 // 8积分 * 0.05 PTC
-    },
-    'vidu2.0': {
-        name: 'Vidu 2.0',
-        duration: '4S',
-        resolution: '720p',
-        credits: 8,
-        price: 0.4
-    },
-    'vidu1.5': {
-        name: 'Vidu 1.5',
-        versions: {
-            '360p_4s': { duration: '4S', resolution: '360P', credits: 8, price: 0.4 },
-            '720p_4s': { duration: '4S', resolution: '720P', credits: 20, price: 1.0 },
-            '1080p_4s': { duration: '4S', resolution: '1080P', credits: 40, price: 2.0 },
-            '720p_8s': { duration: '8S', resolution: '720P', credits: 40, price: 2.0 }
-        }
-    },
-    'vidu1.0': {
-        name: 'Vidu 1.0',
-        versions: {
-            '360p_4s': { duration: '4S', resolution: '360P', credits: 8, price: 0.4 },
-            '360p_8s': { duration: '8S', resolution: '360P', credits: 16, price: 0.8 }
-        }
-    }
+// 通用的API请求封装
+export const viduFetch = (url: string, data?: any, opt2?: any) => {
+  mlog('viduFetch', url);
+  let headers = {'Content-Type': 'application/json'};
+  if (opt2 && opt2.headers) headers = opt2.headers;
+  
+  headers = {...headers, ...getHeaderAuthorization()};
+  
+  const requestOptions = {
+    method: data ? 'POST' : 'GET',
+    headers,
+    ...(data && { body: JSON.stringify(data) })
+  };
+  
+  return fetch(getUrl(url), requestOptions)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .catch(error => {
+      mlog('viduFetch error', error);
+      throw error;
+    });
 };
 
-/**
- * 获取模型价格信息
- * @param model 模型名称
- * @param resolution 分辨率（可选）
- * @param duration 时长（可选）
- */
-export const getModelPrice = (model: string, resolution?: string, duration?: string) => {
-    const modelInfo = viduModels[model as keyof typeof viduModels];
-    if (!modelInfo) return null;
+// 生成视频（参考生视频）
+export const viduGenerate = async (params: {
+  model: 'viduq1' | 'vidu2.0' | 'vidu1.5';
+  images: string[];
+  prompt: string;
+  duration?: number;
+  seed?: number;
+  aspect_ratio?: '16:9' | '9:16' | '1:1';
+  resolution?: string;
+  movement_amplitude?: 'auto' | 'small' | 'medium' | 'large';
+  bgm?: boolean;
+  off_peak?: boolean;
+  payload?: string;
+}) => {
+  try {
+    mlog('viduGenerate', params);
+    const response = await viduFetch('/tasks', params);
     
-    if ('versions' in modelInfo) {
-        // 多版本模型
-        const versionKey = `${resolution?.toLowerCase()}_${duration?.toLowerCase()}`;
-        return modelInfo.versions[versionKey as keyof typeof modelInfo.versions] || null;
-    } else {
-        // 单版本模型
-        return modelInfo;
+    if (response && response.task_id) {
+      // 保存到本地存储
+      const task: ViduTask = {
+        task_id: response.task_id,
+        state: response.state || 'created',
+        model: params.model,
+        prompt: params.prompt,
+        images: params.images,
+        duration: response.duration || params.duration,
+        seed: response.seed,
+        aspect_ratio: response.aspect_ratio || params.aspect_ratio || '16:9',
+        resolution: response.resolution || params.resolution,
+        movement_amplitude: response.movement_amplitude || params.movement_amplitude || 'auto',
+        bgm: response.bgm || params.bgm || false,
+        off_peak: response.off_peak || params.off_peak || false,
+        credits: response.credits,
+        created_at: response.created_at || new Date().toISOString(),
+        payload: response.payload || params.payload
+      };
+      
+      viduStore.save(task);
+      return task;
     }
+    
+    throw new Error('Invalid response from Vidu API');
+  } catch (error) {
+    mlog('viduGenerate error', error);
+    throw error;
+  }
+};
+
+// 查询任务状态
+export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => {
+  try {
+    mlog('viduGetTask', task_id);
+    const response = await viduFetch(`/tasks/${task_id}/creations`);
+    
+    if (response) {
+      const task = viduStore.getObj(task_id);
+      if (task) {
+        // 更新任务状态
+        const updatedTask = {
+          ...task,
+          state: response.state,
+          err_code: response.err_code,
+          credits: response.credits,
+          creations: response.creations || [],
+          last_feed: Date.now()
+        };
+        
+        viduStore.save(updatedTask);
+        return updatedTask;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    mlog('viduGetTask error', error);
+    return null;
+  }
+};
+
+// 取消任务
+export const viduCancelTask = async (task_id: string): Promise<boolean> => {
+  try {
+    mlog('viduCancelTask', task_id);
+    await viduFetch(`/tasks/${task_id}/cancel`, { id: task_id });
+    
+    // 更新本地状态
+    viduStore.updateTaskState(task_id, { state: 'failed', err_code: 'UserCancelled' });
+    return true;
+  } catch (error) {
+    mlog('viduCancelTask error', error);
+    return false;
+  }
+};
+
+// 轮询待处理任务状态
+export const pollPendingTasks = async (): Promise<void> => {
+  const pendingTasks = viduStore.getPendingTasks();
+  
+  for (const task of pendingTasks) {
+    try {
+      await viduGetTask(task.task_id);
+      // 添加延迟避免过于频繁的请求
+      await sleep(1000);
+    } catch (error) {
+      mlog('pollPendingTasks error', error);
+    }
+  }
+};
+
+// 错误码映射
+export const VIDU_ERROR_MESSAGES = {
+  'BadRequest': '不合法的请求',
+  'FieldLacking': '缺少必需字段',
+  'FieldUnwanted': '包含不需要的字段',
+  'FieldItemCountOutOfRange': '字段超出限制',
+  'PageSizeOutOfRange': '图像尺寸有问题',
+  'ImageDownloadFailure': '图片下载失败，请检查图片链接',
+  'TaskPromptPolicyViolation': 'Prompt 触发内容审核',
+  'ImageFormatInvalid': '图像格式不符合要求',
+  'AuditSubmitIllegal': '输入没有通过安全审核',
+  'CreditInsufficient': '积分不足',
+  'CreationPolicyViolation': '生成物触发风控',
+  'ModelUnavailable': '请求的模型不可用',
+  'UserCancelled': '用户手动终止任务',
+  'FieldInvalid': '传入参数未通过合法性校验',
+  'ImageCheckBodyJointsFailed': '人体检测失败，请重新上传',
+  'ImageCheckFaceFailed': '人脸检测失败，请重新上传',
+  'ImageObjectsUndetected': '人体或人脸有遮挡，请重新上传',
+  'Unauthorized': '未认证',
+  'Forbidden': '请求没有权限',
+  'TaskNotFound': '任务ID没找到',
+  'CreationNotFound': '生成物ID没找到',
+  'NotFound': '请求资源不存在',
+  'Conflict': '资源主键冲突',
+  'QuotaExceeded': '超过并发限制',
+  'TooManyRequests': '请求太频繁',
+  'SystemThrottling': '资源超过限制',
+  'Canceled': '请求被取消',
+  'InternalServiceFailure': '服务器内部错误，请稍后重试'
+};
+
+// 获取错误信息
+export const getViduErrorMessage = (err_code?: string): string => {
+  if (!err_code) return '未知错误';
+  return VIDU_ERROR_MESSAGES[err_code as keyof typeof VIDU_ERROR_MESSAGES] || err_code;
 };

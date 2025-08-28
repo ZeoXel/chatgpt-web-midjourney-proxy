@@ -1,0 +1,352 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { NCard, NImage, NButton, NTag, NSpin, NProgress, NTooltip, NEmpty, NTime } from 'naive-ui';
+import { SvgIcon } from '@/components/common';
+import { viduGetTask, viduCancelTask, mlog, pollPendingTasks, getViduErrorMessage } from '@/api';
+import { ViduTask, viduStore } from '@/api/viduStore';
+import { useMessage } from 'naive-ui';
+
+const ms = useMessage();
+const tasks = ref<ViduTask[]>([]);
+const loading = ref(false);
+let pollTimer: NodeJS.Timeout | null = null;
+
+// 加载任务列表
+const loadTasks = () => {
+  tasks.value = viduStore.getObjs().sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+};
+
+// 检查单个任务状态
+const checkTaskStatus = async (task: ViduTask) => {
+  if (task.state === 'success' || task.state === 'failed') return;
+  
+  try {
+    const updatedTask = await viduGetTask(task.task_id);
+    if (updatedTask) {
+      loadTasks(); // 重新加载列表
+    }
+  } catch (error) {
+    mlog("checkTaskStatus error", error);
+  }
+};
+
+// 轮询待处理任务
+const pollTasks = async () => {
+  const pendingTasks = tasks.value.filter(t => 
+    t.state === 'created' || t.state === 'queueing' || t.state === 'processing'
+  );
+  
+  if (pendingTasks.length > 0) {
+    try {
+      await pollPendingTasks();
+      loadTasks();
+    } catch (error) {
+      mlog("pollTasks error", error);
+    }
+  }
+};
+
+// 取消任务
+const cancelTask = async (task: ViduTask) => {
+  try {
+    const success = await viduCancelTask(task.task_id);
+    if (success) {
+      ms.success('任务已取消');
+      loadTasks();
+    } else {
+      ms.error('取消失败，任务可能已开始处理');
+    }
+  } catch (error) {
+    ms.error('取消失败: ' + (error as Error).message);
+  }
+};
+
+// 删除任务
+const deleteTask = (task: ViduTask) => {
+  viduStore.remove(task.task_id);
+  loadTasks();
+  ms.success('任务已删除');
+};
+
+// 下载视频
+const downloadVideo = (video: any) => {
+  if (video.url) {
+    const link = document.createElement('a');
+    link.href = video.url;
+    link.download = `vidu_${video.id}.mp4`;
+    link.target = '_blank';
+    link.click();
+  }
+};
+
+// 获取状态颜色
+const getStatusColor = (state: string) => {
+  switch (state) {
+    case 'success': return 'success';
+    case 'failed': return 'error';
+    case 'processing': return 'warning';
+    case 'queueing': return 'info';
+    default: return 'default';
+  }
+};
+
+// 获取状态文本
+const getStatusText = (state: string) => {
+  switch (state) {
+    case 'created': return '已创建';
+    case 'queueing': return '排队中';
+    case 'processing': return '处理中';
+    case 'success': return '已完成';
+    case 'failed': return '失败';
+    default: return state;
+  }
+};
+
+// 获取模型显示名称
+const getModelName = (model: string) => {
+  switch (model) {
+    case 'viduq1': return 'Vidu Q1';
+    case 'vidu2.0': return 'Vidu 2.0';
+    case 'vidu1.5': return 'Vidu 1.5';
+    default: return model;
+  }
+};
+
+// 复制提示词
+const copyPrompt = (prompt: string) => {
+  navigator.clipboard.writeText(prompt).then(() => {
+    ms.success('提示词已复制');
+  }).catch(() => {
+    ms.error('复制失败');
+  });
+};
+
+onMounted(() => {
+  loadTasks();
+  // 每5秒检查一次待处理任务
+  pollTimer = setInterval(pollTasks, 5000);
+});
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+  }
+});
+
+// 计算统计数据
+const stats = computed(() => {
+  const total = tasks.value.length;
+  const completed = tasks.value.filter(t => t.state === 'success').length;
+  const processing = tasks.value.filter(t => 
+    t.state === 'created' || t.state === 'queueing' || t.state === 'processing'
+  ).length;
+  const failed = tasks.value.filter(t => t.state === 'failed').length;
+  
+  return { total, completed, processing, failed };
+});
+</script>
+
+<template>
+  <div class="p-4 space-y-4">
+    <!-- 统计信息 -->
+    <div v-if="tasks.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-4 border">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div>
+          <div class="text-2xl font-bold text-blue-600">{{ stats.total }}</div>
+          <div class="text-sm text-gray-500">总任务</div>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-green-600">{{ stats.completed }}</div>
+          <div class="text-sm text-gray-500">已完成</div>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-orange-600">{{ stats.processing }}</div>
+          <div class="text-sm text-gray-500">处理中</div>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-red-600">{{ stats.failed }}</div>
+          <div class="text-sm text-gray-500">失败</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div v-if="loading" class="flex justify-center py-8">
+      <NSpin size="large" />
+    </div>
+    
+    <div v-else-if="tasks.length === 0" class="py-12">
+      <NEmpty description="还没有生成的视频">
+        <template #icon>
+          <SvgIcon icon="material-symbols:video-library-outline" class="text-6xl text-gray-400" />
+        </template>
+      </NEmpty>
+    </div>
+
+    <div v-else class="grid gap-4">
+      <NCard 
+        v-for="task in tasks" 
+        :key="task.task_id"
+        class="relative"
+        :class="{'opacity-60': task.state === 'failed'}"
+      >
+        <template #header>
+          <div class="flex justify-between items-start gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <NTag :type="getStatusColor(task.state)" size="small">
+                  {{ getStatusText(task.state) }}
+                </NTag>
+                <span class="text-xs text-gray-500">{{ getModelName(task.model) }}</span>
+                <span class="text-xs text-gray-500">{{ task.duration }}s</span>
+                <span class="text-xs text-gray-500">{{ task.resolution }}</span>
+              </div>
+              <div class="text-sm font-medium truncate" :title="task.prompt">
+                {{ task.prompt }}
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <!-- 复制提示词 -->
+              <NTooltip trigger="hover">
+                <template #trigger>
+                  <NButton size="tiny" quaternary @click="copyPrompt(task.prompt)">
+                    <SvgIcon icon="material-symbols:content-copy" />
+                  </NButton>
+                </template>
+                复制提示词
+              </NTooltip>
+              
+              <!-- 删除任务 -->
+              <NTooltip trigger="hover">
+                <template #trigger>
+                  <NButton size="tiny" quaternary type="error" @click="deleteTask(task)">
+                    <SvgIcon icon="material-symbols:delete" />
+                  </NButton>
+                </template>
+                删除任务
+              </NTooltip>
+            </div>
+          </div>
+        </template>
+        
+        <div class="space-y-3">
+          <!-- 参考图片 -->
+          <div v-if="task.images && task.images.length > 0" class="space-y-2">
+            <div class="text-xs text-gray-500">参考图片:</div>
+            <div class="flex gap-2 flex-wrap">
+              <NImage
+                v-for="(img, index) in task.images"
+                :key="index"
+                :src="img"
+                class="w-16 h-16 object-cover rounded border"
+                preview
+              />
+            </div>
+          </div>
+
+          <!-- 生成的视频 -->
+          <div v-if="task.creations && task.creations.length > 0" class="space-y-3">
+            <div 
+              v-for="creation in task.creations" 
+              :key="creation.id"
+              class="relative"
+            >
+              <video 
+                :src="creation.url"
+                :poster="creation.cover_url"
+                controls
+                preload="metadata"
+                class="w-full rounded-lg max-h-64 object-contain bg-black"
+              />
+              
+              <div class="absolute top-2 right-2 space-x-1">
+                <NTooltip trigger="hover">
+                  <template #trigger>
+                    <NButton 
+                      size="small" 
+                      type="primary"
+                      @click="downloadVideo(creation)"
+                    >
+                      <SvgIcon icon="material-symbols:download" />
+                    </NButton>
+                  </template>
+                  下载视频
+                </NTooltip>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 处理中状态 -->
+          <div v-else-if="task.state === 'processing'" class="text-center py-8">
+            <NSpin size="medium" />
+            <p class="mt-2 text-gray-500">视频生成中...</p>
+            <NProgress type="line" :show-indicator="false" processing class="mt-2" />
+            <div class="mt-2 space-x-2">
+              <NButton size="small" @click="checkTaskStatus(task)">
+                <SvgIcon icon="material-symbols:refresh" />
+                刷新状态
+              </NButton>
+              <NButton size="small" type="error" @click="cancelTask(task)">
+                取消任务
+              </NButton>
+            </div>
+          </div>
+          
+          <!-- 排队状态 -->
+          <div v-else-if="task.state === 'queueing'" class="text-center py-8">
+            <div class="animate-pulse">
+              <div class="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-2"></div>
+              <p class="text-gray-500">排队等待中...</p>
+            </div>
+            <div class="mt-2">
+              <NButton size="small" type="error" @click="cancelTask(task)">
+                取消任务
+              </NButton>
+            </div>
+          </div>
+
+          <!-- 创建状态 -->
+          <div v-else-if="task.state === 'created'" class="text-center py-8">
+            <div class="animate-pulse">
+              <div class="w-16 h-16 bg-blue-300 rounded-full mx-auto mb-2"></div>
+              <p class="text-gray-500">任务已创建...</p>
+            </div>
+          </div>
+          
+          <!-- 失败状态 -->
+          <div v-else-if="task.state === 'failed'" class="text-center py-8">
+            <div class="text-red-500">
+              <SvgIcon icon="material-symbols:error" class="text-4xl" />
+              <p class="mt-2">生成失败</p>
+              <p class="text-sm mt-1">{{ getViduErrorMessage(task.err_code) }}</p>
+            </div>
+          </div>
+          
+          <!-- 任务信息 -->
+          <div class="flex justify-between items-center text-xs text-gray-500 pt-3 border-t">
+            <div class="space-x-4">
+              <span>ID: {{ task.task_id.slice(0, 8) }}...</span>
+              <span v-if="task.credits">积分: {{ task.credits }}</span>
+              <span v-if="task.off_peak">错峰模式</span>
+            </div>
+            <NTime :time="new Date(task.created_at)" format="MM-dd HH:mm" />
+          </div>
+        </div>
+      </NCard>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 自定义动画 */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

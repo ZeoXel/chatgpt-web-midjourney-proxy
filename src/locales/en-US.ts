@@ -529,6 +529,89 @@ export default {
     gen3a_turbo_img:'Gen-3 Alpha Turbo must image',
 
   },
+  vidu:{
+    menu:"Vidu",
+    menuinfo:'Vidu video generation',
+    title:'Vidu Video Generation',
+    models:{
+      viduq1:'Vidu Q1 - High Quality (5s)',
+      vidu20:'Vidu 2.0 - Fast Generation (4s)',
+      vidu15:'Vidu 1.5 - Dynamic Enhanced (4/8s)'
+    },
+    prompts:{
+      input:'Describe your video content...',
+      upload:'Reference images (1-7 images)',
+      placeholder:'Santa Claus and the bear hug by the lakeside.'
+    },
+    params:{
+      model:'Model Selection',
+      prompt:'Video Description',
+      images:'Reference Images',
+      duration:'Video Duration',
+      aspectRatio:'Aspect Ratio',
+      resolution:'Resolution',
+      movement:'Movement Amplitude',
+      bgm:'Background Music',
+      offPeak:'Off-peak Mode',
+      seed:'Random Seed'
+    },
+    options:{
+      aspectRatios:{
+        horizontal:'Horizontal 16:9',
+        vertical:'Vertical 9:16',
+        square:'Square 1:1'
+      },
+      movements:{
+        auto:'Auto',
+        small:'Small',
+        medium:'Medium',
+        large:'Large'
+      }
+    },
+    actions:{
+      generate:'Generate Video',
+      generating:'Generating...',
+      cancel:'Cancel Task',
+      download:'Download Video',
+      copy:'Copy Prompt',
+      delete:'Delete Task',
+      refresh:'Refresh Status'
+    },
+    states:{
+      created:'Created',
+      queueing:'Queueing',
+      processing:'Processing',
+      success:'Completed',
+      failed:'Failed'
+    },
+    messages:{
+      submitSuccess:'Video generation request submitted!',
+      cancelSuccess:'Task cancelled',
+      deleteSuccess:'Task deleted',
+      copySuccess:'Prompt copied',
+      uploadSuccess:'Image uploaded successfully',
+      uploadFail:'Image upload failed',
+      maxImages:'Maximum 7 images allowed',
+      checkParams:'Please check input parameters',
+      requireImages:'Please upload at least 1 reference image'
+    },
+    tips:{
+      imageFormat:'Supports PNG, JPEG, JPG, WebP formats, minimum size 128×128, aspect ratio within 4:1 or 1:4, maximum size 50MB',
+      compliance:'Please ensure image content complies with platform guidelines',
+      processing:'Generation time varies with queue, please wait patiently',
+      offPeak:'Off-peak mode tasks complete within 48 hours, consuming fewer credits'
+    },
+    stats:{
+      total:'Total Tasks',
+      completed:'Completed',
+      processing:'Processing',
+      failed:'Failed'
+    },
+    empty:'No videos generated yet',
+    about:'Vidu Settings',
+    server:'Vidu API Endpoint',
+    keyPlaceholder:'Vidu API key, optional'
+  },
   dance:{
     menu: "Dance",
     menuinfo: "Create dance videos with Viggle and others.",

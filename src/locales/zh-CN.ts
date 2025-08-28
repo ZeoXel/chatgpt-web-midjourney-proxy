@@ -545,6 +545,89 @@ export default {
     gen3a_turbo_img:'Gen-3 Alpha Turbo 必须带图',
 
   }
+  ,vidu:{
+    menu:"Vidu",
+    menuinfo:'Vidu 视频生成',
+    title:'Vidu 视频生成',
+    models:{
+      viduq1:'Vidu Q1 - 高质量 (5秒)',
+      vidu20:'Vidu 2.0 - 快速生成 (4秒)',
+      vidu15:'Vidu 1.5 - 动态增强 (4/8秒)'
+    },
+    prompts:{
+      input:'描述你想生成的视频内容...',
+      upload:'参考图片 (1-7张)',
+      placeholder:'Santa Claus and the bear hug by the lakeside.'
+    },
+    params:{
+      model:'模型选择',
+      prompt:'视频描述',
+      images:'参考图片',
+      duration:'视频时长',
+      aspectRatio:'画面比例',
+      resolution:'分辨率',
+      movement:'运动幅度',
+      bgm:'背景音乐',
+      offPeak:'错峰模式',
+      seed:'随机种子'
+    },
+    options:{
+      aspectRatios:{
+        horizontal:'横屏 16:9',
+        vertical:'竖屏 9:16',
+        square:'方形 1:1'
+      },
+      movements:{
+        auto:'自动',
+        small:'小幅',
+        medium:'中幅',
+        large:'大幅'
+      }
+    },
+    actions:{
+      generate:'生成视频',
+      generating:'生成中...',
+      cancel:'取消任务',
+      download:'下载视频',
+      copy:'复制提示词',
+      delete:'删除任务',
+      refresh:'刷新状态'
+    },
+    states:{
+      created:'已创建',
+      queueing:'排队中',
+      processing:'处理中',
+      success:'已完成',
+      failed:'生成失败'
+    },
+    messages:{
+      submitSuccess:'视频生成请求已提交！',
+      cancelSuccess:'任务已取消',
+      deleteSuccess:'任务已删除',
+      copySuccess:'提示词已复制',
+      uploadSuccess:'图片上传成功',
+      uploadFail:'图片上传失败',
+      maxImages:'最多只能上传7张图片',
+      checkParams:'请检查输入参数',
+      requireImages:'请至少上传1张参考图片'
+    },
+    tips:{
+      imageFormat:'支持 PNG、JPEG、JPG、WebP 格式，尺寸不小于128×128，比例不超过4:1或1:4，大小不超过50MB',
+      compliance:'请确保图片内容符合平台规范，避免违规内容',
+      processing:'生成时间根据队列情况而定，请耐心等待',
+      offPeak:'错峰模式下任务将在48小时内完成，消耗积分更少'
+    },
+    stats:{
+      total:'总任务',
+      completed:'已完成',
+      processing:'处理中',
+      failed:'失败'
+    },
+    empty:'还没有生成的视频',
+    about:'Vidu 相关设置',
+    server:'Vidu 接口地址',
+    keyPlaceholder:'Vidu API 的key，可不填'
+  }
   ,dance:{
     menu:"舞蹈",
     menuinfo:'Viggle等 舞蹈视频创作'

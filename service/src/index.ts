@@ -347,8 +347,52 @@ app.use('/udio' ,authV2, udioProxy  );
 app.use('/pixverse' ,authV2, pixverseProxy  );
 
 //代理vidu 接口 
-app.use('/vidu' ,authV2, viduProxy  );
-app.use('/pro/vidu' ,authV2, viduProxy );
+// 开发环境临时端点
+if (process.env.NODE_ENV === 'development' || !process.env.VIDU_KEY) {
+  console.log('Adding development Vidu endpoints...');
+  
+  // 创建任务端点
+  app.post('/vidu/tasks', (req, res) => {
+    console.log('Vidu API请求:', req.body);
+    const taskId = 'dev-' + Date.now();
+    res.json({
+      task_id: taskId,
+      state: 'created',
+      message: 'Development mode - no actual API call made'
+    });
+  });
+  
+  // 查询任务状态端点
+  app.get('/vidu/tasks/:taskId/creations', (req, res) => {
+    const { taskId } = req.params;
+    console.log('查询任务状态:', taskId);
+    
+    // 模拟任务完成状态
+    res.json({
+      task_id: taskId,
+      state: 'success',
+      video_url: 'https://example.com/sample-video.mp4',
+      message: 'Development mode - simulated completed video',
+      progress: 100,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  });
+  
+  // 取消任务端点
+  app.post('/vidu/tasks/:taskId/cancel', (req, res) => {
+    const { taskId } = req.params;
+    console.log('取消任务:', taskId);
+    res.json({
+      task_id: taskId,
+      state: 'cancelled',
+      message: 'Task cancelled'
+    });
+  });
+}
+
+app.use('/vidu', viduProxy);
+app.use('/pro/vidu', viduProxy);
 
 
 
