@@ -240,7 +240,84 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
    let action= data.action;
    // mlog("gp-image-1 base64Array ",   data.base64Array   )
    //chat.myid=  `${Date.now()}`;
-   if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model.indexOf('ideogram')>-1 ){ //ideogram
+   if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model === 'nano-banana' && data.data.base64Array && data.data.base64Array.length > 0 ){ // nano-banana 图生图
+        mlog("nano-banana 图生图数据 ", data.data, data.data.base64Array)
+        const formData = new FormData(); 
+        for(let o in data.data ){
+            if(o=='base64Array'){
+                for(let f of data.data.base64Array){
+                     formData.append('image', f.file ) // nano-banana 使用 image 字段
+                }
+            }else if(o=='model'){
+                formData.append('model', 'nano-banana') // 使用 nano-banana 模型名
+            }else{
+                formData.append(o, data.data[o])
+            }
+        }
+        mlog("nano-banana formData  ",  formData)
+        
+        try {
+            const ds = await gptUploadFile('/v1/images/edits', formData) // 使用 edits 接口
+            const d=ds.data;
+            if(ds.status!=200) throw "Fail with status:"+ ds.status
+            
+            let key= 'dall:'+chat.myid;
+            const rz : any= d.data[0];
+            if(rz.b64_json){
+                const base64='data:image/png;base64,'+rz.b64_json;
+                await localSaveAny(base64,key)
+            }
+           
+            chat.text= rz.revised_prompt ?? `nano-banana 图片已完成`;
+            chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
+            chat.loading = false;
+            homeStore.setMyData({act:'updateChat', actData:chat });
+        } catch (e) {
+            mlog('nano-banana 图生图失败', e);
+            chat.text='nano-banana 图生图失败！'+"\n```json\n"+ e +"\n```\n";
+            chat.loading=false;
+            homeStore.setMyData({act:'updateChat', actData:chat });
+        }
+   }else if( action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model === 'nano-banana' ){ // nano-banana 文生图
+       mlog("nano-banana 文生图数据 ", data.data)
+       
+       // 构造请求数据，支持参考图
+       let requestData = {
+           model: 'nano-banana',
+           prompt: data.data.prompt,
+           response_format: 'url',  // 强制使用 url 格式
+           size: data.data.size || '1024x1024',
+           n: data.data.n || 1
+       };
+       
+       // 如果有参考图，添加 image_urls 字段
+       if(data.data.base64Array && data.data.base64Array.length > 0) {
+           requestData.image_urls = data.data.base64Array.map(img => img.base64);
+           mlog("nano-banana 添加参考图:", data.data.base64Array.length, "张");
+       }
+
+       try{
+            mlog("nano-banana 即将发起请求:", requestData);
+            let d = await gptFetch('/v1/images/generations', requestData); // 使用标准 generations 接口
+            mlog("nano-banana 文生图返回 ", d)
+            const rz : any= d.data[0];
+            let key= 'dall:'+chat.myid;
+      
+            if(rz.b64_json){
+                const base64='data:image/png;base64,'+rz.b64_json;
+                await localSaveAny(base64,key)
+            }
+            chat.text= rz.revised_prompt ?? `nano-banana 图片已完成`;
+            chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
+            chat.loading = false;
+            homeStore.setMyData({act:'updateChat', actData:chat });
+       }catch(e){
+            mlog('nano-banana 文生图失败', e);
+            chat.text='nano-banana 文生图失败！'+"\n```json\n"+ e +"\n```\n";
+            chat.loading=false;
+            homeStore.setMyData({act:'updateChat', actData:chat });
+       }
+   }else if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model.indexOf('ideogram')>-1 ){ //ideogram
          mlog("ddlog 数据 ", data.data  )
          try{
             let d= await ideoSubmit(data.data );
@@ -334,6 +411,7 @@ export const isDallImageModel =(model:string|undefined)=>{
     if( model.indexOf('flux')>-1 ) return true; 
     if( model.indexOf('ideogram')>-1 ) return true; 
     if( model.indexOf('gpt-image')>-1 ) return true; 
+    if( model === 'nano-banana' ) return true;
     return ['dall-e-2' ,'dall-e-3','ideogram' ].indexOf(model)>-1
       
 }

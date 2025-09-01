@@ -9,7 +9,8 @@ import { t } from '@/locales';
 const ms = useMessage();
 const config = ref( {
 model:[
-{  "label": "DALL·E 3", "value": "dall-e-3" }
+{  "label": "nano-banana", "value": "nano-banana" }
+ ,{  "label": "DALL·E 3", "value": "dall-e-3" }
  ,{  "label": "GPT-Image-1", "value": "gpt-image-1" }
  ,{  "label": "flux-kontext-pro", "value": "flux-kontext-pro" }
  ,{  "label": "flux-kontext-max", "value": "flux-kontext-max" }
@@ -28,7 +29,7 @@ interface myFile{
 const st =ref({isGo:false,quality:'medium' }); 
 const fsRef= ref() ; 
 const base64Array= ref<myFile[]>([]);    
-const f = ref({size:'1024x1024', prompt:'',"model": "dall-e-3","n": 1});
+const f = ref({size:'1024x1024', prompt:'',"model": "nano-banana","n": 1});
 const isDisabled= computed(()=>{
     if(st.value.isGo) {
         //console.log('st.value.isGo',st.value.isGo);
@@ -47,6 +48,8 @@ const create= async ()=>{
     // });
     // mlog('test',d );
     //return ;
+    
+    // 统一的处理逻辑，nano-banana 也使用标准 DALL-E 流程
     let obj= {
         action:'gpt.dall-e-3',
         data:{} //f.value
@@ -107,6 +110,19 @@ const dimensionsList= computed(()=>{
             }
     ];
     }
+    if(f.value.model=='nano-banana'){
+    return [{ 
+                "label": "1024px*1024px",
+                "value": "1024x1024"
+            }, {
+                "label": "1792px*1024px",
+                "value": "1792x1024"
+            }, {
+                "label": "1024px*1792px",
+                "value": "1024x1792"
+            }
+    ];
+    }
     return [{ 
                 "label": "1024px*1024px",
                 "value": "1024x1024"
@@ -127,6 +143,7 @@ const isCanImageEdit= computed(()=>{
     if(f.value.model=='dall-e-2') return true;
     if(f.value.model=='gpt-image-1') return true;
     if(f.value.model.indexOf('kontext')>-1) return true;
+    if(f.value.model=='nano-banana') return true;
     return false;
 })
 

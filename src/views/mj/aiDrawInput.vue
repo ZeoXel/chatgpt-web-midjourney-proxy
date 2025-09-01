@@ -73,7 +73,7 @@ initLoad();
 
     </n-tab-pane>
     
-    <n-tab-pane name="dall.e" tab="Dall.E">
+    <n-tab-pane name="dall.e" tab="Nano-Banana">
      <div class="p-4"><aiDall  /></div>
     </n-tab-pane>
 
