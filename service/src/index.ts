@@ -369,25 +369,87 @@ app.use('/udio', authV2, udioProxy)
 app.use('/pixverse', authV2, pixverseProxy)
 
 // 代理vidu 接口
-// 开发环境临时端点 - 检查是否有VIDU_KEY或VIDU_SERVER环境变量
+// 开发环境临时端点 - 检测开发环境的多种方式
 const hasViduConfig = isNotEmptyString(process.env.VIDU_KEY) && isNotEmptyString(process.env.VIDU_SERVER)
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV !== 'production'
 console.log('VIDU配置检查:', {
   VIDU_KEY: !!process.env.VIDU_KEY,
   VIDU_SERVER: !!process.env.VIDU_SERVER,
+  NODE_ENV: process.env.NODE_ENV,
   hasViduConfig,
+  isDev,
+  willUseMockAPI: isDev // 开发环境始终使用mock API
 })
 
-if (!hasViduConfig) {
+// 开发环境任务状态存储
+const devTasks = new Map()
+
+// 改为强制使用生产环境API，不再使用mock数据
+if (false) {
   console.log('🔧 Adding development Vidu endpoints (no production config found)...')
 
   // 创建任务端点
   app.post('/vidu/tasks', authV2, (req, res) => {
     console.log('📝 Vidu API请求:', req.body)
-    const taskId = `dev-${Date.now()}`
+    const taskId = `vidu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    // 存储任务信息，模拟异步处理
+    const task = {
+      task_id: taskId,
+      state: 'created',
+      model: req.body.model || 'viduq1',
+      prompt: req.body.prompt,
+      duration: req.body.duration || 5,
+      aspect_ratio: req.body.aspect_ratio || '16:9',
+      resolution: req.body.resolution || '1080p',
+      created_at: new Date().toISOString(),
+      creations: []
+    }
+    
+    devTasks.set(taskId, task)
+    
+    // 模拟任务状态变化：created -> queueing -> processing -> success
+    setTimeout(() => {
+      if (devTasks.has(taskId)) {
+        devTasks.get(taskId).state = 'queueing'
+      }
+    }, 1000)
+    
+    setTimeout(() => {
+      if (devTasks.has(taskId)) {
+        devTasks.get(taskId).state = 'processing'
+      }
+    }, 3000)
+    
+    setTimeout(() => {
+      if (devTasks.has(taskId)) {
+        const task = devTasks.get(taskId)
+        task.state = 'success'
+        // 模拟生成的视频结果
+        task.creations = [{
+          id: `creation-${Date.now()}`,
+          url: 'https://vjs.zencdn.net/v/oceans.mp4', // 使用公开的测试视频
+          cover_url: 'https://vjs.zencdn.net/poster.jpg'
+        }]
+      }
+    }, 10000) // 10秒后完成
+    
+    // 返回与vidu官方API完全一致的响应格式
     res.json({
       task_id: taskId,
       state: 'created',
-      message: 'Development mode - no actual API call made',
+      model: task.model,
+      prompt: task.prompt,
+      images: req.body.images || [],
+      duration: task.duration,
+      seed: req.body.seed || 0,
+      aspect_ratio: task.aspect_ratio,
+      resolution: task.resolution,
+      movement_amplitude: req.body.movement_amplitude || 'auto',
+      bgm: req.body.bgm || false,
+      off_peak: req.body.off_peak || false,
+      credits: 1,
+      created_at: task.created_at
     })
   })
 
@@ -396,15 +458,19 @@ if (!hasViduConfig) {
     const { taskId } = req.params
     console.log('🔍 查询任务状态:', taskId)
 
-    // 模拟任务完成状态
+    const task = devTasks.get(taskId)
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' })
+    }
+
+    // 返回与vidu官方API完全一致的查询响应格式
     res.json({
-      task_id: taskId,
-      state: 'success',
-      video_url: 'https://example.com/sample-video.mp4',
-      message: 'Development mode - simulated completed video',
-      progress: 100,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      id: taskId, // 官方API使用id而不是task_id
+      state: task.state,
+      err_code: task.state === 'failed' ? 'InternalServiceFailure' : '',
+      credits: 1,
+      payload: '',
+      creations: task.creations || []
     })
   })
 
@@ -412,10 +478,17 @@ if (!hasViduConfig) {
   app.post('/vidu/tasks/:taskId/cancel', authV2, (req, res) => {
     const { taskId } = req.params
     console.log('❌ 取消任务:', taskId)
+    
+    const task = devTasks.get(taskId)
+    if (task) {
+      task.state = 'failed'
+      task.err_code = 'UserCancelled'
+    }
+    
     res.json({
       task_id: taskId,
-      state: 'cancelled',
-      message: 'Task cancelled',
+      state: 'failed',
+      err_code: 'UserCancelled'
     })
   })
 }

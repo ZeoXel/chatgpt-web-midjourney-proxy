@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { NCard, NImage, NButton, NTag, NSpin, NProgress, NTooltip, NEmpty, NTime } from 'naive-ui';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { NCard, NImage, NButton, NButtonGroup, NTag, NSpin, NProgress, NTooltip, NEmpty, NTime, NPopconfirm } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
-import { viduGetTask, viduCancelTask, mlog, pollPendingTasks, getViduErrorMessage } from '@/api';
+import { viduGetTask, viduCancelTask, viduFeed, mlog, pollPendingTasks, getViduErrorMessage } from '@/api';
 import { ViduTask, viduStore } from '@/api/viduStore';
 import { useMessage } from 'naive-ui';
+import { homeStore } from '@/store';
 
 const ms = useMessage();
 const tasks = ref<ViduTask[]>([]);
 const loading = ref(false);
+const st = ref({ pIndex: -1 }); // 鼠标悬停状态管理，类似其他模块
 let pollTimer: NodeJS.Timeout | null = null;
 
 // 加载任务列表
@@ -70,6 +72,12 @@ const deleteTask = (task: ViduTask) => {
   ms.success('任务已删除');
 };
 
+// 手动刷新单个任务状态 - 类似其他模块的实现
+const refreshTask = async (task: ViduTask) => {
+  mlog('refreshTask', task.task_id);
+  viduFeed(task.task_id);
+};
+
 // 下载视频
 const downloadVideo = (video: any) => {
   if (video.url) {
@@ -123,6 +131,48 @@ const copyPrompt = (prompt: string) => {
   });
 };
 
+// 清理存储空间
+const cleanupStorage = () => {
+  try {
+    viduStore.cleanup();
+    loadTasks();
+    ms.success('存储空间已清理');
+  } catch (error) {
+    ms.error('清理失败: ' + (error as Error).message);
+  }
+};
+
+// 获取存储信息
+const storageInfo = computed(() => {
+  return viduStore.getStorageInfo();
+});
+
+// 获取视频样式，固定尺寸不再适应窗口大小
+const getVideoStyle = (aspectRatio: string) => {
+  const ratioMap = {
+    '16:9': { width: '480px', height: '270px' },  // 固定16:9尺寸
+    '9:16': { width: '270px', height: '480px' },  // 固定9:16尺寸  
+    '1:1': { width: '360px', height: '360px' }    // 固定1:1尺寸
+  };
+  
+  const style = ratioMap[aspectRatio as keyof typeof ratioMap] || ratioMap['16:9'];
+  
+  return {
+    width: style.width,
+    height: style.height,
+    objectFit: 'cover' as const,
+    margin: '0 auto'
+  };
+};
+
+
+// 监听homeStore状态变化 - 统一的状态管理方式
+watch(() => homeStore.myData.act, (action) => {
+  if (action === 'ViduFeed') {
+    loadTasks();
+  }
+});
+
 onMounted(() => {
   loadTasks();
   // 每5秒检查一次待处理任务
@@ -152,6 +202,27 @@ const stats = computed(() => {
   <div class="p-4 space-y-4">
     <!-- 统计信息 -->
     <div v-if="tasks.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-4 border">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">任务统计</h3>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">
+            存储: {{ storageInfo.taskCount }}/{{ storageInfo.maxTasks }} 任务
+          </span>
+          <NPopconfirm
+            @positive-click="cleanupStorage"
+            placement="bottom"
+          >
+            <template #trigger>
+              <NButton size="small" type="warning" quaternary>
+                <SvgIcon icon="material-symbols:cleaning-services" />
+                清理
+              </NButton>
+            </template>
+            清理旧的任务数据以释放存储空间？
+          </NPopconfirm>
+        </div>
+      </div>
+      
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div>
           <div class="text-2xl font-bold text-blue-600">{{ stats.total }}</div>
@@ -187,10 +258,12 @@ const stats = computed(() => {
 
     <div v-else class="grid gap-4">
       <NCard 
-        v-for="task in tasks" 
+        v-for="(task, index) in tasks" 
         :key="task.task_id"
         class="relative"
         :class="{'opacity-60': task.state === 'failed'}"
+        @mousemove="st.pIndex = index"
+        @mouseout="st.pIndex = -1"
       >
         <template #header>
           <div class="flex justify-between items-start gap-4">
@@ -207,11 +280,11 @@ const stats = computed(() => {
                 {{ task.prompt }}
               </div>
             </div>
-            <div class="flex items-center gap-1">
+            <NButtonGroup size="tiny">
               <!-- 复制提示词 -->
               <NTooltip trigger="hover">
                 <template #trigger>
-                  <NButton size="tiny" quaternary @click="copyPrompt(task.prompt)">
+                  <NButton quaternary @click="copyPrompt(task.prompt)">
                     <SvgIcon icon="material-symbols:content-copy" />
                   </NButton>
                 </template>
@@ -221,31 +294,17 @@ const stats = computed(() => {
               <!-- 删除任务 -->
               <NTooltip trigger="hover">
                 <template #trigger>
-                  <NButton size="tiny" quaternary type="error" @click="deleteTask(task)">
+                  <NButton quaternary type="error" @click="deleteTask(task)">
                     <SvgIcon icon="material-symbols:delete" />
                   </NButton>
                 </template>
                 删除任务
               </NTooltip>
-            </div>
+            </NButtonGroup>
           </div>
         </template>
         
         <div class="space-y-3">
-          <!-- 参考图片 -->
-          <div v-if="task.images && task.images.length > 0" class="space-y-2">
-            <div class="text-xs text-gray-500">参考图片:</div>
-            <div class="flex gap-2 flex-wrap">
-              <NImage
-                v-for="(img, index) in task.images"
-                :key="index"
-                :src="img"
-                class="w-16 h-16 object-cover rounded border"
-                preview
-              />
-            </div>
-          </div>
-
           <!-- 生成的视频 -->
           <div v-if="task.creations && task.creations.length > 0" class="space-y-3">
             <div 
@@ -256,12 +315,18 @@ const stats = computed(() => {
               <video 
                 :src="creation.url"
                 :poster="creation.cover_url"
-                controls
+                :controls="st.pIndex === index"
+                loop
+                playsinline
                 preload="metadata"
-                class="w-full rounded-lg max-h-64 object-contain bg-black"
+                class="rounded-lg bg-black"
+                :style="getVideoStyle(task.aspect_ratio)"
               />
               
-              <div class="absolute top-2 right-2 space-x-1">
+              <div 
+                class="absolute top-2 right-2 space-x-1 transition-opacity duration-200"
+                :class="{ 'opacity-0 group-hover:opacity-100': st.pIndex !== index, 'opacity-100': st.pIndex === index }"
+              >
                 <NTooltip trigger="hover">
                   <template #trigger>
                     <NButton 
@@ -283,14 +348,23 @@ const stats = computed(() => {
             <NSpin size="medium" />
             <p class="mt-2 text-gray-500">视频生成中...</p>
             <NProgress type="line" :show-indicator="false" processing class="mt-2" />
-            <div class="mt-2 space-x-2">
-              <NButton size="small" @click="checkTaskStatus(task)">
-                <SvgIcon icon="material-symbols:refresh" />
-                刷新状态
-              </NButton>
-              <NButton size="small" type="error" @click="cancelTask(task)">
-                取消任务
-              </NButton>
+            <div class="mt-2">
+              <!-- 基于last_feed时间差显示刷新按钮，类似其他模块 -->
+              <NButtonGroup 
+                v-if="!task.last_feed || ((new Date().getTime()) - task.last_feed) > 20 * 1000" 
+                size="small"
+              >
+                <NButton type="primary" @click="refreshTask(task)">
+                  <SvgIcon icon="material-symbols:refresh" />
+                  重新获取
+                </NButton>
+                <NButton type="error" @click="cancelTask(task)">
+                  取消任务
+                </NButton>
+              </NButtonGroup>
+              <div v-else class="text-xs text-gray-400">
+                处理中 {{ new Date(task.last_feed).toLocaleTimeString() }}
+              </div>
             </div>
           </div>
           
@@ -301,9 +375,21 @@ const stats = computed(() => {
               <p class="text-gray-500">排队等待中...</p>
             </div>
             <div class="mt-2">
-              <NButton size="small" type="error" @click="cancelTask(task)">
-                取消任务
-              </NButton>
+              <NButtonGroup 
+                v-if="!task.last_feed || ((new Date().getTime()) - task.last_feed) > 20 * 1000"
+                size="small"
+              >
+                <NButton type="primary" @click="refreshTask(task)">
+                  <SvgIcon icon="material-symbols:refresh" />
+                  重新获取
+                </NButton>
+                <NButton type="error" @click="cancelTask(task)">
+                  取消任务
+                </NButton>
+              </NButtonGroup>
+              <div v-else class="text-xs text-gray-400">
+                排队中 {{ new Date(task.last_feed).toLocaleTimeString() }}
+              </div>
             </div>
           </div>
 
@@ -349,4 +435,15 @@ const stats = computed(() => {
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* 视频容器样式 */
+.video-container {
+  display: block;
+  border-radius: 8px;
+  background: #000;
+  width: 100%;
+  height: auto;
+}
+
+/* 视频固定尺寸样式 - 不再响应式适应窗口 */
 </style>

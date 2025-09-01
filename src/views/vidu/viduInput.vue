@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { NInput, NButton, useMessage, NSelect, NSwitch, NImage } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
-import { viduGenerate, mlog, upImg } from '@/api';
+import { viduGenerate, viduFeed, mlog, upImg } from '@/api';
 import { homeStore } from '@/store';
 import { MODEL_CONFIGS } from '@/api/viduStore';
 
@@ -151,7 +151,7 @@ const generate = async () => {
   try {
     mlog('vidu generate', formData.value);
     
-    await viduGenerate({
+    const task = await viduGenerate({
       model: formData.value.model,
       images: formData.value.images,
       prompt: formData.value.prompt,
@@ -164,6 +164,14 @@ const generate = async () => {
     });
 
     ms.success('视频生成请求已提交！');
+    
+    // 通知UI更新任务列表 - 使用homeStore统一状态管理
+    homeStore.setMyData({ act: 'ViduFeed' });
+    
+    // 启动长轮询跟踪任务状态
+    if (task && task.task_id) {
+      viduFeed(task.task_id);
+    }
     
     // 清空表单（保留模型选择）
     formData.value.prompt = '';

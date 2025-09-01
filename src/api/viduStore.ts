@@ -52,18 +52,71 @@ export const MODEL_CONFIGS = {
 // Vidu本地存储管理类
 export class ViduStore {
   private localKey = 'vidu-store';
+  private maxTasks = 20; // 最大存储任务数量
+
+  // 清理任务数据，移除图片数据以节省空间
+  private cleanTaskForStorage(task: ViduTask): ViduTask {
+    const cleanTask = { ...task };
+    // 如果图片数据过大，只保留图片URL的基本信息
+    if (cleanTask.images && cleanTask.images.some(img => img.startsWith('data:'))) {
+      cleanTask.images = cleanTask.images.map((img, index) => 
+        img.startsWith('data:') ? `[base64-image-${index}]` : img
+      );
+    }
+    return cleanTask;
+  }
+
+  // 限制存储的任务数量，删除旧任务
+  private limitStoredTasks(tasks: ViduTask[]): ViduTask[] {
+    if (tasks.length <= this.maxTasks) return tasks;
+    
+    // 按创建时间排序，保留最新的任务
+    return tasks
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, this.maxTasks);
+  }
 
   public save(obj: ViduTask) {
     if (!obj.task_id) throw "task_id must be provided";
-    let arr = this.getObjs();
-    let i = arr.findIndex(v => v.task_id === obj.task_id);
-    if (i > -1) arr[i] = obj;
-    else arr.push(obj);
-    ss.set(this.localKey, arr);
+    
+    try {
+      let arr = this.getObjs();
+      let i = arr.findIndex(v => v.task_id === obj.task_id);
+      
+      // 清理任务数据以节省空间
+      const cleanObj = this.cleanTaskForStorage(obj);
+      
+      if (i > -1) {
+        arr[i] = cleanObj;
+      } else {
+        arr.push(cleanObj);
+      }
+      
+      // 限制存储的任务数量
+      arr = this.limitStoredTasks(arr);
+      
+      ss.set(this.localKey, arr);
+    } catch (error) {
+      console.error('保存任务到localStorage失败:', error);
+      // 如果存储失败，尝试清理后重试
+      this.cleanup();
+      try {
+        const cleanObj = this.cleanTaskForStorage(obj);
+        ss.set(this.localKey, [cleanObj]);
+      } catch (retryError) {
+        console.error('重试保存失败:', retryError);
+        throw new Error('localStorage空间不足，无法保存任务');
+      }
+    }
   }
 
   public getObjs(): ViduTask[] {
-    return ss.get(this.localKey) ?? [];
+    try {
+      return ss.get(this.localKey) ?? [];
+    } catch (error) {
+      console.error('从localStorage读取任务失败:', error);
+      return [];
+    }
   }
 
   public getObj(task_id: string): ViduTask | null {
@@ -81,7 +134,58 @@ export class ViduStore {
   }
 
   public clear() {
-    ss.remove(this.localKey);
+    try {
+      ss.remove(this.localKey);
+    } catch (error) {
+      console.error('清理localStorage失败:', error);
+    }
+  }
+
+  // 清理旧的和已完成的任务，释放存储空间
+  public cleanup() {
+    try {
+      const tasks = this.getObjs();
+      const now = Date.now();
+      const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 一周前
+      
+      // 保留最近一周的任务，或者未完成的任务
+      const filteredTasks = tasks.filter(task => {
+        const taskTime = new Date(task.created_at).getTime();
+        return taskTime > oneWeekAgo || 
+               task.state === 'created' || 
+               task.state === 'queueing' || 
+               task.state === 'processing';
+      });
+      
+      // 限制数量并保存
+      const limitedTasks = this.limitStoredTasks(filteredTasks);
+      ss.set(this.localKey, limitedTasks);
+      
+      console.log(`清理完成：从 ${tasks.length} 个任务减少到 ${limitedTasks.length} 个任务`);
+    } catch (error) {
+      console.error('清理任务失败:', error);
+      // 如果清理失败，直接清空存储
+      ss.remove(this.localKey);
+    }
+  }
+
+  // 获取存储空间使用情况
+  public getStorageInfo() {
+    try {
+      const data = ss.get(this.localKey) ?? [];
+      const dataSize = JSON.stringify(data).length;
+      return {
+        taskCount: data.length,
+        storageSize: dataSize,
+        maxTasks: this.maxTasks
+      };
+    } catch (error) {
+      return {
+        taskCount: 0,
+        storageSize: 0,
+        maxTasks: this.maxTasks
+      };
+    }
   }
 
   // 获取待处理的任务（用于状态轮询）
