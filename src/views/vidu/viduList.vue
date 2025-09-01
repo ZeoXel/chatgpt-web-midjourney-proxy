@@ -256,7 +256,7 @@ const stats = computed(() => {
       </NEmpty>
     </div>
 
-    <div v-else class="grid gap-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
       <NCard 
         v-for="(task, index) in tasks" 
         :key="task.task_id"
@@ -266,21 +266,13 @@ const stats = computed(() => {
         @mouseout="st.pIndex = -1"
       >
         <template #header>
-          <div class="flex justify-between items-start gap-4">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <NTag :type="getStatusColor(task.state)" size="small">
-                  {{ getStatusText(task.state) }}
-                </NTag>
-                <span class="text-xs text-gray-500">{{ getModelName(task.model) }}</span>
-                <span class="text-xs text-gray-500">{{ task.duration }}s</span>
-                <span class="text-xs text-gray-500">{{ task.resolution }}</span>
-              </div>
-              <div class="text-sm font-medium truncate" :title="task.prompt">
-                {{ task.prompt }}
-              </div>
-            </div>
-            <NButtonGroup size="tiny">
+          <div class="space-y-2">
+            <!-- 状态和操作按钮行 -->
+            <div class="flex justify-between items-center">
+              <NTag :type="getStatusColor(task.state)" size="small">
+                {{ getStatusText(task.state) }}
+              </NTag>
+              <NButtonGroup size="tiny">
               <!-- 复制提示词 -->
               <NTooltip trigger="hover">
                 <template #trigger>
@@ -301,6 +293,21 @@ const stats = computed(() => {
                 删除任务
               </NTooltip>
             </NButtonGroup>
+            </div>
+            
+            <!-- 模型信息行 -->
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <span>{{ getModelName(task.model) }}</span>
+              <span>•</span>
+              <span>{{ task.duration }}s</span>
+              <span>•</span>
+              <span>{{ task.resolution }}</span>
+            </div>
+            
+            <!-- 提示词 -->
+            <div class="text-sm font-medium line-clamp-2" :title="task.prompt">
+              {{ task.prompt }}
+            </div>
           </div>
         </template>
         
@@ -446,4 +453,13 @@ const stats = computed(() => {
 }
 
 /* 视频固定尺寸样式 - 不再响应式适应窗口 */
+
+/* 多行文本截断 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
 </style>
