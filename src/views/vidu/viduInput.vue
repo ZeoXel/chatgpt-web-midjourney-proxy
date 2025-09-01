@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { NInput, NButton, useMessage, NSelect, NSwitch, NImage } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
 import { viduGenerate, viduFeed, mlog, upImg } from '@/api';
-import { homeStore } from '@/store';
+import { homeStore, gptServerStore } from '@/store';
 import { MODEL_CONFIGS } from '@/api/viduStore';
 
 // 表单数据
@@ -82,12 +82,30 @@ const resolutionOptions = computed(() => {
   return config.resolutions.map(r => ({ label: r, value: r }));
 });
 
+// 核心密钥检查
+const hasApiKey = computed(() => {
+  return gptServerStore.myData.OPENAI_API_KEY && 
+         gptServerStore.myData.OPENAI_API_KEY.trim() !== '';
+});
+
 // 验证表单
 const canPost = computed(() => {
-  return formData.value.prompt.trim() !== '' && 
+  return hasApiKey.value &&
+         formData.value.prompt.trim() !== '' && 
          formData.value.images.length >= 1 && 
          formData.value.images.length <= 7 && 
          !st.value.isDo;
+});
+
+// 按钮文本
+const buttonText = computed(() => {
+  if (!hasApiKey.value) {
+    return '未配置密钥';
+  }
+  if (st.value.isDo) {
+    return '生成中...';
+  }
+  return '生成视频';
 });
 
 // 图片上传处理
@@ -367,18 +385,28 @@ const randomSeed = () => {
     <!-- 生成按钮 -->
     <div class="pt-4">
       <NButton 
-        type="primary"
+        :type="hasApiKey ? 'primary' : 'default'"
         size="large"
         block
         :disabled="!canPost"
         :loading="st.isDo"
         @click="generate"
+        :class="{ 'opacity-50': !hasApiKey }"
       >
         <template #icon>
-          <SvgIcon icon="material-symbols:video-camera-back" />
+          <SvgIcon :icon="hasApiKey ? 'material-symbols:video-camera-back' : 'material-symbols:key-off'" />
         </template>
-        {{ st.isDo ? '生成中...' : '生成视频' }}
+        {{ buttonText }}
       </NButton>
+    </div>
+
+    <!-- 密钥配置提示 -->
+    <div v-if="!hasApiKey" class="text-xs text-orange-500 bg-orange-50 p-3 rounded border border-orange-200 space-y-1">
+      <div class="flex items-center">
+        <SvgIcon icon="material-symbols:warning" class="mr-1" />
+        <span class="font-medium">需要配置API密钥</span>
+      </div>
+      <div>请先在"设置 - 服务端"中填写API密钥后再使用Vidu视频生成功能</div>
     </div>
 
     <!-- 提示信息 -->

@@ -7,6 +7,50 @@
     {
       "source": "/mjapi/(.*)",
       "destination": "/api/proxy"
+    },
+    {
+      "source": "/sunoapi/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/luma/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/vidu/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/viggle/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/runwayml/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/runway/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/kling/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/ideogram/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/pika/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/udio/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/pixverse/(.*)",
+      "destination": "/api/proxy"
     }
   ]
 }

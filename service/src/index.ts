@@ -496,8 +496,8 @@ else {
   console.log('🚀 Using production Vidu configuration')
 }
 
-app.use('/vidu', viduProxy)
-app.use('/pro/vidu', viduProxy)
+app.use('/vidu', authV2, viduProxy)
+app.use('/pro/vidu', authV2, viduProxy)
 
 app.use('', router)
 app.use('/api', router)
