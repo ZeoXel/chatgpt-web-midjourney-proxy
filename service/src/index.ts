@@ -16,7 +16,7 @@ import { auth, authV2, regCookie, turnstileCheck, verify } from './middleware/au
 import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
-import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viduProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import { klingProxy, runwayProxy, runwaymlProxy, sunoProxy, viduProxy } from './myfun'
 
 const app = express()
 const router = express.Router()
@@ -100,10 +100,6 @@ router.post('/session', async (req, res) => {
     const customVisionModel = process.env.CUSTOM_VISION_MODELS ?? ''
     const backgroundImage = process.env.BACKGROUND_IMAGE ?? ''
     let isHk = (process.env.OPENAI_API_BASE_URL ?? '').toLocaleLowerCase().indexOf('-hk') > 0
-    if (!isHk)
-      isHk = (process.env.LUMA_SERVER ?? '').toLocaleLowerCase().indexOf('-hk') > 0
-    if (!isHk)
-      isHk = (process.env.VIGGLE_SERVER ?? '').toLocaleLowerCase().indexOf('-hk') > 0
     if (!isHk)
       isHk = (process.env.VIDU_SERVER ?? '').toLocaleLowerCase().indexOf('-hk') > 0
 
@@ -346,27 +342,10 @@ app.use('/openapi', authV2, turnstileCheck, proxy(API_BASE_URL, {
 app.use('/sunoapi', authV2, sunoProxy)
 app.use('/suno', authV2, sunoProxy)
 
-// 代理luma 接口
-app.use('/luma', authV2, lumaProxy)
-app.use('/pro/luma', authV2, lumaProxy)
-
-// 代理 viggle 文件
-app.use('/viggle/asset', authV2, upload2.single('file'), viggleProxyFileDo)
-app.use('/pro/viggle/asset', authV2, upload2.single('file'), viggleProxyFileDo)
-// 代理 viggle
-app.use('/viggle', authV2, viggleProxy)
-app.use('/pro/viggle', authV2, viggleProxy)
-
+// 代理视频生成接口 - 保留runway和kling
 app.use('/runwayml', authV2, runwaymlProxy)
 app.use('/runway', authV2, runwayProxy)
 app.use('/kling', authV2, klingProxy)
-
-app.use('/ideogram/remix', authV2, upload2.single('image_file'), ideoProxyFileDo)
-app.use('/ideogram', authV2, ideoProxy)
-app.use('/pika', authV2, pikaProxy)
-app.use('/udio', authV2, udioProxy)
-
-app.use('/pixverse', authV2, pixverseProxy)
 
 // 代理vidu 接口
 // 开发环境临时端点 - 检测开发环境的多种方式

@@ -5,7 +5,6 @@ import { setupPageGuard } from './permission'
 import { ChatLayout } from '@/views/chat/layout'
 import mjlayout from '@/views/mj/layout.vue'
 import sunoLayout from '@/views/suno/layout.vue'
-import lumaLayout from '@/views/luma/layout.vue'
 import viduLayout from '@/views/vidu/layout.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -92,47 +91,6 @@ const routes: RouteRecordRaw[] = [
 
     
 
-  },
-  {
-    path: '/video',
-    name: 'RootVideo',
-    component: lumaLayout,
-    redirect: '/video/index',
-    children: [
-      {
-        path: '/video/:uuid?',
-        name: 'video',
-        component: () => import('@/views/luma/video.vue'),
-      },
-    ],
-  },
-
-  {
-    path: '/dance',
-    name: 'RootDance',
-    component: lumaLayout,
-    redirect: '/dance/index',
-    children: [
-      {
-        path: '/dance/:uuid?',
-        name: 'dance',
-        component: () => import('@/views/viggle/dance.vue'),
-      },
-    ],
-  },
-
-  {
-    path: '/wav',
-    name: 'RootWav',
-    component: lumaLayout,
-    redirect: '/wav/index',
-    children: [
-      {
-        path: '/wav/:uuid?',
-        name: 'wav',
-        component: () => import('@/views/wav/wav.vue'),
-      },
-    ],
   },
 
   {

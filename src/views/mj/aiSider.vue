@@ -83,19 +83,6 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 </n-tooltip>
             </a>
 
-            <!-- 视频 -->
-            <a v-if="!isDisableMenu ( 'video')"      @click="st.active='video'; urouter.push('/video')"
-                class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'video' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
-                    <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='video' ? 'text-[#445ff6]' : '']">
-                      <SvgIcon icon="ri:video-on-line" class="text-3xl flex-1"></SvgIcon>
-                      <span class="text-[10px]">{{ $t('video.menu') }}</span>
-                    </div>
-                  </template>
-                    {{ $t('video.menuinfo') }}
-                </n-tooltip>
-            </a>
 
             <!-- Vidu -->
             <a v-if="!isDisableMenu ( 'vidu')"      @click="st.active='vidu'; urouter.push('/vidu')"

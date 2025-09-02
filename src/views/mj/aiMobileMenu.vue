@@ -54,11 +54,6 @@ const urouter = useRouter() //
         <div class="text-[13px]">{{ $t('suno.menu') }}</div>
       </div>
 
-      <!-- 视频 -->
-      <div v-if="!isDisableMenu ( 'video')"    class="flex items-center justify-center flex-col "   @click="  urouter.push('/video')"  :class="[ goHome =='video' ? 'active' : '']" >
-        <SvgIcon icon="ri:video-on-line" class="text-3xl"></SvgIcon>
-        <div class="text-[13px]">{{ $t('video.menu') }}</div>
-      </div>
 
       <!-- Vidu -->
       <div v-if="!isDisableMenu ( 'vidu')"    class="flex items-center justify-center flex-col "   @click="  urouter.push('/vidu')"  :class="[ goHome =='vidu' ? 'active' : '']" >
