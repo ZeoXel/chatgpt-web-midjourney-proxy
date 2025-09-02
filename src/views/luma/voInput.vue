@@ -8,11 +8,44 @@ import { mlog } from '@/api';
 import { gptServerStore } from '@/store';
 import {  ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useBasicLayout } from '@/hooks/useBasicLayout';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import PixInput from './pixInput.vue';
 
 const route = useRoute(); // 获取当前路由对象
+const { isMobile } = useBasicLayout()
+const containerRef = ref<HTMLElement | null>(null)
 
 const st= ref({tab:''});
+
+// 定义可切换的tab列表
+const tabList = ['luma', 'runway', 'pika', 'kling', 'pixverse']
+
+// 滑动切换功能
+const switchToNextTab = () => {
+  const currentTab = gptServerStore.myData.TAB_VIDEO || 'luma'
+  const currentIndex = tabList.indexOf(currentTab)
+  const nextIndex = (currentIndex + 1) % tabList.length
+  const nextTab = tabList[nextIndex]
+  handleUpdateValue(nextTab)
+}
+
+const switchToPrevTab = () => {
+  const currentTab = gptServerStore.myData.TAB_VIDEO || 'luma'
+  const currentIndex = tabList.indexOf(currentTab)
+  const prevIndex = (currentIndex - 1 + tabList.length) % tabList.length
+  const prevTab = tabList[prevIndex]
+  handleUpdateValue(prevTab)
+}
+
+// 使用滑动手势（仅移动端）
+if (isMobile) {
+  useSwipeGesture(
+    containerRef,
+    switchToNextTab,  // 左滑切换到下一个tab
+    switchToPrevTab   // 右滑切换到上一个tab
+  )
+}
 const handleUpdateValue=(v:string)=>{
    mlog("handleUpdateValue",v)
    gptServerStore.setMyData({TAB_VIDEO:v})
@@ -35,7 +68,7 @@ initLoad();
 </script>
 
 <template>
-<div  >
+<div ref="containerRef">
     <n-tabs type="line"  :tabs-padding="1" class="abc1234" animated :default-value="st.tab"  @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-border-color:#445ff6">
         <!-- <n-tab-pane name="" tab="">
         </n-tab-pane> -->

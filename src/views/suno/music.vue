@@ -10,12 +10,52 @@ import RiffList from './riffList.vue';
 import udioInput from './udioInput.vue';
 import udioList from './udioList.vue';
 import { gptServerStore } from '@/store';
-import { useRoute } from 'vue-router';
-import { useBasicLayout } from '@/hooks/useBasicLayout'; 
+import { useRoute, useRouter } from 'vue-router';
+import { useBasicLayout } from '@/hooks/useBasicLayout';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { SvgIcon } from '@/components/common';
+import { useAppStore } from '@/store'; 
 
 const route = useRoute(); // 获取当前路由对象
+const router = useRouter()
+const appStore = useAppStore()
 const { isMobile } = useBasicLayout()
 const st= ref({menu:'suno',tab:''});
+const containerRef = ref<HTMLElement | null>(null)
+
+// 快速切换到聊天功能
+function goToChat() {
+  router.push('/chat')
+}
+
+// 定义可切换的tab列表
+const tabList = ['suno', 'riff', 'udio']
+
+// 滑动切换功能
+const switchToNextTab = () => {
+  const currentTab = gptServerStore.myData.TAB_MUSIC || 'suno'
+  const currentIndex = tabList.indexOf(currentTab)
+  const nextIndex = (currentIndex + 1) % tabList.length
+  const nextTab = tabList[nextIndex]
+  handleUpdateValue(nextTab)
+}
+
+const switchToPrevTab = () => {
+  const currentTab = gptServerStore.myData.TAB_MUSIC || 'suno'
+  const currentIndex = tabList.indexOf(currentTab)
+  const prevIndex = (currentIndex - 1 + tabList.length) % tabList.length
+  const prevTab = tabList[prevIndex]
+  handleUpdateValue(prevTab)
+}
+
+// 使用滑动手势（仅移动端）
+if (isMobile) {
+  useSwipeGesture(
+    containerRef,
+    switchToNextTab,  // 左滑切换到下一个tab
+    switchToPrevTab   // 右滑切换到上一个tab
+  )
+}
 
 const handleUpdateValue=(v:string)=>{
    //mlog("handleUpdateValue",v)
@@ -40,8 +80,21 @@ initLoad();
 
 <template>
   <!-- 移动端布局 -->
-  <div v-if="isMobile" class="flex flex-col w-full h-full">
-    <!-- 顶部输入区域 -->
+  <div v-if="isMobile" ref="containerRef" class="flex flex-col w-full h-full">
+    <!-- 移动端顶部导航栏 -->
+    <div class="flex items-center justify-between p-2 bg-white dark:bg-[#24272e] border-b border-gray-200 dark:border-gray-700">
+      <button 
+        @click="goToChat"
+        class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        title="返回聊天"
+      >
+        <SvgIcon icon="ri:chat-3-line" class="text-xl text-gray-600 dark:text-gray-300" />
+      </button>
+      <h1 class="text-lg font-medium text-gray-900 dark:text-white">音乐生成</h1>
+      <div class="w-10 h-10"></div> <!-- 占位符保持居中 -->
+    </div>
+    
+    <!-- 输入区域 -->
     <div class="w-full h-auto max-h-[40%] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
       <n-tabs type="line" animated :default-value="gptServerStore.myData.TAB_MUSIC??'suno'" @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-border-color:#445ff6">
         <n-tab-pane name="start" tab=""> 

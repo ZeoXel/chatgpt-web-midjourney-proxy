@@ -6,6 +6,7 @@ import aiBlend from './aiBlend.vue'
 import aiDall from './aiDall.vue'
 import aiIdeoInput from './aiIdeoInput.vue'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
+import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import { SvgIcon } from '@/components/common'
 import { onMounted, ref, watch } from 'vue';
 import { gptServerStore } from '@/store';
@@ -19,6 +20,36 @@ const drawSent=(d:any )=> $emit('drawSent',d);
 const {isMobile}= useBasicLayout()
 
 const st= ref({drawType:'draw',tab:''});
+const containerRef = ref<HTMLElement | null>(null)
+
+// 定义可切换的tab列表
+const tabList = ['midjourney', 'dall.e', 'ideogram']
+
+// 滑动切换功能
+const switchToNextTab = () => {
+  const currentIndex = tabList.indexOf(st.value.tab)
+  const nextIndex = (currentIndex + 1) % tabList.length
+  const nextTab = tabList[nextIndex]
+  st.value.tab = nextTab
+  handleUpdateValue(nextTab)
+}
+
+const switchToPrevTab = () => {
+  const currentIndex = tabList.indexOf(st.value.tab)
+  const prevIndex = (currentIndex - 1 + tabList.length) % tabList.length
+  const prevTab = tabList[prevIndex]
+  st.value.tab = prevTab
+  handleUpdateValue(prevTab)
+}
+
+// 使用滑动手势
+if (isMobile) {
+  useSwipeGesture(
+    containerRef,
+    switchToNextTab,  // 左滑切换到下一个tab
+    switchToPrevTab   // 右滑切换到上一个tab
+  )
+}
 
 onMounted(()=>{
   //st.value.drawType='draw'
@@ -49,7 +80,7 @@ initLoad();
 
 </script>
 <template>
-<div class="overflow-y-auto bg-[#fafbfc] pt-2 dark:bg-[#18181c] h-full ">
+<div ref="containerRef" class="overflow-y-auto bg-[#fafbfc] pt-2 dark:bg-[#18181c] h-full ">
  
 <n-tabs type="line" animated :default-value="st.tab" @update:value="handleUpdateValue"  style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9">
     <n-tab-pane name="start" tab=""> 

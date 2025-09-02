@@ -1,13 +1,21 @@
 <script setup lang='ts'>
-import { computed } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import { NAvatar } from 'naive-ui'
 import { useUserStore } from '@/store'
+import { SvgIcon } from '@/components/common'
 import defaultAvatar from '@/assets/avatar.jpg'
 import { isString } from '@/utils/is'
 
+const Setting = defineAsyncComponent(() => import('@/components/common/Setting/index.vue'))
+
 const userStore = useUserStore()
+const showSetting = ref(false)
 
 const userInfo = computed(() => userStore.userInfo)
+
+function openSettings() {
+  showSetting.value = true
+}
 </script>
 
 <template>
@@ -34,7 +42,21 @@ const userInfo = computed(() => userStore.userInfo)
           v-if="isString(userInfo.description) && userInfo.description !== ''"
           v-html="userInfo.description"
         />
+        <span v-else>零素觉醒AI工具平台</span>
       </p>
     </div>
+    <!-- 设置按钮 -->
+    <div class="flex-shrink-0 ml-2">
+      <button
+        @click="openSettings"
+        class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        title="设置"
+      >
+        <SvgIcon icon="ri:settings-3-line" class="text-lg text-gray-600 dark:text-gray-400" />
+      </button>
+    </div>
   </div>
+
+  <!-- 设置弹窗 -->
+  <Setting v-if="showSetting" v-model:visible="showSetting" />
 </template>
