@@ -6,7 +6,6 @@ import { ChatLayout } from '@/views/chat/layout'
 import mjlayout from '@/views/mj/layout.vue'
 import sunoLayout from '@/views/suno/layout.vue'
 import viduLayout from '@/views/vidu/layout.vue'
-import videoLayout from '@/views/video/layout.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -97,7 +96,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/video',
     name: 'RootVideo',
-    component: videoLayout,
+    component: mjlayout,
     redirect: '/video/index',
     children: [
       {
@@ -108,19 +107,6 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-  {
-    path: '/vidu',
-    name: 'RootVidu',
-    component: viduLayout,
-    redirect: '/vidu/index',
-    children: [
-      {
-        path: '/vidu/:uuid?',
-        name: 'vidu',
-        component: () => import('@/views/vidu/index.vue'),
-      },
-    ],
-  },
 
   //调试
   // {

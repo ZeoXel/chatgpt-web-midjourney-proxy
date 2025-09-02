@@ -60,23 +60,7 @@ const urouter = useRouter() //
         <div class="text-[13px]">{{ $t('video.menu') }}</div>
       </div>
 
-      <!-- Vidu -->
-      <div v-if="!isDisableMenu ( 'vidu')"    class="flex items-center justify-center flex-col "   @click="  urouter.push('/vidu')"  :class="[ goHome =='vidu' ? 'active' : '']" >
-        <SvgIcon icon="material-symbols:video-camera-back" class="text-3xl"></SvgIcon>
-        <div class="text-[13px]">{{ $t('vidu.menu') }}</div>
-      </div>
 
-      <!-- 画廊 -->
-      <div  v-if="!isDisableMenu ( 'gallery')"  class="flex items-center justify-center flex-col " @click="homeStore.setMyData({act:'gallery'})" >
-        <SvgIcon icon="material-symbols:imagesmode-outline" class="text-3xl"></SvgIcon>
-        <div class="text-[13px]">{{$t('mjtab.gallery')}}</div>
-      </div>
-
-      <!-- GPTs -->
-      <div  v-if="!isDisableMenu ( 'gpts')"  class="flex items-center justify-center flex-col "  @click="homeStore.setMyData({act:'showgpts'}) " >
-        <SvgIcon icon="ri:apps-fill" class="text-3xl"></SvgIcon>
-        <div class="text-[13px]">GPTs</div>
-      </div>
   </div>
 
   <n-drawer v-model:show="st.show"  class="!h-[90vh] !max-h-[660px]"     placement="bottom" v-if="goHome=='draw'">
