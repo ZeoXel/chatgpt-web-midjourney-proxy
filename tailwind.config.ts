@@ -2,7 +2,8 @@ import type { Config } from "tailwindcss"
 
 export default {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}", // 根据你的项目路径调整
+    "./src/**/*.{js,ts,jsx,tsx,vue,html}",
+    "./index.html",
   ],
   theme: {
     extend: {

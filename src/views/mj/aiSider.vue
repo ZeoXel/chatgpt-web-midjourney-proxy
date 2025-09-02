@@ -5,7 +5,7 @@ import { useBasicLayout } from '@/hooks/useBasicLayout'
 const { isMobile } = useBasicLayout()
 import { NAvatar,NTooltip } from 'naive-ui'
 import { homeStore, useUserStore,useChatStore } from '@/store'
-import defaultAvatar from '@/assets/avatar.jpg'
+import defaultAvatar from '@/assets/avatar.png'
 import { router } from '@/router'
 import { isDisableMenu } from "@/api";
 import { useRouter } from "vue-router";

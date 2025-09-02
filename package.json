@@ -31,7 +31,6 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
-    "@tauri-apps/api": "^2.7.0",
     "@traptitech/markdown-it-katex": "^3.6.0",
     "@vueuse/core": "^9.13.0",
     "eventsource-parser": "^1.1.1",
@@ -58,7 +57,6 @@
     "@iconify/vue": "^4.1.0",
     "@openai/realtime-api-beta": "github:dooy/openai-realtime-api-beta",
     "@openai/realtime-wavtools": "github:dooy/openai-realtime-wavtools",
-    "@tauri-apps/cli": "^1.5.11",
     "@types/crypto-js": "^4.1.1",
     "@types/katex": "^0.16.0",
     "@types/markdown-it": "^12.2.3",
