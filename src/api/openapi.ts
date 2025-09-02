@@ -9,7 +9,6 @@ import { t } from "@/locales";
 import { ChatMessage } from "gpt-tokenizer/esm/GptEncoding";
 import { chatSetting } from "./chat";
 import { MessageApiInjection } from "naive-ui/es/message/src/MessageProvider";
-import { ideoSubmit } from "./ideo";
 import { error } from "console";
 //import {encode,  encodeChat}  from "gpt-tokenizer"
 //import {encode,  encodeChat} from "gpt-tokenizer/cjs/encoding/cl100k_base.js";
@@ -317,23 +316,6 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
             chat.loading=false;
             homeStore.setMyData({act:'updateChat', actData:chat });
        }
-   }else if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model.indexOf('ideogram')>-1 ){ //ideogram
-         mlog("ddlog 数据 ", data.data  )
-         try{
-            let d= await ideoSubmit(data.data );
-            mlog("ddlog 数据返回 ", d  )
-             const rz = d[0];
-            chat.text= rz.prompt//rz.p??`图片已完成`;
-            chat.opt={imageUrl:rz.url } ;
-            chat.loading = false;
-            homeStore.setMyData({act:'updateChat', actData:chat });
-
-         }catch(e){
-            //chat.text='失败！'+"\n```json\n"+JSON.stringify(d, null, 2)+"\n```\n";
-            chat.text='失败！'+"\n```json\n"+   e  +"\n```\n";
-            chat.loading=false;
-            homeStore.setMyData({act:'updateChat', actData:chat });
-         }
    }else if(  action=='gpt.dall-e-3'  && data.data.base64Array!=undefined ){ //执行变化
         mlog("gp-image-1 base64Array ",data.data ,  data.data.base64Array   )
      //let d= await gptFetch('/v1/images/edits', data.data);
@@ -409,10 +391,9 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
 export const isDallImageModel =(model:string|undefined)=>{
     if(!model) return false;
     if( model.indexOf('flux')>-1 ) return true; 
-    if( model.indexOf('ideogram')>-1 ) return true; 
     if( model.indexOf('gpt-image')>-1 ) return true; 
     if( model === 'nano-banana' ) return true;
-    return ['dall-e-2' ,'dall-e-3','ideogram' ].indexOf(model)>-1
+    return ['dall-e-2' ,'dall-e-3' ].indexOf(model)>-1
       
 }
 
