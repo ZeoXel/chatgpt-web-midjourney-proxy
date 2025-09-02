@@ -55,7 +55,7 @@ const urouter = useRouter() //
       </div>
 
       <!-- 视频 -->
-      <div v-if="!isDisableMenu ( 'video')"    class="flex items-center justify-center flex-col "   @click="  urouter.push('/vidu')"  :class="[ goHome =='vidu' ? 'active' : '']" >
+      <div v-if="!isDisableMenu ( 'video')"    class="flex items-center justify-center flex-col "   @click="  urouter.push('/video')"  :class="[ goHome =='video' ? 'active' : '']" >
         <SvgIcon icon="ri:video-on-line" class="text-3xl"></SvgIcon>
         <div class="text-[13px]">{{ $t('video.menu') }}</div>
       </div>

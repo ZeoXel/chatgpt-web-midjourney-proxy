@@ -79,4 +79,7 @@ export * from "./sse/fetchsse"
 export * from "./Recognition"
 export * from "./realtime"
 export * from "./vidu"
+export * from "./runway"
+export * from "./runwayml"
+export * from "./kling"
 
