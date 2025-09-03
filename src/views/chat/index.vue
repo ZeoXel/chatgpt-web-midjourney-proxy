@@ -26,6 +26,7 @@ import {
   homeStore,
   useChatStore,
   usePromptStore,
+  useBalanceStore,
 } from "@/store";
 import {
   chatSetting,
@@ -51,6 +52,7 @@ const dialog = useDialog();
 const ms = useMessage();
 const router = useRouter();
 const chatStore = useChatStore();
+const balanceStore = useBalanceStore();
 
 const { isMobile } = useBasicLayout();
 const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } =
@@ -171,6 +173,7 @@ async function onConversation() {
                 parentMessageId: data.id,
               },
               requestOptions: { prompt: message, options: { ...options } },
+              responseData: data, // 保存完整的响应数据
             });
 
             if (
@@ -193,6 +196,9 @@ async function onConversation() {
     };
 
     await fetchChatAPIOnce();
+    
+    // 聊天完成后实时更新余额
+    balanceStore.fetchBalance();
   } catch (error: any) {
     const errorMessage = error?.message ?? t("common.wrong");
 
@@ -288,6 +294,7 @@ async function onRegenerate(index: number) {
                 parentMessageId: data.id,
               },
               requestOptions: { prompt: message, options: { ...options } },
+              responseData: data, // 保存完整的响应数据
             });
 
             if (
@@ -307,6 +314,9 @@ async function onRegenerate(index: number) {
       updateChatSome(+uuid, index, { loading: false });
     };
     await fetchChatAPIOnce();
+    
+    // 重新生成完成后实时更新余额
+    balanceStore.fetchBalance();
   } catch (error: any) {
     if (error.message === "canceled") {
       updateChatSome(+uuid, index, {

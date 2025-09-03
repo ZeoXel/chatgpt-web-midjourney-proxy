@@ -27,6 +27,11 @@ export default {
     verify: 'Verify',
     unauthorizedTips: 'Unauthorized, please verify first.',
     stopResponding: 'Stop Responding',
+    close: 'Close',
+    copy: 'Copy',
+    copySuccess: 'Copy Success',
+    copyFailed: 'Copy Failed',
+    downloadSuccess: 'Download Success',
   },
   chat: {
     newChatButton: 'New Chat',
@@ -51,6 +56,8 @@ export default {
     clearHistoryConfirm: 'Are you sure to clear chat history?',
     preview: 'Preview',
     showRawText: 'Show as raw text',
+    viewJson: 'View JSON',
+    jsonInfo: 'JSON Info',
   },
   setting: {
     setting: 'Setting',
@@ -280,6 +287,20 @@ export default {
     "about": "About",
     "model": "Model",
     "sysname": "AI Drawing"
+  },
+
+  user: {
+    title: 'User Info',
+    balance: 'Balance',
+    unit: 'Credits',
+    lastUpdate: 'Last Update',
+    refresh: 'Refresh',
+    updateInfo: 'Balance updates automatically after each conversation',
+    rechargeAmount: 'Recharged Amount',
+    usedAmount: 'Used Amount',
+    remainingBalance: 'Remaining Balance',
+    recharge: 'Recharge',
+    rechargeSuccess: 'Recharge Successful',
   },
   "mjtab": {
     "chat": "Chat",

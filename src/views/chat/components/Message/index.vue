@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { NDropdown, useMessage } from 'naive-ui'
 import AvatarComponent from './Avatar.vue'
 import TextComponent from './Text.vue'
+import JsonDialog from './JsonDialog.vue'
 import { SvgIcon } from '@/components/common'
 import { useIconRender } from '@/hooks/useIconRender'
 import { t } from '@/locales'
@@ -43,6 +44,8 @@ const asRawText = ref(props.inversion && homeStore.myData.session.isCloseMdPrevi
 
 const messageRef = ref<HTMLElement>()
 
+const showJsonDialog = ref(false)
+
 const options = computed(() => {
   const common = [
     {
@@ -69,6 +72,11 @@ const options = computed(() => {
       icon: iconRender({ icon: asRawText.value ? 'ic:outline-code-off' : 'ic:outline-code' }),
     });
     common.unshift({
+      label: t('chat.viewJson'),
+      key: 'viewJson',
+      icon: iconRender({ icon: 'ri:code-s-slash-line' }),
+    });
+    common.unshift({
       label: t('mj.tts'),
       key: 'tts',
       icon: iconRender({ icon:'mdi:tts' }),
@@ -78,7 +86,7 @@ const options = computed(() => {
   return common
 })
 
-function handleSelect(key: 'copyText' | 'delete' | 'edit' | 'toggleRenderType' | 'tts') {
+function handleSelect(key: 'copyText' | 'delete' | 'edit' | 'toggleRenderType' | 'tts' | 'viewJson') {
   switch (key) {
     case 'tts': 
       homeStore.setMyData({act:'gpt.ttsv2', actData:{ index:props.index , uuid:props.chat.uuid, text:props.text } });
@@ -88,6 +96,9 @@ function handleSelect(key: 'copyText' | 'delete' | 'edit' | 'toggleRenderType' |
       return
     case 'toggleRenderType':
       asRawText.value = !asRawText.value
+      return
+    case 'viewJson':
+      showJsonDialog.value = true
       return
     case 'delete':
       emit('delete')
@@ -195,4 +206,10 @@ function handleRegenerate2() {
       </div>
     </div>
   </div>
+  
+  <!-- JSON Dialog -->
+  <JsonDialog 
+    v-model:visible="showJsonDialog" 
+    :json-data="chat"
+  />
 </template>

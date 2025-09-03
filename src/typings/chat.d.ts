@@ -10,6 +10,7 @@ declare namespace Chat {
 		loading?: boolean
 		conversationOptions?: ConversationRequest | null
 		requestOptions: { prompt: string; options?: ConversationRequest | null }
+		responseData?: ConversationResponse // 完整的响应数据
 		model?:string //模型
 		mjID?:string //MJ的ID
 		opt?:{

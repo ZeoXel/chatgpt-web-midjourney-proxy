@@ -27,6 +27,11 @@ export default {
     verify: '验证',
     unauthorizedTips: '未经授权，请先进行验证。',
     stopResponding: '停止响应',
+    close: '关闭',
+    copy: '复制',
+    copySuccess: '复制成功',
+    copyFailed: '复制失败',
+    downloadSuccess: '下载成功',
   },
   chat: {
     newChatButton: '新建聊天',
@@ -51,6 +56,8 @@ export default {
     clearHistoryConfirm: '确定清空记录?',
     preview: '预览',
     showRawText: '显示原文',
+    viewJson: '查看JSON',
+    jsonInfo: 'JSON信息',
   },
   setting: {
     setting: '设置',
@@ -100,6 +107,20 @@ export default {
     about: '关于',
     model: '模型',
     sysname: '零素觉醒AI工具平台',
+  },
+
+  user: {
+    title: '用户信息',
+    balance: '余额',
+    unit: '零素',
+    lastUpdate: '最后更新',
+    refresh: '刷新',
+    updateInfo: '余额会在每次对话后实时更新',
+    rechargeAmount: '充值金额',
+    usedAmount: '已使用',
+    remainingBalance: '剩余余额',
+    recharge: '充值',
+    rechargeSuccess: '充值成功',
   },
 
   mjtab: {
