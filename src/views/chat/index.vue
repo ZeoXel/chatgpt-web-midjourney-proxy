@@ -4,9 +4,7 @@ import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import {
-  NAutoComplete,
   NButton,
-  NInput,
   useDialog,
   useMessage,
   NAvatar,
@@ -18,6 +16,7 @@ import { useChat } from "./hooks/useChat";
 import { useUsingContext } from "./hooks/useUsingContext";
 import HeaderComponent from "./components/Header/index.vue";
 import { SvgIcon } from "@/components/common";
+import ChatInputWithModel from "@/components/ChatInputWithModel.vue";
 import { useBasicLayout } from "@/hooks/useBasicLayout";
 import {
   gptConfigStore,
@@ -38,7 +37,6 @@ import { t } from "@/locales";
 import drawListVue from "../mj/drawList.vue";
 import aiGPT from "../mj/aiGpt.vue";
 import AiSiderInput from "../mj/aiSiderInput.vue";
-import aiGptInput from "../mj/aiGptInput.vue";
 import AiTextSetting from "../mj/aiTextSetting.vue";
 import { useUserStore } from "@/store";
 
@@ -88,17 +86,27 @@ const userInfo = computed(() => userStore.userInfo);
 
 const backgroundImage = computed(()=>userInfo.value.backgroundImage ?? "");
 
-function handleSubmit() {
+function handleInput(text: string) {
+  prompt.value = text;
+}
+
+function handleSubmit(text?: string) {
   //onConversation() //把这个放到aiGpt
-  let message = prompt.value;
-  if (!message || message.trim() === "") return;
-  if (loading.value) return;
+  let message = text || prompt.value;
+  if (!message || message.trim() === "") {
+    return;
+  }
+  if (loading.value) {
+    return;
+  }
   loading.value = true;
   homeStore.setMyData({
     act: "gpt.submit",
-    actData: { prompt: prompt.value, uuid },
+    actData: { prompt: message, uuid },
   });
-  prompt.value = "";
+  if (!text) {
+    prompt.value = "";
+  }
 }
 
 async function onConversation() {
@@ -646,13 +654,8 @@ const ychat = computed(() => {
               v-html="homeStore.myData.session.notify"
               class="text-neutral-300 mt-4"
             ></div>
-            <div
-              class="flex items-center justify-center mt-4 text-center text-neutral-300"
-              v-else
-            >
-              <SvgIcon icon="ri:bubble-chart-fill" class="mr-2 text-3xl" />
-              <span>Aha~</span>
-            </div>
+            <!-- Empty chat placeholder removed -->
+            <div v-else></div>
           </template>
           <template v-else>
             <div>
@@ -694,67 +697,13 @@ const ychat = computed(() => {
     </main>
     <footer :class="footerClass" v-if="local !== 'draw'">
       <div class="w-full max-w-screen-xl m-auto">
-        <aiGptInput
-          v-if="
-            ['gpt-4-vision-preview', 'gpt-3.5-turbo-16k'].indexOf(
-              gptConfigStore.myData.model
-            ) > -1 || st.inputme
-          "
-          v-model:modelValue="prompt"
+        <ChatInputWithModel
+          :placeholder="placeholder"
           :disabled="buttonDisabled"
-          :searchOptions="searchOptions"
-          :renderOption="renderOption"
+          @submit="handleSubmit"
+          @input="handleInput"
+          ref="inputRef"
         />
-        <div class="flex items-center justify-between space-x-2" v-else>
-          <!-- 
-          <HoverButton v-if="!isMobile" @click="handleClear">
-            <span class="text-xl text-[#4f555e] dark:text-white">
-              <SvgIcon icon="ri:delete-bin-line" />
-            </span>
-          </HoverButton>
-          <HoverButton v-if="!isMobile" @click="handleExport">
-            <span class="text-xl text-[#4f555e] dark:text-white">
-              <SvgIcon icon="ri:download-2-line" />
-            </span>
-          </HoverButton>
-          <HoverButton @click="toggleUsingContext">
-            <span class="text-xl" :class="{ 'text-[#4b9e5f]': usingContext, 'text-[#a8071a]': !usingContext }">
-              <SvgIcon icon="ri:chat-history-line" />
-            </span>
-          </HoverButton>
-          -->
-
-          <NAutoComplete
-            v-model:value="prompt"
-            :options="searchOptions"
-            :render-label="renderOption"
-          >
-            <template #default="{ handleInput, handleBlur, handleFocus }">
-              <NInput
-                ref="inputRef"
-                v-model:value="prompt"
-                type="textarea"
-                :placeholder="placeholder"
-                :autosize="{ minRows: 1, maxRows: isMobile ? 4 : 8 }"
-                @input="handleInput"
-                @focus="handleFocus"
-                @blur="handleBlur"
-                @keypress="handleEnter"
-              />
-            </template>
-          </NAutoComplete>
-          <NButton
-            type="primary"
-            :disabled="buttonDisabled"
-            @click="handleSubmit"
-          >
-            <template #icon>
-              <span class="dark:text-black">
-                <SvgIcon icon="ri:send-plane-fill" />
-              </span>
-            </template>
-          </NButton>
-        </div>
       </div>
     </footer>
   </div>

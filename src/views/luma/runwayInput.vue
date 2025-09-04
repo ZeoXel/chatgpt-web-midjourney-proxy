@@ -294,7 +294,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                 <div   class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer" @click=" fsRef.click()">
                   
                    
-                    <SvgIcon icon="line-md:uploading-loop" class="text-[60px] text-green-300"  v-if="st.uploading"  ></SvgIcon>
+                    <SvgIcon icon="line-md:uploading-loop" class="text-2xl text-green-300"  v-if="st.uploading"  ></SvgIcon>
                     <!-- <video :src="runway.image_prompt" v-else-if="runway.image_prompt && isMp4(runway.image_prompt)" /> -->
                     <video   loop  playsinline    v-else-if="runway.image_prompt && isMp4(runway.image_prompt)"
                         referrerpolicy="no-referrer" 

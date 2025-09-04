@@ -1,0 +1,87 @@
+[
+  {
+    "service": "openai",
+    "userId": "dGVzdC1maW5hbA==",
+    "operation": "/chat-process",
+    "model": "gpt-3.5-turbo",
+    "tokens": 0,
+    "cost": 0,
+    "timestamp": 1756785179024,
+    "requestId": "1756785180864-dthlw4gw3",
+    "metadata": {
+      "prompt": "Final test for usage monitoring",
+      "error": "No usage data available",
+      "responseTime": 1840,
+      "statusCode": 200
+    },
+    "id": "1756785180865-lnqdhzab3"
+  },
+  {
+    "service": "openai",
+    "userId": "ZmluYWwtdGVzdC11",
+    "operation": "/chat-process",
+    "model": "gpt-3.5-turbo",
+    "tokens": 0,
+    "cost": 0,
+    "timestamp": 1756785265623,
+    "requestId": "1756785267653-uvy2w2t4k",
+    "metadata": {
+      "prompt": "Testing complete usage monitoring system",
+      "error": "No usage data available",
+      "responseTime": 2030,
+      "statusCode": 200
+    },
+    "id": "1756785267653-pud7nbl9x"
+  },
+  {
+    "service": "midjourney",
+    "userId": "ZmluYWwtdGVzdC11",
+    "operation": "/submit/imagine",
+    "model": "midjourney-v6",
+    "tokens": 0,
+    "cost": 0.04,
+    "timestamp": 1756785359811,
+    "requestId": "1756785362059-gbs4714qi",
+    "metadata": {
+      "action": "imagine",
+      "prompt": "imagine a beautiful landscape",
+      "responseTime": 2248,
+      "statusCode": 404
+    },
+    "id": "1756785362060-kiri4wxk4"
+  },
+  {
+    "service": "openai",
+    "userId": "bGl2ZS12ZXJpZmlj",
+    "operation": "/chat-process",
+    "model": "gpt-3.5-turbo",
+    "tokens": 0,
+    "cost": 0,
+    "timestamp": 1756792234888,
+    "requestId": "1756792236275-953qe09c6",
+    "metadata": {
+      "prompt": "实时验证用量监控系统",
+      "error": "No usage data available",
+      "responseTime": 1387,
+      "statusCode": 200
+    },
+    "id": "1756792236275-paoefvj3d"
+  },
+  {
+    "service": "openai",
+    "userId": "::1",
+    "operation": "/chat-process",
+    "model": "gpt-3.5-turbo",
+    "tokens": 0,
+    "cost": 0,
+    "timestamp": 1756792899203,
+    "requestId": "1756792899872-rxojvhpns",
+    "metadata": {
+      "prompt": "test usage tracking",
+      "error": "No usage data available",
+      "responseTime": 669,
+      "statusCode": 200
+    },
+    "id": "1756792899872-kajh8c41a"
+  }
+]

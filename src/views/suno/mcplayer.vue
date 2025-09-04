@@ -46,7 +46,7 @@ watch(()=>homeStore.myData.act, (n)=>{
         <NImage :src="pObj.image_large_url" class="w-full h-full">
              <template #placeholder>
                       <div class="w-full h-full justify-center items-center flex"  >
-                       <SvgIcon icon="line-md:downloading-loop" class="text-[60px] text-green-300"   ></SvgIcon>
+                       <SvgIcon icon="line-md:downloading-loop" class="text-2xl text-green-300"   ></SvgIcon>
                       </div>
                 </template>
         </NImage>

@@ -1,0 +1,29 @@
+{
+  "userId": "authenticated-user",
+  "balance": 1100,
+  "lastUpdated": 1756806487403,
+  "transactions": [
+    {
+      "id": "init-1756806077024",
+      "type": "credit",
+      "amount": 1000,
+      "balance": 1000,
+      "timestamp": 1756806077024,
+      "metadata": {
+        "reason": "Initial balance"
+      }
+    },
+    {
+      "id": "credit-1756806487402-7swmyhb1e",
+      "type": "credit",
+      "amount": 100,
+      "balance": 1100,
+      "timestamp": 1756806487403,
+      "metadata": {
+        "method": "admin_recharge",
+        "operator": "system",
+        "timestamp": 1756806487402
+      }
+    }
+  ]
+}

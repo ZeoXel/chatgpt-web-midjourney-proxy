@@ -53,12 +53,10 @@ const show = computed({
         <NTabPane v-if="isChatGPTAPI" name="Advanced" tab="Advanced">
           <template #tab>
             <SvgIcon class="text-lg" icon="ri:equalizer-line" />
-            <!-- <span class="ml-2">{{ $t('setting.advanced') }}</span> -->
-            <span class="ml-2">{{ $t('mjset.model') }}</span>
+            <span class="ml-2">{{ $t('setting.advanced') }}</span>
           </template>
           <div class="min-h-[100px]">
-            <!-- <Advanced /> -->
-            <aiModel/>
+            <Advanced />
           </div>
         </NTabPane>
 
@@ -68,14 +66,6 @@ const show = computed({
             <span class="ml-2">{{ $t('mjset.server') }}</span>
           </template>
           <aiSetServer />
-        </NTabPane>
-        <NTabPane name="Config" tab="Config">
-          <template #tab>
-            <SvgIcon class="text-lg" icon="ri:list-settings-line" />
-            <!-- <span class="ml-2">{{ $t('setting.config') }}</span> -->
-            <span class="ml-2">{{ $t('mjset.about') }}</span>
-          </template>
-          <About />
         </NTabPane>
 
       </NTabs>

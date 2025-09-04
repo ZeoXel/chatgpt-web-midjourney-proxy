@@ -146,7 +146,7 @@ defineExpose({ searchQ })
                 class="group-hover:scale-[130%] duration-300 shrink-0 overflow-hidden bg-base object-cover rounded-full bc-avatar w-[80px] h-[80px]">
                     <template #placeholder>
                       <div class="w-full h-full justify-center items-center flex"  >
-                       <SvgIcon icon="line-md:downloading-loop" class="text-[60px] text-green-300"   ></SvgIcon>
+                       <SvgIcon icon="line-md:downloading-loop" class="text-2xl text-green-300"   ></SvgIcon>
                       </div>
                     </template>
                 </NImage>

@@ -85,19 +85,19 @@ initLoad();
                 <n-image  lazy  width="100"  :src="item.image_path" preview-disabled  >
                     <template #placeholder>
                         <div class="w-full h-full justify-center items-center flex"  >
-                        <SvgIcon icon="line-md:downloading-loop" class="text-[40px] text-green-300"   ></SvgIcon>
+                        <SvgIcon icon="line-md:downloading-loop" class="text-xl text-green-300"   ></SvgIcon>
                         </div>
                     </template>
                 </n-image>
                 <div class="absolute top-0 right-0 w-full h-full flex justify-center items-center" v-if="st.playid==item.id">
-                    <SvgIcon icon="mdi:pause-circle-outline" class="text-[40px] text-[#fff]" v-if="sp.status=='pause'"></SvgIcon>
-                    <SvgIcon icon="svg-spinners:bars-scale-middle" class="text-[40px] text-[#fff]" v-else></SvgIcon>
+                    <SvgIcon icon="mdi:pause-circle-outline" class="text-xl text-[#fff]" v-if="sp.status=='pause'"></SvgIcon>
+                    <SvgIcon icon="svg-spinners:bars-scale-middle" class="text-xl text-[#fff]" v-else></SvgIcon>
                 </div>
             </template>
             <template v-else>
                 <n-image  lazy  width="100"  :src="item.image_path" preview-disabled  />
                 <div class="absolute top-0 right-0  w-full h-full justify-center items-center flex"  >
-                    <SvgIcon icon="line-md:downloading-loop" class="text-[40px] text-green-300"   ></SvgIcon>
+                    <SvgIcon icon="line-md:downloading-loop" class="text-xl text-green-300"   ></SvgIcon>
                 </div>
             </template>
         </div> 

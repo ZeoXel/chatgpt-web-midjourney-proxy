@@ -235,7 +235,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                             <n-image  lazy  width="100"  :src="exSuno.image_url" preview-disabled  >
                                 <template #placeholder>
                                     <div class="w-full h-full justify-center items-center flex"  >
-                                    <SvgIcon icon="line-md:downloading-loop" class="text-[40px] text-green-300"   ></SvgIcon>
+                                    <SvgIcon icon="line-md:downloading-loop" class="text-xl text-green-300"   ></SvgIcon>
                                     </div>
                                 </template>
                             </n-image>

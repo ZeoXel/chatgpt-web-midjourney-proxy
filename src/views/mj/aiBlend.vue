@@ -71,7 +71,7 @@ const drawlocalized = computed(() => {
     </div>
     <div class="w-[var(--my-blend-img-size)] h-[var(--my-blend-img-size)] mt-2 bg-[#999] overflow-hidden rounded-sm flex justify-center items-center cursor-pointer"
      @click="fsRef.click()" v-if="base64Array.length<6">
-        <SvgIcon icon="mdi:add-bold" class="text-[40px] text-[#fff]"></SvgIcon>
+        <SvgIcon icon="mdi:add-bold" class="text-xl text-[#fff]"></SvgIcon>
     </div>
 </div>
 <div   class="flex justify-end pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo" style="background-color: #445ff6;">{{$t('mjchat.blendStart')}}</NButton> </div>

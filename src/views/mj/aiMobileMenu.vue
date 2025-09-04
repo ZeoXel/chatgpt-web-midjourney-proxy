@@ -66,11 +66,6 @@ const urouter = useRouter() //
         <div class="text-[13px]">{{ $t('vidu.menu') }}</div>
       </div>
 
-      <!-- 画廊 -->
-      <div  v-if="!isDisableMenu ( 'gallery')"  class="flex items-center justify-center flex-col " @click="homeStore.setMyData({act:'gallery'})" >
-        <SvgIcon icon="material-symbols:imagesmode-outline" class="text-3xl"></SvgIcon>
-        <div class="text-[13px]">{{$t('mjtab.gallery')}}</div>
-      </div>
 
       <!-- GPTs -->
       <div  v-if="!isDisableMenu ( 'gpts')"  class="flex items-center justify-center flex-col "  @click="homeStore.setMyData({act:'showgpts'}) " >
