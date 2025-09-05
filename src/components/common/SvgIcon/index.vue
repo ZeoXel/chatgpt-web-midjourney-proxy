@@ -15,15 +15,19 @@ const attrs = useAttrs()
 
 // Merge all attributes including class, style, and any others
 const bindAttrs = computed(() => {
+  // Get class string safely
+  const classStr = (attrs.class as string) || '';
+  
   // Default size if no class specifies size
-  const hasSize = attrs.class && 
-    (attrs.class as string).includes('w-') || 
-    (attrs.class as string).includes('h-') ||
-    (attrs.class as string).includes('text-');
+  const hasSize = classStr && (
+    classStr.includes('w-') || 
+    classStr.includes('h-') ||
+    classStr.includes('text-')
+  );
   
   return {
     ...attrs,
-    class: `${!hasSize ? 'w-5 h-5' : ''} ${(attrs.class as string) || ''}`.trim(),
+    class: `${!hasSize ? 'w-5 h-5' : ''} ${classStr}`.trim(),
     style: (attrs.style as string) || '',
   }
 })
