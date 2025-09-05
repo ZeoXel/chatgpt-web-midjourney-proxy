@@ -90,7 +90,7 @@ watch(()=>gptConfigStore.myData , toMyuid , {deep:true})
         <div v-for="(item, index) of dataSources" :key="index">
           <a
             class="relative flex items-center gap-3 px-3 py-3 break-all border rounded-md cursor-pointer hover:bg-neutral-100 group dark:border-neutral-800 dark:hover:bg-[#24272e]"
-            :class="isActive(item.uuid) && ['border-[#445ff6]', 'bg-neutral-100', 'text-[#445ff6]', 'dark:bg-[#24272e]', 'dark:border-[#445ff6]', 'pr-14']"
+            :class="[isActive(item.uuid) && ['border-[#445ff6]', 'bg-neutral-100', 'text-[#445ff6]', 'dark:bg-[#24272e]', 'dark:border-[#445ff6]'], 'pr-14']"
             @click="handleSelect(item)"
           >
              
@@ -101,25 +101,26 @@ watch(()=>gptConfigStore.myData , toMyuid , {deep:true})
                 @keypress="handleEnter(item, false, $event)"
               />
              </AiListText>
-            <div v-if="isActive(item.uuid)" class="absolute z-10 flex visible right-1">
-              <template v-if="item.isEdit">
+            <div class="absolute z-10 flex visible right-1 opacity-0 group-hover:opacity-100 transition-opacity" :class="{ 'opacity-100': isActive(item.uuid) }">
+              <template v-if="item.isEdit && isActive(item.uuid)">
                 <button class="p-1" @click="handleEdit(item, false, $event)">
                   <SvgIcon icon="ri:save-line" />
                 </button>
               </template>
               <template v-else>
-                <button class="p-1">
-                  <SvgIcon icon="ri:edit-line" @click="handleEdit(item, true, $event)" />
+                <button v-if="isActive(item.uuid)" class="p-1" @click="handleEdit(item, true, $event)">
+                  <SvgIcon icon="ri:edit-line" />
                 </button>
-                <NPopconfirm placement="bottom" @positive-click="handleDeleteDebounce(index, $event)">
-                  <template #trigger>
-                    <button class="p-1">
-                      <SvgIcon icon="ri:delete-bin-line" />
-                    </button>
-                  </template>
-                  {{ $t('chat.deleteHistoryConfirm') }}
-                </NPopconfirm>
               </template>
+              <!-- 删除按钮始终显示，不依赖激活状态 -->
+              <NPopconfirm v-if="!item.isEdit" placement="bottom" @positive-click="handleDeleteDebounce(index, $event)">
+                <template #trigger>
+                  <button class="p-1 text-red-500 hover:text-red-600">
+                    <SvgIcon icon="ri:delete-bin-line" />
+                  </button>
+                </template>
+                {{ $t('chat.deleteHistoryConfirm') }}
+              </NPopconfirm>
             </div>
           </a>
         </div>

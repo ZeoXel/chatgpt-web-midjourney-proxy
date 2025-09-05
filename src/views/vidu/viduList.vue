@@ -250,9 +250,6 @@ const stats = computed(() => {
     
     <div v-else-if="tasks.length === 0" class="py-12">
       <NEmpty description="还没有生成的视频">
-        <template #icon>
-          <SvgIcon icon="material-symbols:video-library-outline" class="text-6xl text-gray-400" />
-        </template>
       </NEmpty>
     </div>
 
@@ -411,7 +408,6 @@ const stats = computed(() => {
           <!-- 失败状态 -->
           <div v-else-if="task.state === 'failed'" class="text-center py-8">
             <div class="text-red-500">
-              <SvgIcon icon="material-symbols:error" class="text-4xl" />
               <p class="mt-2">生成失败</p>
               <p class="text-sm mt-1">{{ getViduErrorMessage(task.err_code) }}</p>
             </div>

@@ -23,7 +23,7 @@ const heroIconMapping: Record<string, any> = {
   // Navigation & UI
   'ri:align-justify': HeroiconsOutline.Bars3Icon,
   'ri:align-right': HeroiconsOutline.Bars3BottomRightIcon,
-  'ri:apps-fill': HeroiconsSolid.Squares2X2Icon,
+  'ri:apps-fill': HeroiconsSolid.PuzzlePieceIcon,
   'ri:more-2-fill': HeroiconsOutline.EllipsisHorizontalIcon,
   'icon-park-outline:right': HeroiconsOutline.ChevronRightIcon,
   'ri:arrow-up-s-line': HeroiconsOutline.ChevronUpIcon,
@@ -97,6 +97,7 @@ const heroIconMapping: Record<string, any> = {
   'ri:star-line': HeroiconsOutline.StarIcon,
   
   // Settings & Configuration
+  'ri:settings-line': HeroiconsOutline.Cog6ToothIcon,
   'ri:settings-3-line': HeroiconsOutline.Cog6ToothIcon,
   'ri:settings-4-line': HeroiconsOutline.Cog8ToothIcon,
   'ri:user-settings-line': HeroiconsOutline.UserIcon,
