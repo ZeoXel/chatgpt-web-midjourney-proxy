@@ -13,10 +13,20 @@ const props = defineProps<Props>()
 
 const attrs = useAttrs()
 
-const bindAttrs = computed<{ class: string; style: string }>(() => ({
-  class: (attrs.class as string) || '',
-  style: (attrs.style as string) || '',
-}))
+// Merge all attributes including class, style, and any others
+const bindAttrs = computed(() => {
+  // Default size if no class specifies size
+  const hasSize = attrs.class && 
+    (attrs.class as string).includes('w-') || 
+    (attrs.class as string).includes('h-') ||
+    (attrs.class as string).includes('text-');
+  
+  return {
+    ...attrs,
+    class: `${!hasSize ? 'w-5 h-5' : ''} ${(attrs.class as string) || ''}`.trim(),
+    style: (attrs.style as string) || '',
+  }
+})
 
 // Comprehensive Heroicons icon name mapping
 const heroIconMapping: Record<string, any> = {

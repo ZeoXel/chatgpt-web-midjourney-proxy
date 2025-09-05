@@ -279,7 +279,7 @@ const randomSeed = () => {
           class="w-full h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors"
           @click="() => fileInputRefs[formData.images.length]?.click()"
         >
-          <SvgIcon icon="material-symbols:add" class="text-gray-400 text-2xl" />
+          <span class="text-gray-400 text-sm">点击上传</span>
           <input
             :ref="el => fileInputRefs[formData.images.length] = el as HTMLInputElement"
             type="file"
