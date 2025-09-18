@@ -75,7 +75,7 @@ initLoad()
 
                     
                       <n-button-group size="tiny">
-                        <n-button  size="tiny" round ghost @click="TaskDown( item )"   ><SvgIcon icon="mdi:download" /> {{ $t('video.download') }}</n-button>
+                        <n-button size="tiny" round ghost @click="TaskDown( item )"><SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}</n-button>
                         <!-- <n-button   size="tiny"  round ghost   ><SvgIcon icon="ri:video-add-line" /> {{ $t('video.extend') }}</n-button> -->
                         <n-button   size="tiny"  round ghost    > 
                                 <n-popconfirm @positive-click="()=>deleteGo(item)" placement="bottom">

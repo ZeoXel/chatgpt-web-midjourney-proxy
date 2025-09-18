@@ -79,8 +79,8 @@ watch(()=>homeStore.myData.act,debounce( (n)=> {
           class="flex items-center justify-center w-11 h-11"
           @click="handleUpdateCollapsed" v-if="isMobile"
         >
-          <SvgIcon v-if="collapsed" class="text-2xl" icon="ri:align-justify" />
-          <SvgIcon v-else class="text-2xl" icon="ri:align-right" />
+          <SvgIcon v-if="collapsed" size="lg" icon="ri:align-justify" />
+          <SvgIcon v-else size="lg" icon="ri:align-right" />
         </button>
       </div>
       <h1  class="flex-1 px-4 pr-6 overflow-hidden cursor-pointer select-none text-ellipsis whitespace-nowrap"
@@ -90,12 +90,12 @@ watch(()=>homeStore.myData.act,debounce( (n)=> {
       <div class="flex items-center space-x-2">
         <HoverButton @click="handleExport">
           <span class="text-xl text-[#4f555e] dark:text-white">
-            <SvgIcon icon="ri:download-2-line" />
+            <SvgIcon icon="ri:download-2-line" size="md" />
           </span>
         </HoverButton>
         <HoverButton @click="handleClear">
           <span class="text-xl text-[#4f555e] dark:text-white">
-            <SvgIcon icon="ri:delete-bin-line" />
+            <SvgIcon icon="ri:delete-bin-line" size="md" />
           </span>
         </HoverButton>
       </div>
@@ -105,14 +105,14 @@ watch(()=>homeStore.myData.act,debounce( (n)=> {
     <!-- <div @click="st.isShow=true" class="absolute left-1/2   top-full -translate-x-1/2 cursor-pointer select-none rounded-b-md px-2"> -->
         <div class="flex items-center   justify-center space-x-1 cursor-pointer hover:text-primary" v-if="homeStore.myData.local!='draw'">
             <template   v-if="nGptStore.gpts">
-             <SvgIcon icon="ri:apps-fill" /> 
+             <SvgIcon icon="ri:apps-fill" size="md" /> 
              <span class="line-clamp-1 overflow-hidden">{{ nGptStore.gpts.name }}</span> 
             </template>
             <template v-else >
-            <SvgIcon icon="heroicons:sparkles" /> 
+            <SvgIcon icon="heroicons:sparkles" size="md" /> 
             <span >{{ nGptStore.model }}</span> 
             </template>
-            <SvgIcon icon="icon-park-outline:right" />
+            <SvgIcon icon="icon-park-outline:right" size="sm" />
         </div>
     </div>
   </header>

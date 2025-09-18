@@ -104,7 +104,7 @@ watch(
             </NButton>
           </div>
           <NButton @click="handleClearAll">
-            <SvgIcon icon="ri:close-circle-line" />
+            <SvgIcon icon="ri:close-circle-line" size="md" />
           </NButton>
         </div>
       </main>

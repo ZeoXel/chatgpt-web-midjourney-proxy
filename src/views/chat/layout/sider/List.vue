@@ -82,7 +82,7 @@ watch(()=>gptConfigStore.myData , toMyuid , {deep:true})
     <div class="flex flex-col gap-2 text-sm">
       <template v-if="!dataSources.length">
         <div class="flex flex-col items-center mt-4 text-center text-neutral-300">
-          <SvgIcon icon="ri:inbox-line" class="mb-2 text-3xl" />
+          <SvgIcon icon="ri:inbox-line" size="2xl" class="mb-2" />
           <span>{{ $t('common.noData') }}</span>
         </div>
       </template>
@@ -104,17 +104,17 @@ watch(()=>gptConfigStore.myData , toMyuid , {deep:true})
             <div v-if="isActive(item.uuid)" class="absolute z-10 flex visible right-1">
               <template v-if="item.isEdit">
                 <button class="p-1" @click="handleEdit(item, false, $event)">
-                  <SvgIcon icon="ri:save-line" />
+                  <SvgIcon icon="ri:save-line" size="sm" />
                 </button>
               </template>
               <template v-else>
                 <button class="p-1">
-                  <SvgIcon icon="ri:edit-line" @click="handleEdit(item, true, $event)" />
+                  <SvgIcon icon="ri:edit-line" size="sm" @click="handleEdit(item, true, $event)" />
                 </button>
                 <NPopconfirm placement="bottom" @positive-click="handleDeleteDebounce(index, $event)">
                   <template #trigger>
                     <button class="p-1">
-                      <SvgIcon icon="ri:delete-bin-line" />
+                      <SvgIcon icon="ri:delete-bin-line" size="sm" />
                     </button>
                   </template>
                   {{ $t('chat.deleteHistoryConfirm') }}

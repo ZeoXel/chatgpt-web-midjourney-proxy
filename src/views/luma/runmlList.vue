@@ -74,7 +74,7 @@ initLoad();
                         
                         
                       <n-button-group size="tiny">
-                        <n-button  size="tiny" round ghost   v-if="item.status=='SUCCEEDED'" ><a :href="item.output[0]" target="_blank" class="flex"><SvgIcon icon="mdi:download" /> {{ $t('video.download') }} </a></n-button>
+                        <n-button size="tiny" round ghost v-if="item.status=='SUCCEEDED'"><a :href="item.output[0]" target="_blank" class="flex"><SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}</a></n-button>
                         <n-button   size="tiny"  round ghost    > 
                              <n-popconfirm @positive-click="()=>deleteGo(item)" placement="bottom">
                                 <template #trigger> <div class=" cursor-pointer"><SvgIcon icon="mdi:delete"  /></div></template>

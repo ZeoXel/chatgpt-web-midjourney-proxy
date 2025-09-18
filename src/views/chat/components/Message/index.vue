@@ -144,7 +144,7 @@ function handleRegenerate2() {
         <span v-if="chat.model"  class="text-[#b4bbc4]/50">{{ chat.model }}</span>
         <!-- <span>{{ chat.opt?.progress }}</span> -->
         <template  v-if="chat.opt?.status=='SUCCESS'">
-          <SvgIcon icon="ri:restart-line" @click="sendReload"  class="cursor-pointer text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300 " ></SvgIcon>
+          <SvgIcon icon="ri:restart-line" size="md" @click="sendReload" class="cursor-pointer text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300" />
           
           <div @click="getSeed(chat, message )" class="cursor-pointer">
             <span v-if="chat.opt?.seed">Seed:{{ chat.opt?.seed }}</span>

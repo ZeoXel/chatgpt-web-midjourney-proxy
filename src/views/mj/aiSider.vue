@@ -48,7 +48,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger>
                     <div  class="flex h-full justify-center items-center py-1 flex-col " :class="[ goHome =='Chat' ? 'text-[#445ff6]' : '']">
-                    <SvgIcon icon="ri:wechat-line" class="text-3xl  flex-1"></SvgIcon>
+                    <SvgIcon icon="ri:wechat-line" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.chat')}}</span>
                     </div>
                  </template>
@@ -61,7 +61,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger>
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" :class="[goHome=='draw' ? 'text-[#445ff6]' : '']">
-                    <SvgIcon icon="ic:outline-palette" class="text-3xl flex-1"></SvgIcon>
+                    <SvgIcon icon="ic:outline-palette" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.draw')}}</span>
                     </div>
                   </template>
@@ -75,7 +75,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='music' ? 'text-[#445ff6]' : '']">
-                      <SvgIcon icon="arcticons:wynk-music" class="text-3xl flex-1"></SvgIcon>
+                      <SvgIcon icon="arcticons:wynk-music" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('suno.menu') }}</span>
                     </div>
                   </template>
@@ -89,7 +89,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='video' ? 'text-[#445ff6]' : '']">
-                      <SvgIcon icon="ri:video-on-line" class="text-3xl flex-1"></SvgIcon>
+                      <SvgIcon icon="ri:video-on-line" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('video.menu') }}</span>
                     </div>
                   </template>
@@ -103,7 +103,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='vidu' ? 'text-[#445ff6]' : '']">
-                      <SvgIcon icon="material-symbols:video-camera-back" class="text-3xl flex-1"></SvgIcon>
+                      <SvgIcon icon="material-symbols:engineering" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('vidu.menu') }}</span>
                     </div>
                   </template>
@@ -116,7 +116,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger> 
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" >
-                    <SvgIcon icon="material-symbols:imagesmode-outline" class="text-3xl flex-1"></SvgIcon>
+                    <SvgIcon icon="material-symbols:imagesmode-outline" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.gallery')}}</span>
                     </div> 
                   </template>
@@ -129,7 +129,7 @@ const chatId= computed(()=>chatStore.active??'1002' );
                 <n-tooltip placement="right" trigger="hover">
                   <template #trigger> 
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" >
-                    <SvgIcon icon="ri:apps-fill" class="text-3xl flex-1"></SvgIcon>
+                    <SvgIcon icon="ri:apps-fill" size="2xl" class="flex-1" />
                      <span class="text-[10px]">GPTs</span>
                     </div> 
                   </template>

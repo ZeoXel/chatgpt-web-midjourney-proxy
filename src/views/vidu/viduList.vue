@@ -214,7 +214,7 @@ const stats = computed(() => {
           >
             <template #trigger>
               <NButton size="small" type="warning" quaternary>
-                <SvgIcon icon="material-symbols:cleaning-services" />
+                <SvgIcon icon="material-symbols:cleaning-services" size="md" />
                 清理
               </NButton>
             </template>
@@ -251,7 +251,7 @@ const stats = computed(() => {
     <div v-else-if="tasks.length === 0" class="py-12">
       <NEmpty description="还没有生成的视频">
         <template #icon>
-          <SvgIcon icon="material-symbols:video-library-outline" class="text-6xl text-gray-400" />
+          <SvgIcon icon="material-symbols:video-library-outline" size="6xl" class="text-gray-400" />
         </template>
       </NEmpty>
     </div>
@@ -277,7 +277,7 @@ const stats = computed(() => {
               <NTooltip trigger="hover">
                 <template #trigger>
                   <NButton quaternary @click="copyPrompt(task.prompt)">
-                    <SvgIcon icon="material-symbols:content-copy" />
+                    <SvgIcon icon="material-symbols:content-copy" size="sm" />
                   </NButton>
                 </template>
                 复制提示词
@@ -287,7 +287,7 @@ const stats = computed(() => {
               <NTooltip trigger="hover">
                 <template #trigger>
                   <NButton quaternary type="error" @click="deleteTask(task)">
-                    <SvgIcon icon="material-symbols:delete" />
+                    <SvgIcon icon="material-symbols:delete" size="sm" />
                   </NButton>
                 </template>
                 删除任务
@@ -341,7 +341,7 @@ const stats = computed(() => {
                       type="primary"
                       @click="downloadVideo(creation)"
                     >
-                      <SvgIcon icon="material-symbols:download" />
+                      <SvgIcon icon="material-symbols:download" size="sm" />
                     </NButton>
                   </template>
                   下载视频
@@ -362,7 +362,7 @@ const stats = computed(() => {
                 size="small"
               >
                 <NButton type="primary" @click="refreshTask(task)">
-                  <SvgIcon icon="material-symbols:refresh" />
+                  <SvgIcon icon="material-symbols:refresh" size="md" />
                   重新获取
                 </NButton>
                 <NButton type="error" @click="cancelTask(task)">
@@ -387,7 +387,7 @@ const stats = computed(() => {
                 size="small"
               >
                 <NButton type="primary" @click="refreshTask(task)">
-                  <SvgIcon icon="material-symbols:refresh" />
+                  <SvgIcon icon="material-symbols:refresh" size="md" />
                   重新获取
                 </NButton>
                 <NButton type="error" @click="cancelTask(task)">
@@ -411,7 +411,7 @@ const stats = computed(() => {
           <!-- 失败状态 -->
           <div v-else-if="task.state === 'failed'" class="text-center py-8">
             <div class="text-red-500">
-              <SvgIcon icon="material-symbols:error" class="text-4xl" />
+              <SvgIcon icon="material-symbols:error" size="4xl" />
               <p class="mt-2">生成失败</p>
               <p class="text-sm mt-1">{{ getViduErrorMessage(task.err_code) }}</p>
             </div>

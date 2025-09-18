@@ -85,13 +85,13 @@ initLoad();
                 <n-image  lazy  width="100"  :src="item.image_path" preview-disabled  >
                     <template #placeholder>
                         <div class="w-full h-full justify-center items-center flex"  >
-                        <SvgIcon icon="line-md:downloading-loop" class="text-[40px] text-green-300"   ></SvgIcon>
+                        <SvgIcon icon="line-md:downloading-loop" size="3xl" class="text-green-300" />
                         </div>
                     </template>
                 </n-image>
                 <div class="absolute top-0 right-0 w-full h-full flex justify-center items-center" v-if="st.playid==item.id">
-                    <SvgIcon icon="mdi:pause-circle-outline" class="text-[40px] text-[#fff]" v-if="sp.status=='pause'"></SvgIcon>
-                    <SvgIcon icon="svg-spinners:bars-scale-middle" class="text-[40px] text-[#fff]" v-else></SvgIcon>
+                    <SvgIcon icon="mdi:pause-circle-outline" size="3xl" class="text-[#fff]" v-if="sp.status=='pause'" />
+                    <SvgIcon icon="svg-spinners:bars-scale-middle" size="3xl" class="text-[#fff]" v-else />
                 </div>
             </template>
             <template v-else>
@@ -127,11 +127,11 @@ initLoad();
                 </template>
                 <!-- <div class="text-[8px] flex items-center border-[1px] border-gray-500/30 px-1 list-none rounded-md" v-if="item.major_model_version"> {{item.major_model_version}}</div> -->
                 <n-popconfirm @positive-click="()=>deleteGo(item.id )" placement="bottom">
-                    <template #trigger><SvgIcon icon="mdi:delete" class="cursor-pointer"   /></template>
+                    <template #trigger><SvgIcon icon="mdi:delete" size="sm" class="cursor-pointer" /></template>
                      {{ $t('mj.confirmDelete') }}
                 </n-popconfirm>
-                <SvgIcon icon="mdi:play-circle-outline" class="cursor-pointer"  @click="goPlay( item )" />
-                <a :href="item.song_path" download  target="_blank"><SvgIcon icon="mdi:download" class="cursor-pointer"/></a>
+                <SvgIcon icon="mdi:play-circle-outline" size="lg" class="cursor-pointer" @click="goPlay( item )" />
+                <a :href="item.song_path" download target="_blank"><SvgIcon icon="mdi:download" size="sm" class="cursor-pointer" /></a>
             </div>
            
         </div>

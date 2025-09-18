@@ -294,7 +294,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                 <div   class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer" @click=" fsRef.click()">
                   
                    
-                    <SvgIcon icon="line-md:uploading-loop" class="text-[60px] text-green-300"  v-if="st.uploading"  ></SvgIcon>
+                    <SvgIcon icon="line-md:uploading-loop" size="5xl" class="text-green-300" v-if="st.uploading" />
                     <!-- <video :src="runway.image_prompt" v-else-if="runway.image_prompt && isMp4(runway.image_prompt)" /> -->
                     <video   loop  playsinline    v-else-if="runway.image_prompt && isMp4(runway.image_prompt)"
                         referrerpolicy="no-referrer" 
@@ -325,7 +325,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                         <NTag v-if="runway.text_prompt!='' || runway.image_prompt!='' || exRunway" type="primary" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
                      
                 </div>
-                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
+                <NButton :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line" size="sm" /> {{$t('video.generate')}}</NButton> 
             </div>
         </div>
     </div>

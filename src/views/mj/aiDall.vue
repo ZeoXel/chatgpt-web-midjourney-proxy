@@ -193,7 +193,7 @@ const selectFile=(input:any)=>{
 
         <div   @click="fsRef.click()" v-if="base64Array.length<3"
          class="w-[var(--my-blend-img-size)] h-[var(--my-blend-img-size)] mt-2 bg-[#999] overflow-hidden rounded-sm flex justify-center items-center cursor-pointer">
-            <SvgIcon icon="mdi:add-bold" class="text-[40px] text-[#fff]"></SvgIcon>
+            <SvgIcon icon="mdi:add-bold" size="3xl" class="text-[#fff]" />
         </div>
          
     </div>   

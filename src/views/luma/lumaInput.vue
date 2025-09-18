@@ -215,7 +215,7 @@ const mvOption= [
                 <NTag v-if=" exLuma|| luma.user_prompt!=''||luma.image_url!=''||luma.image_end_url!=''" type="primary" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
             </div>
             <div>
-                <NButton  :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line"  /> {{$t('video.generate')}}</NButton> 
+                <NButton :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line" size="sm" /> {{$t('video.generate')}}</NButton> 
             </div>
         </div>  
     </div>

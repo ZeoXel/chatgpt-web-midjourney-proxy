@@ -43,7 +43,7 @@ const show = computed({
       <NTabs v-model:value="active" type="line" animated style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9">
         <NTabPane name="General" tab="General">
           <template #tab>
-            <SvgIcon class="text-lg" icon="ri:file-user-line" />
+            <SvgIcon size="lg" icon="ri:file-user-line" />
             <span class="ml-2">{{ $t('setting.general') }}</span>
           </template>
           <div class="min-h-[100px]">
@@ -52,7 +52,7 @@ const show = computed({
         </NTabPane>
         <NTabPane v-if="isChatGPTAPI" name="Advanced" tab="Advanced">
           <template #tab>
-            <SvgIcon class="text-lg" icon="ri:equalizer-line" />
+            <SvgIcon size="lg" icon="ri:equalizer-line" />
             <!-- <span class="ml-2">{{ $t('setting.advanced') }}</span> -->
             <span class="ml-2">{{ $t('mjset.model') }}</span>
           </template>
@@ -64,14 +64,14 @@ const show = computed({
 
         <NTabPane name="server" tab="server" v-if=" ! homeStore.myData.session.isHideServer">
           <template #tab>
-            <SvgIcon class="text-lg" icon="mingcute:server-line" />
+            <SvgIcon size="lg" icon="mingcute:server-line" />
             <span class="ml-2">{{ $t('mjset.server') }}</span>
           </template>
           <aiSetServer />
         </NTabPane>
         <NTabPane name="Config" tab="Config">
           <template #tab>
-            <SvgIcon class="text-lg" icon="ri:list-settings-line" />
+            <SvgIcon size="lg" icon="ri:list-settings-line" />
             <!-- <span class="ml-2">{{ $t('setting.config') }}</span> -->
             <span class="ml-2">{{ $t('mjset.about') }}</span>
           </template>

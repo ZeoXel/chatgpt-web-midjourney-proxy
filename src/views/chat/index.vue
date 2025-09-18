@@ -650,7 +650,7 @@ const ychat = computed(() => {
               class="flex items-center justify-center mt-4 text-center text-neutral-300"
               v-else
             >
-              <SvgIcon icon="ri:bubble-chart-fill" class="mr-2 text-3xl" />
+              <SvgIcon icon="ri:bubble-chart-fill" size="2xl" class="mr-2" />
               <span>Aha~</span>
             </div>
           </template>
@@ -682,7 +682,7 @@ const ychat = computed(() => {
               <div class="sticky bottom-0 left-0 flex justify-center">
                 <NButton v-if="loading" type="warning" @click="handleStop">
                   <template #icon>
-                    <SvgIcon icon="ri:stop-circle-line" />
+                    <SvgIcon icon="ri:stop-circle-line" size="md" />
                   </template>
                   {{ t("common.stopResponding") }}
                 </NButton>

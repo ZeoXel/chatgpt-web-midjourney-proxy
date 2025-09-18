@@ -215,7 +215,7 @@ const randomSeed = () => {
     <!-- 模型选择 -->
     <div>
       <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        <SvgIcon icon="material-symbols:psychology" class="inline mr-1" />
+        <SvgIcon icon="material-symbols:psychology" size="sm" class="inline mr-1" />
         模型选择
       </label>
       <NSelect
@@ -231,7 +231,7 @@ const randomSeed = () => {
     <!-- 提示词输入 -->
     <div>
       <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        <SvgIcon icon="material-symbols:edit-note" class="inline mr-1" />
+        <SvgIcon icon="material-symbols:edit-note" size="sm" class="inline mr-1" />
         视频描述 *
       </label>
       <NInput
@@ -248,7 +248,7 @@ const randomSeed = () => {
     <!-- 图片上传 -->
     <div>
       <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        <SvgIcon icon="material-symbols:image" class="inline mr-1" />
+        <SvgIcon icon="material-symbols:image" size="sm" class="inline mr-1" />
         参考图片 * (1-7张)
       </label>
       
@@ -279,7 +279,7 @@ const randomSeed = () => {
           class="w-full h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors"
           @click="() => fileInputRefs[formData.images.length]?.click()"
         >
-          <SvgIcon icon="material-symbols:add" class="text-gray-400 text-2xl" />
+          <SvgIcon icon="material-symbols:add" size="2xl" class="text-gray-400" />
           <input
             :ref="el => fileInputRefs[formData.images.length] = el as HTMLInputElement"
             type="file"
@@ -376,7 +376,7 @@ const randomSeed = () => {
             class="flex-1"
           />
           <NButton @click="randomSeed" :disabled="st.isDo">
-            <SvgIcon icon="material-symbols:shuffle" />
+            <SvgIcon icon="material-symbols:shuffle" size="md" />
           </NButton>
         </div>
       </div>
@@ -394,7 +394,7 @@ const randomSeed = () => {
         :class="{ 'opacity-50': !hasApiKey }"
       >
         <template #icon>
-          <SvgIcon :icon="hasApiKey ? 'material-symbols:video-camera-back' : 'material-symbols:key-off'" />
+          <SvgIcon :icon="hasApiKey ? 'material-symbols:engineering' : 'material-symbols:key-off'" size="md" />
         </template>
         {{ buttonText }}
       </NButton>
@@ -403,7 +403,7 @@ const randomSeed = () => {
     <!-- 密钥配置提示 -->
     <div v-if="!hasApiKey" class="text-xs text-orange-500 bg-orange-50 p-3 rounded border border-orange-200 space-y-1">
       <div class="flex items-center">
-        <SvgIcon icon="material-symbols:warning" class="mr-1" />
+        <SvgIcon icon="material-symbols:warning" size="sm" class="mr-1" />
         <span class="font-medium">需要配置API密钥</span>
       </div>
       <div>请先在"设置 - 服务端"中填写API密钥后再使用Vidu视频生成功能</div>

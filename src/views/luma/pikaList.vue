@@ -80,7 +80,7 @@ onMounted(() => {
                      <n-button-group size="tiny" >
                         <n-button  size="tiny" round ghost    v-if="item.videos[0].resultUrl" >
                             <a :href="item.videos[0].resultUrl" download  target="_blank" class="flex justify-center items-center"  >
-                                <SvgIcon icon="mdi:download" /> {{ $t('video.download') }}
+                                <SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}
                             </a>
                         </n-button>
                         <n-button   size="tiny"  round ghost    > 

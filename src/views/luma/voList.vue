@@ -100,14 +100,14 @@ initLoad();
 
                     
                       <n-button-group size="tiny">
-                        <n-button  size="tiny" round ghost   @click="FeedLumaTaskDown( item )"  ><SvgIcon icon="mdi:download" /> {{ $t('video.download') }}</n-button>
+                        <n-button size="tiny" round ghost @click="FeedLumaTaskDown( item )"><SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}</n-button>
                         <n-button   size="tiny"  round ghost    > 
                             <n-popconfirm @positive-click="()=>deleteGo(item)" placement="bottom">
                                 <template #trigger> <SvgIcon icon="mdi:delete"  /></template>
                                 {{ $t('mj.confirmDelete') }}
                             </n-popconfirm> 
                         </n-button>
-                        <n-button   size="tiny"  round ghost  @click="extend( item )"  ><SvgIcon icon="ri:video-add-line" /> {{ $t('video.extend') }}</n-button>
+                        <n-button size="tiny" round ghost @click="extend( item )"><SvgIcon icon="ri:video-add-line" size="xs" /> {{ $t('video.extend') }}</n-button>
                       </n-button-group>
                      <!-- <a :href="item.video?.download_url? item.video?.download_url:item.video?.url" download  target="_blank" v-if="item.video?.url|| item.video?.download_url"  ><SvgIcon icon="mdi:download" class="cursor-pointer"/></a> -->
                 </div>

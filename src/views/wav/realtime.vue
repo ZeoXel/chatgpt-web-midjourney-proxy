@@ -400,20 +400,20 @@ const close=()=>{
             <section >
                <div  class="flex justify-center items-center space-x-4">
                     <div class="flex flex-col justify-center items-center cursor-pointer" @click="st.showSetting=true,disconnectConversation() " >
-                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:settings-3-line" class="text-3xl text-orange-500/75"></SvgIcon></div>
+                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:settings-3-line" size="2xl" class="text-orange-500/75"></SvgIcon></div>
                         <div class="pt-1">{{ $t('setting.setting') }}</div>
                     </div>
                     <div class="flex flex-col justify-center items-center cursor-pointer" @click="close()">
                         <!-- <div class="bg-orange-600 rounded-full p-2"><SvgIcon icon="tdesign:close" class="text-3xl"></SvgIcon></div> -->
-                        <div class="bg-red-500 rounded-full p-2"><SvgIcon icon="majesticons:phone-hangup" class="text-3xl text-white"></SvgIcon></div>
+                        <div class="bg-red-500 rounded-full p-2"><SvgIcon icon="majesticons:phone-hangup" size="2xl" class="text-white"></SvgIcon></div>
                         <div class="pt-1">{{ $t('mj.mCanel') }}</div>
                     </div>
                     <div class="flex flex-col justify-center items-center cursor-pointer" @click="disconnectConversation()" v-if="st.isConnect">
-                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:wechat-line" class="text-3xl text-orange-500/75"></SvgIcon></div>
+                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:wechat-line" size="2xl" class="text-orange-500/75"></SvgIcon></div>
                         <div class="pt-1">{{ $t('mj.mPause') }}</div>
                     </div>
                      <div class="flex flex-col justify-center items-center cursor-pointer" @click="go()" v-else>
-                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:wechat-line" class="text-3xl text-orange-500/75"></SvgIcon></div>
+                        <div class=" bg-white rounded-full p-2"><SvgIcon icon="ri:wechat-line" size="2xl" class="text-orange-500/75"></SvgIcon></div>
                         <div class="pt-1">{{ $t('mj.mStart') }}</div>
                     </div>
                     
