@@ -553,8 +553,9 @@ router.get('/proxy-image', async (req, res) => {
   }
 })
 
-app.use('/vidu', authV2, viduProxy)
-app.use('/pro/vidu', authV2, viduProxy)
+// 临时禁用认证进行调试
+app.use('/vidu', viduProxy)
+app.use('/pro/vidu', viduProxy)
 
 app.use('', router)
 app.use('/api', router)

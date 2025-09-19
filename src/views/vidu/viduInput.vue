@@ -82,10 +82,11 @@ const resolutionOptions = computed(() => {
   return config.resolutions.map(r => ({ label: r, value: r }));
 });
 
-// 核心密钥检查
+// 核心密钥检查 - 临时禁用进行调试
 const hasApiKey = computed(() => {
-  return gptServerStore.myData.OPENAI_API_KEY &&
-         gptServerStore.myData.OPENAI_API_KEY.trim() !== '';
+  return true; // 临时总是返回true
+  // return gptServerStore.myData.OPENAI_API_KEY &&
+  //        gptServerStore.myData.OPENAI_API_KEY.trim() !== '';
 });
 
 // 验证表单

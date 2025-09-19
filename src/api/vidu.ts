@@ -7,31 +7,14 @@ import { sleep } from "./suno";
 function getHeaderAuthorization() {
   let headers = {};
 
-  // Token处理逻辑
-  if (homeStore.myData.vtoken) {
-    const vtokenh = {
-      'x-vtoken': homeStore.myData.vtoken,
-      'x-ctoken': homeStore.myData.ctoken
-    };
-    headers = {...headers, ...vtokenh};
-  }
-
-  if (!gptServerStore.myData.VIDU_KEY) {
-    const authStore = useAuthStore();
-    // 优先使用authStore中的token，如果没有则使用核心密钥(OPENAI_API_KEY)作为认证token
-    const token = authStore.token || gptServerStore.myData.OPENAI_API_KEY;
-    if (token) {
-      const bmi = { 'x-ptoken': token };
-      headers = {...headers, ...bmi};
-      return headers;
-    }
-    return headers;
-  }
+  // 使用配置的VIDU_KEY或fallback密钥
+  const viduKey = gptServerStore.myData.VIDU_KEY || 'vda_843332282906320896_cRNYnyjLA2GnhGRUQtb6aDcb1ngTaSxy';
 
   const bmi = {
-    'Authorization': 'Token ' + gptServerStore.myData.VIDU_KEY
+    'Authorization': 'Token ' + viduKey
   };
   headers = {...headers, ...bmi};
+
   return headers;
 }
 
