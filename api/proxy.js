@@ -35,16 +35,20 @@ module.exports = (req, res) => {
     
     console.log('🔍 Vercel代理请求:', req.method, req.url)
     
-    // 统一的核心密钥验证
-    const authResult = validateCoreAuth(req, res);
-    if (!authResult.valid) {
-        console.log('❌ 核心密钥验证失败:', authResult.error.message);
-        res.status(authResult.error.status);
-        return res.json({
-            code: authResult.error.code,
-            message: authResult.error.message,
-            data: null
-        });
+    // 统一的核心密钥验证 - vidu路径跳过验证（与本地开发环境一致）
+    if (!req.url.startsWith('/vidu')) {
+        const authResult = validateCoreAuth(req, res);
+        if (!authResult.valid) {
+            console.log('❌ 核心密钥验证失败:', authResult.error.message);
+            res.status(authResult.error.status);
+            return res.json({
+                code: authResult.error.code,
+                message: authResult.error.message,
+                data: null
+            });
+        }
+    } else {
+        console.log('✅ Vidu路径跳过认证检查（与本地开发环境一致）');
     }
     
     // 代理目标地址配置
