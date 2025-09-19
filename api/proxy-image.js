@@ -33,17 +33,8 @@ module.exports = async (req, res) => {
         return;
     }
 
-    // 核心密钥验证
-    const authResult = validateCoreAuth(req, res);
-    if (!authResult.valid) {
-        console.log('❌ 图片代理核心密钥验证失败:', authResult.error.message);
-        res.status(authResult.error.status);
-        return res.json({
-            code: authResult.error.code,
-            message: authResult.error.message,
-            data: null
-        });
-    }
+    // 图片代理跳过核心密钥验证（与vidu路径保持一致）
+    console.log('✅ 图片代理跳过认证检查（与开发环境一致）');
 
     try {
         const { url } = req.query;
@@ -58,6 +49,7 @@ module.exports = async (req, res) => {
         // 安全性：只允许特定域名的图片
         const allowedDomains = [
             'mj-oss.oss-cn-shanghai.aliyuncs.com',
+            'mj-sh.oss-cn-shanghai.aliyuncs.com',  // 添加实际使用的域名
             'cdn.discordapp.com',
             'attachments.discord.com',
             // 可以添加更多信任的域名

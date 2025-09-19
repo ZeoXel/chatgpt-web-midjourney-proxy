@@ -162,7 +162,7 @@ const isDall=(chat: Chat.Chat)=>{
       <div v-else-if="asRawText" class="whitespace-pre-wrap" v-text="text" />
       <div v-else class="markdown-body "  style="--color-fg-default:#24292f"  v-html="text" />
       <!-- <div v-else class="whitespace-pre-wrap" v-text="text" /> -->
-      <MjTextAttr :image="chat.opt?.images[0]" v-if="chat.opt?.images"></MjTextAttr>
+      <MjTextAttr :image="chat.opt?.images[0]" v-if="chat.opt?.images && !chat.mjID"></MjTextAttr>
       <whisperText v-if="chat.model && chat.model.indexOf('whisper')>-1 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
       <ttsText v-if="!inversion && chat.opt?.duration && chat.opt?.duration>0 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
 
