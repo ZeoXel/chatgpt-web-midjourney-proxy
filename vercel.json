@@ -51,6 +51,10 @@
     {
       "source": "/pixverse/(.*)",
       "destination": "/api/proxy"
+    },
+    {
+      "source": "/api/proxy-image",
+      "destination": "/api/proxy-image"
     }
   ]
 }

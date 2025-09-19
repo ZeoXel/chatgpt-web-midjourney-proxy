@@ -84,7 +84,7 @@ const resolutionOptions = computed(() => {
 
 // 核心密钥检查
 const hasApiKey = computed(() => {
-  return gptServerStore.myData.OPENAI_API_KEY && 
+  return gptServerStore.myData.OPENAI_API_KEY &&
          gptServerStore.myData.OPENAI_API_KEY.trim() !== '';
 });
 

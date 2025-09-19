@@ -79,7 +79,7 @@ router.post('/session', async (req, res) => {
     const hasAuth = isNotEmptyString(AUTH_SECRET_KEY)
     const isUpload = isNotEmptyString(process.env.API_UPLOADER)
     const isHideServer = process.env.HIDE_SERVER === 'true'
-    const amodel = process.env.OPENAI_API_MODEL ?? 'gpt-3.5-turbo'
+    const amodel = process.env.OPENAI_API_MODEL ?? 'gpt-5-nano'
     const isApiGallery = isNotEmptyString(process.env.MJ_API_GALLERY)
     const cmodels = process.env.CUSTOM_MODELS ?? ''
     const baiduId = process.env.TJ_BAIDU_ID ?? ''
@@ -495,6 +495,63 @@ if (false) {
 else {
   console.log('🚀 Using production Vidu configuration')
 }
+
+// 图片代理端点，解决CORS问题
+router.get('/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query
+    if (!url) {
+      return res.status(400).json({ error: 'URL parameter is required' })
+    }
+
+    // 安全性：只允许特定域名的图片
+    const allowedDomains = [
+      'mj-oss.oss-cn-shanghai.aliyuncs.com',
+      'cdn.discordapp.com',
+      // 可以添加更多信任的域名
+    ]
+
+    const imageUrl = decodeURIComponent(url as string)
+    const urlObj = new URL(imageUrl)
+
+    if (!allowedDomains.some(domain => urlObj.hostname.includes(domain))) {
+      return res.status(403).json({ error: 'Domain not allowed' })
+    }
+
+    const response = await axios.get(imageUrl, {
+      responseType: 'stream',
+      timeout: 30000, // 生产环境增加超时时间
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': urlObj.origin
+      }
+    })
+
+    // 设置正确的响应头
+    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg')
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Cache-Control', 'public, max-age=86400') // 24小时缓存
+    res.setHeader('Content-Length', response.headers['content-length'] || '')
+
+    // 流式传输图片
+    response.data.pipe(res)
+
+    // 处理流错误
+    response.data.on('error', (err: any) => {
+      console.error('图片流错误:', err)
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Stream error' })
+      }
+    })
+
+  } catch (error) {
+    console.error('图片代理错误:', error)
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to proxy image' })
+    }
+  }
+})
 
 app.use('/vidu', authV2, viduProxy)
 app.use('/pro/vidu', authV2, viduProxy)

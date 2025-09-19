@@ -201,10 +201,8 @@ export const iconMappings: Record<string, any> = {
   'ri:volume-up-line': ionicons5.VolumeHighOutline,
   'ri:volume-down-line': ionicons5.VolumeLowOutline,
   'ri:volume-mute-line': ionicons5.VolumeOffOutline,
-  'ri:music-line': ionicons5.MusicalNoteOutline,
   'ri:music-fill': ionicons5.MusicalNote,
   'ri:film-line': ionicons5.FilmOutline,
-  'ri:video-line': ionicons5.VideocamOutline,
   'ri:video-fill': ionicons5.Videocam,
 
   // Arcticons 映射

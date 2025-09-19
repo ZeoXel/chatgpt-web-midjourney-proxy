@@ -3,7 +3,7 @@ import { computed,defineAsyncComponent ,ref} from "vue";
 import { SvgIcon ,HoverButton} from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 const { isMobile } = useBasicLayout()
-import { NAvatar,NTooltip } from 'naive-ui'
+import { NAvatar } from 'naive-ui'
 import { homeStore, useUserStore,useChatStore } from '@/store'
 import defaultAvatar from '@/assets/avatar.jpg'
 import { router } from '@/router'
@@ -45,96 +45,61 @@ const chatId= computed(()=>chatStore.active??'1002' );
         <div class="flex flex-col space-y-4 flex-1 " :class="{ 'pt-5': homeStore.myData.isClient }" data-tauri-drag-region>
             <!-- 对话 -->
             <a      @click="st.active='chat'; urouter.push(`/chat`)" class="router-link-active router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'Chat' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
                     <div  class="flex h-full justify-center items-center py-1 flex-col " :class="[ goHome =='Chat' ? 'text-[#445ff6]' : '']">
                     <SvgIcon icon="ri:wechat-line" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.chat')}}</span>
                     </div>
-                 </template>
-                AI Chat
-                </n-tooltip>
             </a>
 
             <!-- 绘画 -->
             <a v-if="!isDisableMenu ( 'draws')"  @click="st.active='draw'; urouter.push(`/draw`)" class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'draw' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" :class="[goHome=='draw' ? 'text-[#445ff6]' : '']">
                     <SvgIcon icon="ic:outline-palette" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.draw')}}</span>
                     </div>
-                  </template>
-                    {{$t('mjtab.drawinfo')}}
-                </n-tooltip>
             </a>
 
             <!-- 音乐 -->
             <a v-if="!isDisableMenu ( 'music')"      @click="st.active='music'; urouter.push('/music')" class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'music' }"
              >
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='music' ? 'text-[#445ff6]' : '']">
                       <SvgIcon icon="arcticons:wynk-music" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('suno.menu') }}</span>
                     </div>
-                  </template>
-                    {{ $t('suno.menuinfo') }}
-                </n-tooltip>
             </a>
 
             <!-- 视频 -->
             <a v-if="!isDisableMenu ( 'video')"      @click="st.active='video'; urouter.push('/video')"
                 class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'video' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='video' ? 'text-[#445ff6]' : '']">
                       <SvgIcon icon="ri:video-on-line" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('video.menu') }}</span>
                     </div>
-                  </template>
-                    {{ $t('video.menuinfo') }}
-                </n-tooltip>
             </a>
 
             <!-- Vidu -->
             <a v-if="!isDisableMenu ( 'vidu')"      @click="st.active='vidu'; urouter.push('/vidu')"
                 class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'vidu' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger>
                     <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='vidu' ? 'text-[#445ff6]' : '']">
                       <SvgIcon icon="material-symbols:engineering" size="2xl" class="flex-1" />
                       <span class="text-[10px]">{{ $t('vidu.menu') }}</span>
                     </div>
-                  </template>
-                    {{ $t('vidu.menuinfo') }}
-                </n-tooltip>
             </a>
 
             <!-- 画廊 -->
              <a  v-if="!isDisableMenu ( 'gallery')"  @click="homeStore.setMyData({act:'gallery'}) " class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': homeStore.myData.act === 'gallery' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger> 
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" >
                     <SvgIcon icon="material-symbols:imagesmode-outline" size="2xl" class="flex-1" />
                      <span class="text-[10px]">{{$t('mjtab.gallery')}}</span>
-                    </div> 
-                  </template>
-                    {{ $t('mjtab.galleryInfo') }}
-                </n-tooltip>
+                    </div>
             </a>
 
             <!-- GPTs -->
             <a  v-if="!isDisableMenu ( 'gpts')"   @click="homeStore.setMyData({act:'showgpts'}) " class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': homeStore.myData.act === 'showgpts' }">
-                <n-tooltip placement="right" trigger="hover">
-                  <template #trigger> 
                     <div  class="flex h-full justify-center items-center   py-1 flex-col" >
                     <SvgIcon icon="ri:apps-fill" size="2xl" class="flex-1" />
                      <span class="text-[10px]">GPTs</span>
-                    </div> 
-                  </template>
-                    ChatGPT Store 
-                </n-tooltip>
+                    </div>
             </a>
 
             

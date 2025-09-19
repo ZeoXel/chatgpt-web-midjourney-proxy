@@ -112,7 +112,13 @@ export const authV2 = async ( req :Request , res:Response , next:NextFunction ) 
 
       checkLimit( req, res );
       const Authorization = req.header('X-Ptoken')
-      if ( !Authorization || !auth_secret_keys.includes(Authorization.trim()))
+      // 开发环境下允许任何以sk-开头的密钥，生产环境下必须匹配AUTH_SECRET_KEY
+      const isDev = process.env.NODE_ENV !== 'production'
+      const isValidToken = Authorization && (
+        auth_secret_keys.includes(Authorization.trim()) ||
+        (isDev && Authorization.trim().startsWith('sk-'))
+      )
+      if (!isValidToken)
         throw new Error('Error: 无访问权限 | No access rights')
       clearLimit( req, res);
       next()

@@ -6,26 +6,28 @@ import { sleep } from "./suno";
 // 获取认证头部
 function getHeaderAuthorization() {
   let headers = {};
-  
+
   // Token处理逻辑
   if (homeStore.myData.vtoken) {
-    const vtokenh = { 
-      'x-vtoken': homeStore.myData.vtoken, 
-      'x-ctoken': homeStore.myData.ctoken 
+    const vtokenh = {
+      'x-vtoken': homeStore.myData.vtoken,
+      'x-ctoken': homeStore.myData.ctoken
     };
     headers = {...headers, ...vtokenh};
   }
-  
+
   if (!gptServerStore.myData.VIDU_KEY) {
     const authStore = useAuthStore();
-    if (authStore.token) {
-      const bmi = { 'x-ptoken': authStore.token };
+    // 优先使用authStore中的token，如果没有则使用核心密钥(OPENAI_API_KEY)作为认证token
+    const token = authStore.token || gptServerStore.myData.OPENAI_API_KEY;
+    if (token) {
+      const bmi = { 'x-ptoken': token };
       headers = {...headers, ...bmi};
       return headers;
     }
     return headers;
   }
-  
+
   const bmi = {
     'Authorization': 'Token ' + gptServerStore.myData.VIDU_KEY
   };
