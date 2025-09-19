@@ -21,21 +21,12 @@ function getHeaderAuthorization() {
 // 获取API URL
 const getUrl = (url: string) => {
   if (url.indexOf('http') === 0) return url;
-  
+
   const pro_prefix = url.indexOf('/pro') > -1 ? '/pro' : '';
   url = url.replaceAll('/pro', '');
-  
-  // 在开发环境中始终使用本地代理
-  if (import.meta.env.DEV) {
-    return `${pro_prefix}/vidu${url}`;
-  }
-  
-  if (gptServerStore.myData.VIDU_SERVER) {
-    if (gptServerStore.myData.VIDU_SERVER.indexOf('/pro') > 0) {
-      return `${gptServerStore.myData.VIDU_SERVER}/vidu${url}`;
-    }
-    return `${gptServerStore.myData.VIDU_SERVER}${pro_prefix}/vidu${url}`;
-  }
+
+  // 始终使用本地代理（开发环境和生产环境都通过代理）
+  // 这确保请求通过Vercel的api/proxy.js处理
   return `${pro_prefix}/vidu${url}`;
 }
 
