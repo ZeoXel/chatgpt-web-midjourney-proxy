@@ -11,7 +11,7 @@ import {NSpin ,NEmpty,NImage, NTag } from 'naive-ui'
 import { homeStore ,useChatStore} from "@/store"
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 //import { ViewCard } from 'vue-waterfall-plugin-next/dist/types/types/waterfall'
-import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl, getGalleryImages, addToGallery, migrateToNewGallery, smartImageUrl } from '@/api'
+import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl, getGalleryImages, addToGallery, migrateToNewGallery, smartImageUrl, localSave } from '@/api'
 import localforage from 'localforage'
 
 // 限制日志输出，仅在开发环境
@@ -50,16 +50,13 @@ const breakpoints= {
 }
 
 const loadImg= ()=>{
-    // 检查加载模式
-    const isApiMode = homeStore.myData.session.isApiGallery;
-
-    // 快速统计图片数量，避免过度遍历
+    // 快速统计图片数量
     let imageCount = 0;
     for (const conversation of chatStore.$state.chat) {
         for (const message of conversation.data) {
             if (message.mjID || (message.opt && message.opt.imageUrl)) {
                 imageCount++;
-                if (imageCount > 0) break; // 找到一张图片即可，无需全部统计
+                if (imageCount > 0) break;
             }
         }
         if (imageCount > 0) break;
@@ -71,11 +68,8 @@ const loadImg= ()=>{
         return;
     }
 
-    if (isApiMode) {
-        loadApiGallery();
-    } else {
-        loadImagFormLocal();
-    }
+    // 使用新的智能画廊系统
+    loadImagFormLocal();
 }
 
 // 创建测试图片数据
@@ -132,9 +126,29 @@ const clearCache = async () => {
     }
 }
 
-// 图片加载成功
-const onImageLoad = (item: any) => {
+// 图片加载成功 - 智能缓存机制
+const onImageLoad = async (item: any) => {
     item.isLoad = 1;
+
+    // 如果图片来自外部URL且未缓存，将其转换为base64并存储
+    if (item.src && !item.src.startsWith('data:') && item.mjID) {
+        const cacheKey = `img:${item.mjID}`;
+        try {
+            const cachedImage = await localGet(cacheKey);
+            if (!cachedImage) {
+                // 使用url2base64函数将图片转换为base64并存储
+                const result = await url2base64(item.src, cacheKey);
+                if (result && result.base64) {
+                    // 更新当前显示的图片源为base64
+                    item.src = result.base64;
+                    item.image_url = result.base64;
+                }
+            }
+        } catch (error) {
+            // 缓存失败不影响显示
+            debugLog('图片缓存失败:', item.mjID, error);
+        }
+    }
 }
 
 // 图片加载失败 - 轻量级重试机制
@@ -227,21 +241,63 @@ const loadImagFormLocal = async () => {
     st.value.isLoad = true;
 
     try {
-        // 首次运行时，迁移旧数据到新画廊格式
+        // 迁移旧数据到新画廊格式
         await migrateToNewGallery(chatStore.$state);
 
         // 从新画廊系统获取图片
-        const galleryImages = await getGalleryImages();
+        let galleryImages = await getGalleryImages();
+
+        // 检查画廊中的图片是否过期，清理失效数据
+        if (galleryImages.length > 0) {
+            const validImages = [];
+
+            for (const img of galleryImages) {
+                // 简单的启发式检查
+                const isLikelyValid = (
+                    (Date.now() - img.timestamp) < 7 * 24 * 60 * 60 * 1000 ||
+                    img.url.includes('cdn.discordapp.com') ||
+                    img.type === 'dalle'
+                );
+
+                if (isLikelyValid) {
+                    validImages.push(img);
+                }
+            }
+
+            if (validImages.length !== galleryImages.length) {
+                await localSave('MJ:gallery:images', validImages);
+                galleryImages = validImages;
+            }
+        }
 
         if (!galleryImages || galleryImages.length === 0) {
-            debugLog('画廊为空，没有找到符合条件的图片');
-            list.value = [];
-            return;
+            // 只迁移最近7天的成功图片
+            const oldChatData = await getMjAll(chatStore.$state);
+            const recentChats = oldChatData.filter(chat => {
+                const isRecent = (Date.now() - (chat.opt?.startTime || 0)) < 7 * 24 * 60 * 60 * 1000;
+                const isValid = chat.opt?.status === 'SUCCESS' &&
+                               (chat.opt?.action === 'UPSCALE' || chat.model?.includes('dall-e')) &&
+                               chat.opt?.imageUrl;
+                return isRecent && isValid;
+            });
+
+            // 迁移最近的有效图片
+            for (const chat of recentChats) {
+                await addToGallery(chat);
+            }
+
+            // 重新获取画廊数据
+            galleryImages = await getGalleryImages();
+
+            if (galleryImages.length === 0) {
+                createTestImages();
+                return;
+            }
         }
 
         debugLog(`从画廊加载到 ${galleryImages.length} 张图片`);
 
-        // 并行处理图片缓存 - 显著提升性能
+        // 并行处理图片缓存
         const processedImages = await Promise.all(
             galleryImages.map(async (galleryImg) => {
                 const item = {
@@ -256,25 +312,27 @@ const loadImagFormLocal = async () => {
                     model: galleryImg.model
                 };
 
-                // 尝试从缓存加载
+                // 智能缓存加载策略
                 const cacheKey = galleryImg.mjID ? `img:${galleryImg.mjID}` : `img:${galleryImg.id}`;
+
                 try {
+                    // 优先从本地缓存加载
                     const cachedImage = await localGet(cacheKey);
-                    if (cachedImage) {
+                    if (cachedImage && cachedImage.startsWith('data:')) {
                         item.image_url = item.src = cachedImage;
-                        debugLog(`从缓存加载: ${galleryImg.id}`);
-                    } else {
-                        // 使用智能图片URL处理，支持多种代理服务和错误回退
-                        try {
-                            item.image_url = item.src = await smartImageUrl(galleryImg.url);
-                        } catch (e) {
-                            debugLog(`智能URL处理失败 ${galleryImg.id}:`, e);
-                            // 最后回退到wsrv
-                            item.image_url = item.src = wsrvUrl(galleryImg.url);
-                        }
+                        return item;
                     }
+
+                    // 尝试智能URL处理
+                    try {
+                        const smartUrl = await smartImageUrl(galleryImg.url);
+                        item.image_url = item.src = smartUrl;
+                    } catch (e) {
+                        // 最后回退到wsrv
+                        item.image_url = item.src = wsrvUrl(galleryImg.url);
+                    }
+
                 } catch (e) {
-                    debugLog(`缓存加载失败 ${galleryImg.id}:`, e);
                     // 设置占位符图片
                     item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pS4uLjwvdGV4dD48L3N2Zz4=';
                 }
@@ -294,11 +352,6 @@ const loadImagFormLocal = async () => {
     } finally {
         st.value.isLoad = false;
     }
-
-    //             return  v;
-    //         })
-    //     } )
-
 }
 const goShow=( item:any)=>{
     //console.log('goShow', isMobile );

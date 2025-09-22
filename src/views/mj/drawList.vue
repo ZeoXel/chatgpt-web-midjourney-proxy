@@ -8,7 +8,7 @@ import { useChat } from '../chat/hooks/useChat'
 import { useUsingContext } from '../chat/hooks/useUsingContext' 
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { homeStore, useChatStore, usePromptStore } from '@/store'
-import {   mlog,subTask,localSaveAny, subGPT, isDallImageModel } from '@/api'
+import {   mlog,subTask,localSaveAny, subGPT, isDallImageModel, addToGallery } from '@/api'
 import { t } from '@/locales'
 
 let controller = new AbortController()
@@ -245,9 +245,17 @@ watch(()=>homeStore.myData.act,(n)=>{
                // url2base64(dchat.opt?.imageUrl ,'img:'+dchat.mjID ).then(()=>{}).catch((e)=>mlog('url2base64 error',e));
                //homeStore.setMyData{{act}}
                homeStore.setMyData({act:'mjReload', actData:{mjID:dchat.mjID,noShow:true} })
+
+               // 自动保存到新画廊（仅UPSCALE结果）
+               addToGallery(dchat).catch(e => mlog('画廊保存失败:', e));
+
                toBottom();
             }else if(  dchat.model && ( isDallImageModel(dchat.model) )   && dchat.opt?.imageUrl ){
                 homeStore.setMyData({act:'dallReload', actData:{myid:dchat.myid,noShow:true} });
+
+                // 自动保存DALL-E结果到新画廊
+                addToGallery(dchat).catch(e => mlog('画廊保存失败:', e));
+
                 toBottom();
             }
 

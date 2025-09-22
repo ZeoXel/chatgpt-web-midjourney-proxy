@@ -144,11 +144,14 @@ const GALLERY_STORAGE_KEY = 'MJ:gallery:images';
 // 获取所有画廊图片 (新逻辑：只返回最终结果)
 export const getGalleryImages = async (): Promise<GalleryImage[]> => {
     try {
+        console.log('🗂️ 从存储加载画廊图片...');
         const images = await localGet(GALLERY_STORAGE_KEY) as GalleryImage[] || [];
+        console.log(`📊 画廊存储中有 ${images.length} 张图片`);
         // 按时间降序排序，确保最新图片在前
         return images.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
         mlog('Error loading gallery images:', error);
+        console.log('❌ 画廊加载错误:', error);
         return [];
     }
 }
@@ -185,6 +188,31 @@ export const addToGallery = async (chat: Chat.Chat): Promise<void> => {
 
         await localSave(GALLERY_STORAGE_KEY, limitedImages);
         mlog('Gallery updated:', galleryImage.type, galleryImage.action);
+
+        // 预加载新图片到缓存 (异步执行，不阻塞主流程)
+        if (galleryImage.url && !galleryImage.url.startsWith('data:')) {
+            const cacheKey = `img:${galleryImage.id}`;
+
+            // 检查是否已缓存
+            localGet(cacheKey).then(cached => {
+                if (!cached) {
+                    mlog('开始预加载图片到缓存:', galleryImage.id);
+                    // 异步缓存，不阻塞主流程
+                    url2base64(galleryImage.url, cacheKey)
+                        .then(result => {
+                            if (result && result.base64) {
+                                mlog('图片预加载缓存成功:', galleryImage.id);
+                            }
+                        })
+                        .catch(error => {
+                            mlog('图片预加载缓存失败:', galleryImage.id, error);
+                        });
+                }
+            }).catch(e => {
+                // 忽略缓存检查错误，继续尝试缓存
+                mlog('缓存检查失败，跳过预加载:', galleryImage.id);
+            });
+        }
     } catch (error) {
         mlog('Error adding to gallery:', error);
     }
