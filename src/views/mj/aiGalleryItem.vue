@@ -12,6 +12,10 @@ import { homeStore ,useChatStore} from "@/store"
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 //import { ViewCard } from 'vue-waterfall-plugin-next/dist/types/types/waterfall'
 import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl } from '@/api'
+import localforage from 'localforage'
+
+// 限制日志输出，仅在开发环境
+const debugLog = process.env.NODE_ENV === 'development' ? mlog : () => {}
  
 const chatStore = useChatStore()
 
@@ -46,30 +50,32 @@ const breakpoints= {
 }
 
 const loadImg= ()=>{
-    mlog('画廊加载模式',homeStore.myData.session.isApiGallery );
-    mlog('聊天历史总数', chatStore.$state.chat.length);
+    // 检查加载模式
+    const isApiMode = homeStore.myData.session.isApiGallery;
 
-    // 统计所有消息中有图片的数量
+    // 快速统计图片数量，避免过度遍历
     let imageCount = 0;
-    chatStore.$state.chat.forEach(conversation => {
-        conversation.data.forEach(message => {
+    for (const conversation of chatStore.$state.chat) {
+        for (const message of conversation.data) {
             if (message.mjID || (message.opt && message.opt.imageUrl)) {
                 imageCount++;
-                mlog('找到图片消息', message);
+                if (imageCount > 0) break; // 找到一张图片即可，无需全部统计
             }
-        });
-    });
-    mlog('总共找到图片消息数量', imageCount);
+        }
+        if (imageCount > 0) break;
+    }
 
-    // 如果没有找到图片，创建一些测试数据
+    // 如果没有找到图片，创建测试数据
     if (imageCount === 0) {
-        mlog('没有找到图片数据，创建测试数据');
         createTestImages();
         return;
     }
 
-    if( homeStore.myData.session.isApiGallery )  loadApiGallery();
-    else  loadImagFormLocal();
+    if (isApiMode) {
+        loadApiGallery();
+    } else {
+        loadImagFormLocal();
+    }
 }
 
 // 创建测试图片数据
@@ -100,134 +106,182 @@ const createTestImages = () => {
 }
 
 // 清除图片缓存
-const clearCache = () => {
-    // 清除所有以'img:'开头的localStorage项
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-        if (key.startsWith('img:')) {
-            localStorage.removeItem(key);
-            mlog('清除缓存', key);
-        }
-    });
-    mlog('缓存清除完成，重新加载画廊');
-    loadImg();
+const clearCache = async () => {
+    try {
+        // 清除localStorage中的图片缓存
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            if (key.startsWith('img:')) {
+                localStorage.removeItem(key);
+            }
+        });
+
+        // 清除localforage中的缓存
+        const forageKeys = await localforage.keys();
+        await Promise.all(
+            forageKeys
+                .filter(key => key.startsWith('img:'))
+                .map(key => localforage.removeItem(key))
+        );
+
+        // 重新加载画廊
+        list.value = [];
+        loadImg();
+    } catch (error) {
+        console.error('清除缓存失败:', error);
+    }
 }
 
 // 图片加载成功
 const onImageLoad = (item: any) => {
-    mlog('图片加载成功', item.mjID, item.src);
     item.isLoad = 1;
 }
 
 // 图片加载失败
 const onImageError = (item: any) => {
-    mlog('图片加载失败', item.mjID, item.src);
     item.isLoad = -1;
+    // 尝试使用备用图片源
+    if (item.src && !item.src.includes('wsrv.nl')) {
+        item.src = wsrvUrl(item.image_url);
+    }
 }
 
 const loadApiGallery= async ()=>{
-    st.value.isLoad= true;
-   let d= await loadGallery();
-   mlog('loadApiGallery',d);
-    st.value.isLoad= false;
-   if( !d || d.length==0 ) return;
-   let rz = d.map((v:any)=>{
-       // 暂时不使用外部图片URL，等待base64转换
-       let imageUrl = v.imageUrl;
-       mlog('原始图片URL', imageUrl);
-       return {
-           mjID: v.id,
-            src: imageUrl,isLoad:0, prompt: v.prompt,
-            image_url: imageUrl,
-            action: v.action
-            ,time: v.startTime
-       }
-   });
-   for(let i in rz ){
-        let v = rz[i];
-        try {
-            if( v.image_url){
-                let key= 'img:'+v.mjID;
-                let base64 = await localGet(key );
-                if(!base64) {
-                    mlog('没有找到base64缓存，尝试转换', key);
-                    // 使用简单的占位符
-                    rz[i].image_url = rz[i].src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
-                    mlog('使用占位符图片', rz[i].image_url);
-                    // 在后台尝试转换
-                    url2base64( v.image_url ,key ).then((newBase64:any)=>{
-                         mlog('图片转换成功>>', key );
-                         // 更新列表中的图片
-                         if(newBase64) {
-                             const foundItem = list.value.find(item => item.mjID === v.mjID);
-                             if(foundItem) {
-                                 foundItem.image_url = foundItem.src = newBase64;
-                             }
-                         }
-                    }).catch(error => {
-                        mlog('图片转换失败', error);
-                    });
-                }else {
-                     rz[i].image_url =  rz[i].src =base64;
-                }
-            }
-        } catch (error) {
-            mlog('图片处理失败',error);
-        }
-   }
-   
+    st.value.isLoad = true;
 
-   list.value= rz.sort((a:any,b:any)=> ( b.time - a.time) ) ;
+    try {
+        const d = await loadGallery();
+        if (!d || d.length === 0) {
+            return;
+        }
+
+        // 去重处理
+        const imageMap = new Map();
+        const rz = d
+            .filter(v => v.id && v.imageUrl)
+            .forEach(v => {
+                if (!imageMap.has(v.id)) {
+                    imageMap.set(v.id, {
+                        mjID: v.id,
+                        src: v.imageUrl,
+                        isLoad: 0,
+                        prompt: v.prompt,
+                        image_url: v.imageUrl,
+                        action: v.action,
+                        time: v.startTime || Date.now()
+                    });
+                }
+            });
+
+        const uniqueImages = Array.from(imageMap.values());
+
+        // 批量处理缓存
+        const processedImages = await Promise.all(
+            uniqueImages.map(async (item) => {
+                const key = `img:${item.mjID}`;
+                try {
+                    const base64 = await localGet(key);
+                    if (base64) {
+                        item.image_url = item.src = base64;
+                    } else {
+                        // 使用占位符，在后台异步转换
+                        item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
+
+                        // 异步转换base64
+                        url2base64(item.image_url, key)
+                            .then((newBase64: any) => {
+                                if (newBase64) {
+                                    const foundItem = list.value.find(listItem => listItem.mjID === item.mjID);
+                                    if (foundItem) {
+                                        foundItem.image_url = foundItem.src = newBase64;
+                                        foundItem.isLoad = 1;
+                                    }
+                                }
+                            })
+                            .catch(() => {
+                                // 静默失败，使用错误占位符
+                                const foundItem = list.value.find(listItem => listItem.mjID === item.mjID);
+                                if (foundItem) {
+                                    foundItem.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZlYmVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2RjMjYyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
+                                    foundItem.isLoad = -1;
+                                }
+                            });
+                    }
+                } catch (error) {
+                    item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZlYmVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2RjMjYyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
+                }
+                return item;
+            })
+        );
+
+        // 按时间倒序排序
+        list.value = processedImages.sort((a:any, b:any) => (b.time - a.time));
+
+    } catch (error) {
+        console.error('加载API画廊失败:', error);
+    } finally {
+        st.value.isLoad = false;
+    }
 }
 
 const loadImagFormLocal= async ( )=>{
-    mlog('开始加载本地画廊数据');
-    mlog('chatStore状态', chatStore.$state);
-    let d = await getMjAll( chatStore.$state);
-    mlog('本地画廊数据', d);
-    if( !d || d.length==0 ) {
-        mlog('画廊：没有找到本地图片数据');
-        return;
-    }
-    
-    let rz = d.filter((v:any)=>  v.opt && v.opt.imageUrl ).map((v:any)=>{
-        //mlog('vv', v.opt.imageUrl);
-        // let key= 'img:'+v.mjID;
-        //  let base64 = await loca(key );
-        // 暂时不使用外部图片URL，等待base64转换
-        let imageUrl = v.opt.imageUrl;
-        mlog('原始图片URL', imageUrl);
-        return {
-            mjID: v.mjID,
-            src: imageUrl,isLoad:0, prompt: v.opt.promptEn,
-            image_url: imageUrl
-            ,action: v.opt.action
-            ,time: v.opt.startTime
+    st.value.isLoad = true;
+
+    try {
+        const d = await getMjAll(chatStore.$state);
+        if (!d || d.length === 0) {
+            return;
         }
-    });
-    mlog('过滤后的图片数据', rz);
-    list.value=[];
-    for(let v of rz ){
-        let key= 'img:'+v.mjID;
-        try{
-            let base64 = await localGet(key );
-            if( base64 ) {
-                mlog('找到base64缓存', key, base64.substring(0, 50) + '...');
-                v.image_url = v.src = base64;
-            } else {
-                mlog('没有找到base64缓存，使用代理URL', key, v.image_url);
-                // 使用后端代理解决CORS问题
-                const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(v.image_url)}`;
-                v.image_url = v.src = proxyUrl;
-                mlog('使用代理URL', proxyUrl);
+
+        // 过滤和去重图片数据
+        const imageMap = new Map();
+        const rz = d
+            .filter((v:any) => v.opt && v.opt.imageUrl && v.mjID)
+            .forEach((v:any) => {
+                // 使用mjID去重
+                if (!imageMap.has(v.mjID)) {
+                    imageMap.set(v.mjID, {
+                        mjID: v.mjID,
+                        src: v.opt.imageUrl,
+                        isLoad: 0,
+                        prompt: v.opt.promptEn || v.opt.prompt,
+                        image_url: v.opt.imageUrl,
+                        action: v.opt.action,
+                        time: v.opt.startTime || Date.now()
+                    });
+                }
+            });
+
+        const uniqueImages = Array.from(imageMap.values());
+
+        // 批量处理图片缓存
+        list.value = [];
+        for (const item of uniqueImages) {
+            const key = `img:${item.mjID}`;
+            try {
+                const base64 = await localGet(key);
+                if (base64) {
+                    item.image_url = item.src = base64;
+                } else {
+                    // 使用代理URL或wsrv服务
+                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(item.image_url)}`;
+                    item.image_url = item.src = proxyUrl;
+                }
+            } catch (e) {
+                // 设置占位符图片
+                item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pS4uLjwvdGV4dD48L3N2Zz4=';
             }
-        }catch(e){
-            mlog('读取base64缓存失败', e);
-            v.image_url = v.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veS4rS4uLjwvdGV4dD48L3N2Zz4=';
+            list.value.push(item);
         }
-        list.value.push(v );
+
+        // 按时间倒序排序，确保最新图片在前
+        list.value.sort((a:any, b:any) => (b.time - a.time));
+
+    } catch (error) {
+        console.error('加载本地画廊失败:', error);
+    } finally {
+        st.value.isLoad = false;
     }
-    mlog('最终画廊列表', list.value);
 
    // list.value
     
@@ -273,11 +327,18 @@ loadImg();
 <Waterfall v-if="list.length" :list="list" :breakpoints="breakpoints" class="!bg-transparent">
   <template #item="{ item, url, index }">
     <div class="bg-white dark:bg-[#24272e] rounded-md overflow-hidden cursor-pointer group/item relative">
-      <LazyImg :url="item.image_url" @success="item.isLoad=1" @click="goShow(item)" />
+      <LazyImg :url="item.image_url" @success="onImageLoad(item)" @error="onImageError(item)" @click="goShow(item)" />
 
-      <div class="absolute top-0 left-0 right-0 bottom-0" v-if="item.isLoad==0">
+      <div class="absolute top-0 left-0 right-0 bottom-0 bg-gray-50 dark:bg-gray-800" v-if="item.isLoad==0">
         <div class="flex justify-center items-center w-full h-full">
             <n-spin size="large" />
+        </div>
+      </div>
+
+      <div class="absolute top-0 left-0 right-0 bottom-0 bg-red-50 dark:bg-red-900/20" v-else-if="item.isLoad==-1">
+        <div class="flex flex-col justify-center items-center w-full h-full text-red-500 text-sm">
+            <div class="mb-2">⚠️</div>
+            <div>加载失败</div>
         </div>
       </div>
 
@@ -304,10 +365,10 @@ loadImg();
 <div v-else class="w-full h-full flex flex-col justify-center items-center">
     <n-empty :description="$t('mjchat.noproduct')" />
     <div class="mt-4 space-x-2">
-        <button @click="loadImg()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        <button @click="loadImg()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
             刷新画廊
         </button>
-        <button @click="clearCache()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+        <button @click="clearCache()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
             清除缓存
         </button>
     </div>
