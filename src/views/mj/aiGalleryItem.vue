@@ -11,7 +11,7 @@ import {NSpin ,NEmpty,NImage, NTag } from 'naive-ui'
 import { homeStore ,useChatStore} from "@/store"
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 //import { ViewCard } from 'vue-waterfall-plugin-next/dist/types/types/waterfall'
-import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl } from '@/api'
+import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl, getGalleryImages, addToGallery, migrateToNewGallery, smartImageUrl } from '@/api'
 import localforage from 'localforage'
 
 // 限制日志输出，仅在开发环境
@@ -137,29 +137,31 @@ const onImageLoad = (item: any) => {
     item.isLoad = 1;
 }
 
-// 图片加载失败
+// 图片加载失败 - 轻量级重试机制
 const onImageError = (item: any) => {
-    // 如果wsrv也失败了，尝试直接使用原始URL
-    if (item.src && item.src.includes('wsrv.nl')) {
-        // wsrv失败，尝试原始URL
-        const originalUrl = item.image_url || item.src;
-        if (originalUrl && !originalUrl.startsWith('data:')) {
-            // 解析wsrv URL中的原始URL
-            const match = originalUrl.match(/url=([^&]+)/);
-            if (match) {
-                item.src = decodeURIComponent(match[1]);
-            } else {
-                item.isLoad = -1;
-            }
-        } else {
-            item.isLoad = -1;
-        }
-    } else if (item.src && !item.src.includes('wsrv.nl')) {
-        // 原始URL失败，尝试wsrv
-        item.src = wsrvUrl(item.image_url || item.src);
-    } else {
+    debugLog('图片加载失败:', item.mjID || item.id, '当前URL:', item.src);
+
+    // 避免无限重试
+    if (item.retryCount >= 2) {
+        debugLog('达到最大重试次数，设置为失败状态');
         item.isLoad = -1;
+        return;
     }
+
+    item.retryCount = (item.retryCount || 0) + 1;
+
+    // 简单的重试策略：如果当前不是wsrv URL，尝试wsrv
+    if (!item.src.includes('wsrv.nl')) {
+        const originalUrl = item.image_url || item.src;
+        const wsrvProxyUrl = wsrvUrl(originalUrl);
+
+        debugLog(`重试 ${item.retryCount}: 使用wsrv代理 ${wsrvProxyUrl}`);
+        item.src = wsrvProxyUrl;
+        return;
+    }
+
+    // 如果wsrv也失败了，设置为失败状态
+    item.isLoad = -1;
 }
 
 const loadApiGallery= async ()=>{
@@ -220,73 +222,79 @@ const loadApiGallery= async ()=>{
     }
 }
 
-const loadImagFormLocal= async ( )=>{
+// 新的画廊加载函数 - 使用优化的存储逻辑
+const loadImagFormLocal = async () => {
     st.value.isLoad = true;
 
     try {
-        const d = await getMjAll(chatStore.$state);
-        if (!d || d.length === 0) {
+        // 首次运行时，迁移旧数据到新画廊格式
+        await migrateToNewGallery(chatStore.$state);
+
+        // 从新画廊系统获取图片
+        const galleryImages = await getGalleryImages();
+
+        if (!galleryImages || galleryImages.length === 0) {
+            debugLog('画廊为空，没有找到符合条件的图片');
+            list.value = [];
             return;
         }
 
-        // 过滤和去重图片数据
-        const imageMap = new Map();
-        const rz = d
-            .filter((v:any) => v.opt && v.opt.imageUrl && v.mjID)
-            .forEach((v:any) => {
-                // 使用mjID去重
-                if (!imageMap.has(v.mjID)) {
-                    imageMap.set(v.mjID, {
-                        mjID: v.mjID,
-                        src: v.opt.imageUrl,
-                        isLoad: 0,
-                        prompt: v.opt.promptEn || v.opt.prompt,
-                        image_url: v.opt.imageUrl,
-                        action: v.opt.action,
-                        time: v.opt.startTime || Date.now()
-                    });
+        debugLog(`从画廊加载到 ${galleryImages.length} 张图片`);
+
+        // 并行处理图片缓存 - 显著提升性能
+        const processedImages = await Promise.all(
+            galleryImages.map(async (galleryImg) => {
+                const item = {
+                    mjID: galleryImg.id,
+                    src: galleryImg.url,
+                    isLoad: 0,
+                    prompt: galleryImg.prompt,
+                    image_url: galleryImg.url,
+                    action: galleryImg.action,
+                    time: galleryImg.timestamp,
+                    type: galleryImg.type,
+                    model: galleryImg.model
+                };
+
+                // 尝试从缓存加载
+                const cacheKey = galleryImg.mjID ? `img:${galleryImg.mjID}` : `img:${galleryImg.id}`;
+                try {
+                    const cachedImage = await localGet(cacheKey);
+                    if (cachedImage) {
+                        item.image_url = item.src = cachedImage;
+                        debugLog(`从缓存加载: ${galleryImg.id}`);
+                    } else {
+                        // 使用智能图片URL处理，支持多种代理服务和错误回退
+                        try {
+                            item.image_url = item.src = await smartImageUrl(galleryImg.url);
+                        } catch (e) {
+                            debugLog(`智能URL处理失败 ${galleryImg.id}:`, e);
+                            // 最后回退到wsrv
+                            item.image_url = item.src = wsrvUrl(galleryImg.url);
+                        }
+                    }
+                } catch (e) {
+                    debugLog(`缓存加载失败 ${galleryImg.id}:`, e);
+                    // 设置占位符图片
+                    item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pS4uLjwvdGV4dD48L3N2Zz4=';
                 }
-            });
 
-        const uniqueImages = Array.from(imageMap.values());
+                return item;
+            })
+        );
 
-        // 批量处理图片缓存
-        list.value = [];
-        for (const item of uniqueImages) {
-            const key = `img:${item.mjID}`;
-            try {
-                const base64 = await localGet(key);
-                if (base64) {
-                    item.image_url = item.src = base64;
-                } else {
-                    // 直接使用wsrv服务处理图片，避免代理问题
-                    item.image_url = item.src = wsrvUrl(item.image_url);
-                }
-            } catch (e) {
-                // 设置占位符图片
-                item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pS4uLjwvdGV4dD48L3N2Zz4=';
-            }
-            list.value.push(item);
-        }
+        // 图片已经按时间排序，直接使用
+        list.value = processedImages;
 
-        // 按时间倒序排序，确保最新图片在前
-        list.value.sort((a:any, b:any) => (b.time - a.time));
+        debugLog(`画廊加载完成: ${list.value.length} 张图片`);
 
     } catch (error) {
-        console.error('加载本地画廊失败:', error);
+        console.error('加载画廊失败:', error);
+        list.value = [];
     } finally {
         st.value.isLoad = false;
     }
 
-   // list.value
-    
-    // ajax({  url: '/chatgpt/mj/gallery' })
-    //     .then((d) => {
-    //         // st.value.style= d.data.style
-    //         // st.value.example= d.data.example
-    //         console.log(d)
-    //         list.value= d.data.images.map((v:any)=>{ 
-    //             v.isLoad=0
     //             return  v;
     //         })
     //     } )
