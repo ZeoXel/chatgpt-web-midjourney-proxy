@@ -298,7 +298,7 @@ const subV3=(type:string)=>{
              
         </div> 
         <div v-else-if="chat.opt?.action!='IMAGINE'" class="py-2 text-[#666]  whitespace-pre-wrap">{{ chat.opt?.promptEn }} (<span v-html="chat.opt?.action"></span>)</div> 
-        <div v-else-if="chat.opt.videoUrls"  class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2" >
+        <div v-if="chat.opt.videoUrls"  class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2" >
             <div v-for="(v,k) in chat.opt.videoUrls" class="relative"  @mouseover="st.ctrIndex=k" >
                 <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[8px] overflow-hidden aspect-[16/8.85]">
                     <video  :src="v.url" :controls="st.ctrIndex==k"  loop playsinline class="w-full h-full object-cover"></video>
@@ -306,9 +306,18 @@ const subV3=(type:string)=>{
                 <a class="absolute top-[8px] right-[8px] cursor-pointer" target="_blank" :href="v.url" :download="(k+1)+'.mp4'"><SvgIcon icon="mdi:download" /></a>
             </div>
         </div>
-        <!-- imageUrls grid - 强制限制为2x2网格 -->
-        <div v-else-if="chat.opt.imageUrls && uniqueImageUrls.length > 0" class="grid grid-cols-2 grid-rows-2 gap-1 max-w-[500px]" >
-             <div v-for="(v,k) in uniqueImageUrls.slice(0, 4)" :key="`img-${k}-${v.url}`" class="relative aspect-square overflow-hidden"  @mouseover="st.ctrIndex=k" >
+        <!-- imageUrls grid - 根据图片数量自适应布局 -->
+        <div v-else-if="chat.opt.imageUrls && uniqueImageUrls.length > 0"
+             :class="[
+               uniqueImageUrls.length === 1 ? 'flex justify-center max-w-[400px]' : 'grid grid-cols-2 gap-1 max-w-[500px]',
+               uniqueImageUrls.length === 4 ? 'grid-rows-2' : ''
+             ]" >
+             <div v-for="(v,k) in uniqueImageUrls.slice(0, 4)" :key="`img-${k}-${v.url}`"
+                  :class="[
+                    'relative overflow-hidden',
+                    uniqueImageUrls.length === 1 ? 'w-full max-w-[400px] aspect-square' : 'aspect-square'
+                  ]"
+                  @mouseover="st.ctrIndex=k" >
                  <NImage  :src="v.url"     class="w-full h-full object-cover"/>
                 <a class="absolute top-[8px] right-[8px] cursor-pointer" target="_blank" :href="v.url" :download="`image-${k+1}.jpg`"><SvgIcon icon="mdi:download" /></a>
             </div>
