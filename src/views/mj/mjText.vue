@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { NImage,NButton,NModal,useMessage,NInput } from 'naive-ui'
-import { computed , ref,watch } from 'vue'
+import { computed , ref,watch, onMounted } from 'vue'
 import {flechTask ,localGet,mlog, url2base64,mjImgUrl } from '@/api'
 import { homeStore } from '@/store'
 import aiCanvas from './aiCanvas.vue'
@@ -49,6 +49,24 @@ const sub= (type:string,index:number)=>{
 //     }
 // }
 const chat = computed(() =>props.chat);
+
+onMounted(() => {
+  load();
+});
+
+// 去重imageUrls，避免显示重复图片
+const uniqueImageUrls = computed(() => {
+  if (!chat.value.opt?.imageUrls || !Array.isArray(chat.value.opt.imageUrls)) return [];
+
+  const seen = new Set();
+  return chat.value.opt.imageUrls.filter((img: any) => {
+    if (seen.has(img.url)) {
+      return false;
+    }
+    seen.add(img.url);
+    return true;
+  });
+});
 
 const subV2= (b:{k:string,n:string})=>{
     if(chat.value.opt?.buttons ==undefined ) return;
@@ -268,8 +286,6 @@ const subV3=(type:string)=>{
     mst.value.isShow= true
     mst.value.type= type
 }
-
-load();
 </script>
 <template>
 <div v-if="st.isLoadImg">
@@ -282,7 +298,7 @@ load();
              
         </div> 
         <div v-else-if="chat.opt?.action!='IMAGINE'" class="py-2 text-[#666]  whitespace-pre-wrap">{{ chat.opt?.promptEn }} (<span v-html="chat.opt?.action"></span>)</div> 
-        <div v-if="chat.opt.videoUrls"  class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2" >
+        <div v-else-if="chat.opt.videoUrls"  class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2" >
             <div v-for="(v,k) in chat.opt.videoUrls" class="relative"  @mouseover="st.ctrIndex=k" >
                 <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[8px] overflow-hidden aspect-[16/8.85]">
                     <video  :src="v.url" :controls="st.ctrIndex==k"  loop playsinline class="w-full h-full object-cover"></video>
@@ -290,15 +306,14 @@ load();
                 <a class="absolute top-[8px] right-[8px] cursor-pointer" target="_blank" :href="v.url" :download="(k+1)+'.mp4'"><SvgIcon icon="mdi:download" /></a>
             </div>
         </div>
-        <div v-else-if="chat.opt.imageUrls" class="grid grid-cols-2 grid-rows-2 gap-0 max-w-[500px]" >
-             <div v-for="(v,k) in chat.opt.imageUrls" class="relative aspect-square overflow-hidden"  @mouseover="st.ctrIndex=k" >
-                 
+        <!-- imageUrls grid - 强制限制为2x2网格 -->
+        <div v-else-if="chat.opt.imageUrls && uniqueImageUrls.length > 0" class="grid grid-cols-2 grid-rows-2 gap-1 max-w-[500px]" >
+             <div v-for="(v,k) in uniqueImageUrls.slice(0, 4)" :key="`img-${k}-${v.url}`" class="relative aspect-square overflow-hidden"  @mouseover="st.ctrIndex=k" >
                  <NImage  :src="v.url"     class="w-full h-full object-cover"/>
-                 
-                <a class="absolute top-[8px] right-[8px] cursor-pointer" target="_blank" :href="v.url" :download="(k+1)+'.mp4'"><SvgIcon icon="mdi:download" /></a>
+                <a class="absolute top-[8px] right-[8px] cursor-pointer" target="_blank" :href="v.url" :download="`image-${k+1}.jpg`"><SvgIcon icon="mdi:download" /></a>
             </div>
         </div>
-        <NImage v-else-if="chat.opt.imageUrl" :src="st.uri_base64?st.uri_base64: mjImgUrl( chat.opt.imageUrl)" class=" rounded-sm " :class="[isMobile?'':'!max-w-[500px]']"  /> 
+        <NImage v-else-if="chat.opt.imageUrl && (!chat.opt.imageUrls || uniqueImageUrls.length === 0)" :src="st.uri_base64?st.uri_base64: mjImgUrl( chat.opt.imageUrl)" class=" rounded-sm " :class="[isMobile?'':'!max-w-[500px]']"  /> 
         <div v-if="chat.opt?.status=='SUCCESS' " class=" space-y-2"  >
             <template v-if="chat.opt?.buttons">
                 <div v-for="(bts,ii) in bt" class=" flex justify-start items-center flex-wrap "> 

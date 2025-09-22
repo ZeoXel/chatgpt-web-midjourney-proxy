@@ -401,14 +401,6 @@ const randomSeed = () => {
       </NButton>
     </div>
 
-    <!-- 密钥配置提示 -->
-    <div v-if="!hasApiKey" class="text-xs text-orange-500 bg-orange-50 p-3 rounded border border-orange-200 space-y-1">
-      <div class="flex items-center">
-        <SvgIcon icon="material-symbols:warning" size="sm" class="mr-1" />
-        <span class="font-medium">需要配置API密钥</span>
-      </div>
-      <div>请先在"设置 - 服务端"中填写API密钥后再使用Vidu视频生成功能</div>
-    </div>
 
     <!-- 提示信息 -->
     <div class="text-xs text-gray-500 space-y-1">

@@ -1,6 +1,6 @@
 <script setup lang='ts'>
 import type { CSSProperties } from 'vue'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, provide } from 'vue'
 import { NButton, NLayoutSider, useDialog } from 'naive-ui'
 import List from './List.vue'
 import Footer from './Footer.vue'
@@ -17,6 +17,10 @@ const dialog = useDialog()
 const { isMobile } = useBasicLayout()
 const show = ref(false)
 
+// 批量删除相关状态
+const isBatchDeleteMode = ref(false)
+const selectedItems = ref<Set<number>>(new Set())
+
 const collapsed = computed(() => appStore.siderCollapsed)
 
 function handleAdd() {
@@ -29,6 +33,40 @@ function handleUpdateCollapsed() {
   appStore.setSiderCollapsed(!collapsed.value)
 }
 
+// 新的批量删除处理函数
+function handleBatchDelete() {
+  if (!isBatchDeleteMode.value) {
+    // 进入批量删除模式
+    isBatchDeleteMode.value = true
+    selectedItems.value.clear()
+  } else {
+    // 执行批量删除
+    if (selectedItems.value.size === 0) {
+      // 如果没有选择任何项，退出批量删除模式
+      isBatchDeleteMode.value = false
+      return
+    }
+
+    // 删除选中的对话
+    const sortedIndexes = Array.from(selectedItems.value)
+      .map(uuid => chatStore.history.findIndex(item => item.uuid === uuid))
+      .filter(index => index !== -1)
+      .sort((a, b) => b - a) // 从后往前删除，避免索引错乱
+
+    sortedIndexes.forEach(index => {
+      chatStore.deleteHistory(index)
+    })
+
+    // 退出批量删除模式
+    isBatchDeleteMode.value = false
+    selectedItems.value.clear()
+
+    if (isMobile.value)
+      appStore.setSiderCollapsed(true)
+  }
+}
+
+// 保留原有的清空所有对话功能（备用）
 function handleClearAll() {
   dialog.warning({
     title: t('chat.deleteMessage'),
@@ -62,6 +100,10 @@ const mobileSafeArea = computed(() => {
   }
   return {}
 })
+
+// 提供状态给子组件
+provide('batchDeleteMode', isBatchDeleteMode)
+provide('selectedItems', selectedItems)
 
 watch(
   isMobile,
@@ -103,7 +145,11 @@ watch(
               {{ $t('store.siderButton') }}
             </NButton>
           </div>
-          <NButton @click="handleClearAll">
+          <NButton
+            @click="handleBatchDelete"
+            :type="isBatchDeleteMode ? 'error' : 'default'"
+            :style="{ backgroundColor: isBatchDeleteMode ? '#f56565' : undefined }"
+          >
             <SvgIcon icon="ri:close-circle-line" size="md" />
           </NButton>
         </div>

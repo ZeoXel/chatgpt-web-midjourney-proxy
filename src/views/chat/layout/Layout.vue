@@ -6,11 +6,12 @@ import Sider from './sider/index.vue'
 import Permission from './Permission.vue'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { gptConfigStore, homeStore, useAppStore, useAuthStore, useChatStore } from '@/store'
-import { aiSider,aiFooter} from '@/views/mj' 
-import aiMobileMenu from '@/views/mj/aiMobileMenu.vue'; 
+import { aiSider,aiFooter} from '@/views/mj'
+import aiMobileMenu from '@/views/mj/aiMobileMenu.vue';
 import { t } from '@/locales'
 import { mlog, openaiSetting } from '@/api'
 import { isObject } from '@/utils/is'
+import { getLastChatUuid } from '@/store/modules/chat/helper'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -33,9 +34,21 @@ if(rt.name =='GPTs'){
   ms.success( t('mj.modleSuccess') );
 }
 
- 
+// 智能路由跳转逻辑：优先恢复用户的最后聊天状态
+if (rt.name === 'Root' || (rt.name === 'Chat' && !rt.params.uuid)) {
+  // 优先使用保存的最后聊天uuid，如果没有则使用当前active
+  const lastChatUuid = getLastChatUuid()
+  const targetUuid = lastChatUuid || chatStore.active
 
-router.replace({ name: 'Chat', params: { uuid: chatStore.active } })
+  // 确保目标uuid对应的聊天记录存在
+  const chatExists = chatStore.history.find(h => h.uuid === targetUuid)
+  if (chatExists) {
+    router.replace({ name: 'Chat', params: { uuid: targetUuid } })
+  } else {
+    // 如果目标聊天不存在，使用当前active或创建新的
+    router.replace({ name: 'Chat', params: { uuid: chatStore.active } })
+  }
+}
 homeStore.setMyData({local:'Chat'});
 const { isMobile } = useBasicLayout()
 

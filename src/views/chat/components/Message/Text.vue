@@ -150,8 +150,9 @@ const isDall=(chat: Chat.Chat)=>{
         <aiTextSetting v-if="!inversion && isApikeyError(text)"/>
         <aiSetAuth v-if="!inversion && isAuthSessionError(text)" />
           
-        <dallText :chat="chat" v-if=" chat.model && chat.model?.indexOf('chat') == -1 && isDall( chat ) " class="whitespace-pre-wrap" />
-        <mjText v-if="chat.mjID" class="whitespace-pre-wrap" :chat="chat" :mdi="mdi"></mjText>
+        <!-- 修复：确保MJ任务只被mjText处理，防止dallText重复渲染 -->
+        <mjText v-if="chat.mjID" class="whitespace-pre-wrap" :chat="chat" :mdi="mdi" :key="`mjtext-${chat.mjID}`"></mjText>
+        <dallText :chat="chat" v-else-if=" chat.model && chat.model?.indexOf('chat') == -1 && isDall( chat ) " class="whitespace-pre-wrap" />
         <ttsText v-else-if="chat.model && isTTS(chat.model) && chat.text=='ok'" :chat="chat"/>
         <template v-else>
           <div v-if="!asRawText" class="markdown-body" :class="{ 'markdown-body-generate': loading }" v-html="text" />
@@ -162,7 +163,8 @@ const isDall=(chat: Chat.Chat)=>{
       <div v-else-if="asRawText" class="whitespace-pre-wrap" v-text="text" />
       <div v-else class="markdown-body "  style="--color-fg-default:#24292f"  v-html="text" />
       <!-- <div v-else class="whitespace-pre-wrap" v-text="text" /> -->
-      <MjTextAttr :image="chat.opt?.images[0]" v-if="chat.opt?.images && !chat.mjID"></MjTextAttr>
+      <!-- 移除MjTextAttr渲染 - mjID场景已由mjText.vue处理 -->
+      <!-- <MjTextAttr :image="chat.opt?.images[0]" v-if="chat.opt?.images && !chat.mjID"></MjTextAttr> -->
       <whisperText v-if="chat.model && chat.model.indexOf('whisper')>-1 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
       <ttsText v-if="!inversion && chat.opt?.duration && chat.opt?.duration>0 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
 

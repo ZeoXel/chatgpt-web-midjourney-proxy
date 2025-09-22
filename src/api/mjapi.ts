@@ -227,6 +227,8 @@ export const flechTask= ( chat:Chat.Chat)=>{
             return ;
         }
         const ts=  await mjFetch(`/mj/task/${chat.mjID}/fetch`);
+
+
         chat.opt= ts;
         chat.loading=   (cnt>=99)?false:true; 
         //chat.progress=ts.progress;

@@ -41,6 +41,7 @@ import AiSiderInput from "../mj/aiSiderInput.vue";
 import aiGptInput from "../mj/aiGptInput.vue";
 import AiTextSetting from "../mj/aiTextSetting.vue";
 import { useUserStore } from "@/store";
+import { setLastChatUuid } from "@/store/modules/chat/helper";
 
 let controller = new AbortController();
 
@@ -557,6 +558,17 @@ const footerClass = computed(() => {
 onMounted(() => {
   scrollToBottom();
   if (inputRef.value && !isMobile.value) inputRef.value?.focus();
+  // 保存当前聊天页面的uuid，用于从其他模块返回时恢复状态
+  if (uuid && +uuid) {
+    setLastChatUuid(+uuid);
+  }
+});
+
+// 监听路由参数变化，保存最新的聊天uuid
+watch(() => route.params.uuid, (newUuid) => {
+  if (newUuid && +newUuid) {
+    setLastChatUuid(+newUuid);
+  }
 });
 
 onUnmounted(() => {

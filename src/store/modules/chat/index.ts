@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { defaultState, getLocalState, setLocalState } from './helper'
+import { defaultState, getLocalState, setLocalState, setLastChatUuid, getLastChatUuid } from './helper'
 import { router } from '@/router'
 import { homeStore } from '@/store/homeStore'
 import { sleep } from '@/api/suno'
@@ -80,6 +80,8 @@ export const useChatStore = defineStore('chat-store', {
 
     async setActive(uuid: number) {
       this.active = uuid
+      // 保存聊天模块的最后活动uuid
+      setLastChatUuid(uuid)
       return await this.reloadRoute(uuid)
     },
 

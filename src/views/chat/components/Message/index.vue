@@ -41,6 +41,7 @@ const textRef = ref<HTMLElement>()
 
 const asRawText = ref(props.inversion && homeStore.myData.session.isCloseMdPreview)
 
+
 const messageRef = ref<HTMLElement>()
 
 const options = computed(() => {
