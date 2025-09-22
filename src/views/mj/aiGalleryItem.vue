@@ -139,10 +139,26 @@ const onImageLoad = (item: any) => {
 
 // 图片加载失败
 const onImageError = (item: any) => {
-    item.isLoad = -1;
-    // 尝试使用备用图片源
-    if (item.src && !item.src.includes('wsrv.nl')) {
-        item.src = wsrvUrl(item.image_url);
+    // 如果wsrv也失败了，尝试直接使用原始URL
+    if (item.src && item.src.includes('wsrv.nl')) {
+        // wsrv失败，尝试原始URL
+        const originalUrl = item.image_url || item.src;
+        if (originalUrl && !originalUrl.startsWith('data:')) {
+            // 解析wsrv URL中的原始URL
+            const match = originalUrl.match(/url=([^&]+)/);
+            if (match) {
+                item.src = decodeURIComponent(match[1]);
+            } else {
+                item.isLoad = -1;
+            }
+        } else {
+            item.isLoad = -1;
+        }
+    } else if (item.src && !item.src.includes('wsrv.nl')) {
+        // 原始URL失败，尝试wsrv
+        item.src = wsrvUrl(item.image_url || item.src);
+    } else {
+        item.isLoad = -1;
     }
 }
 
@@ -184,28 +200,8 @@ const loadApiGallery= async ()=>{
                     if (base64) {
                         item.image_url = item.src = base64;
                     } else {
-                        // 使用占位符，在后台异步转换
-                        item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
-
-                        // 异步转换base64
-                        url2base64(item.image_url, key)
-                            .then((newBase64: any) => {
-                                if (newBase64) {
-                                    const foundItem = list.value.find(listItem => listItem.mjID === item.mjID);
-                                    if (foundItem) {
-                                        foundItem.image_url = foundItem.src = newBase64;
-                                        foundItem.isLoad = 1;
-                                    }
-                                }
-                            })
-                            .catch(() => {
-                                // 静默失败，使用错误占位符
-                                const foundItem = list.value.find(listItem => listItem.mjID === item.mjID);
-                                if (foundItem) {
-                                    foundItem.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZlYmVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2RjMjYyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
-                                    foundItem.isLoad = -1;
-                                }
-                            });
+                        // 使用wsrv服务处理图片URL
+                        item.image_url = item.src = wsrvUrl(item.image_url);
                     }
                 } catch (error) {
                     item.image_url = item.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZlYmVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2RjMjYyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
@@ -263,9 +259,8 @@ const loadImagFormLocal= async ( )=>{
                 if (base64) {
                     item.image_url = item.src = base64;
                 } else {
-                    // 使用代理URL或wsrv服务
-                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(item.image_url)}`;
-                    item.image_url = item.src = proxyUrl;
+                    // 直接使用wsrv服务处理图片，避免代理问题
+                    item.image_url = item.src = wsrvUrl(item.image_url);
                 }
             } catch (e) {
                 // 设置占位符图片
