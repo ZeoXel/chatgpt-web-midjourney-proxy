@@ -48,7 +48,7 @@ const create= async ()=>{
     // });
     // mlog('test',d );
     //return ;
-    
+
     // 统一的处理逻辑，nano-banana 也使用标准 DALL-E 流程
     let obj= {
         action:'gpt.dall-e-3',
@@ -58,8 +58,8 @@ const create= async ()=>{
     if(isCanImageEdit.value){
         obj.data= {...obj.data ,quality:st.value.quality};
     }
-    if (isCanImageEdit.value && base64Array.value.length>0){ 
-         
+    if (isCanImageEdit.value && base64Array.value.length>0){
+
         obj.data= {...obj.data, 'base64Array':base64Array.value,quality:st.value.quality};
         mlog("data", '我加东西了：',  base64Array.value  )
     }
@@ -111,7 +111,7 @@ const dimensionsList= computed(()=>{
     ];
     }
     if(f.value.model=='nano-banana'){
-    return [{ 
+    return [{
                 "label": "1024px*1024px",
                 "value": "1024x1024"
             }, {

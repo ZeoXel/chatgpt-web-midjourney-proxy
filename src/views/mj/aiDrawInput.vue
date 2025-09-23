@@ -49,13 +49,13 @@ initLoad();
 
 </script>
 <template>
-<div class="overflow-y-auto bg-[#fafbfc] pt-2 dark:bg-[#18181c] h-full ">
+<div class="overflow-y-auto bg-[#fafbfc] pt-2 dark:bg-[#18181c] h-full">
  
-<n-tabs type="line" animated :default-value="st.tab" @update:value="handleUpdateValue"  style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9">
+<n-tabs type="line" animated :default-value="st.tab" @update:value="handleUpdateValue" size="small" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-gap: 8px;--n-tab-padding: 8px 12px">
     <n-tab-pane name="start" tab=""> 
 
     </n-tab-pane>
-    <n-tab-pane name="midjourney" tab="MidJourney" >
+    <n-tab-pane name="midjourney" tab="MJ工坊" >
       <!--  -->
     <n-tabs type="segment" animated   default-value="draw23" size="small" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color:#445ff6">
         <n-tab-pane name="draw23" :tab="$t('mjchat.draw')">
@@ -72,12 +72,12 @@ initLoad();
     </n-tabs>
 
     </n-tab-pane>
-    
-    <n-tab-pane name="dall.e" tab="Nano-Banana">
+
+    <n-tab-pane name="dall.e" tab="智能绘画">
      <div class="p-4"><aiDall  /></div>
     </n-tab-pane>
 
-    <n-tab-pane name="ideogram" tab="IdeoGram">
+    <n-tab-pane name="ideogram" tab="商用绘图">
      <div class="p-2"> <aiIdeoInput/> </div>
     </n-tab-pane>  
     
@@ -94,6 +94,55 @@ initLoad();
       </div>
     </n-tab-pane>
 
-</n-tabs> 
+</n-tabs>
 </div>
 </template>
+
+<style scoped>
+/* 优化标签页间距和外观 */
+:deep(.n-tabs .n-tabs-nav) {
+  padding: 0 8px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+:deep(.n-tabs .n-tabs-nav .n-tabs-wrapper) {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+:deep(.n-tabs .n-tabs-tab) {
+  margin-right: 4px;
+  padding: 6px 10px !important;
+  font-weight: 500;
+  font-size: 13px;
+  min-width: fit-content;
+  white-space: nowrap;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+:deep(.n-tabs .n-tabs-tab:hover) {
+  background-color: rgba(68, 95, 246, 0.1);
+}
+
+:deep(.n-tabs .n-tabs-tab--active) {
+  font-weight: 600;
+  color: #445ff6 !important;
+}
+
+/* 调整子标签页间距 */
+:deep(.n-tabs-pane .n-tabs .n-tabs-tab) {
+  margin-right: 4px;
+  padding: 6px 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  :deep(.n-tabs .n-tabs-tab) {
+    padding: 4px 8px !important;
+    font-size: 12px;
+  }
+}
+</style>
