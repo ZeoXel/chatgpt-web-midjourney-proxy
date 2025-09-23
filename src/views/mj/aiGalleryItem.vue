@@ -62,9 +62,9 @@ const loadImg= ()=>{
         if (imageCount > 0) break;
     }
 
-    // 如果没有找到图片，创建测试数据
+    // 如果没有找到图片，显示空状态
     if (imageCount === 0) {
-        createTestImages();
+        list.value = [];
         return;
     }
 
@@ -72,32 +72,6 @@ const loadImg= ()=>{
     loadImagFormLocal();
 }
 
-// 创建测试图片数据
-const createTestImages = () => {
-    const testImages = [
-        {
-            mjID: 'test1',
-            src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjNGY5M2ZmIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7mtYvor5Xnlbflm74xPC90ZXh0Pjwvc3ZnPg==',
-            image_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjNGY5M2ZmIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7mtYvor5Xnlbflm74xPC90ZXh0Pjwvc3ZnPg==',
-            prompt: '测试图片1 - SVG图片',
-            action: 'IMAGINE',
-            time: Date.now() - 1000000,
-            isLoad: 1
-        },
-        {
-            mjID: 'test2',
-            src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmY2YjM1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7mtYvor5Xnlbflm74yPC90ZXh0Pjwvc3ZnPg==',
-            image_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmY2YjM1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7mtYvor5Xnlbflm74yPC90ZXh0Pjwvc3ZnPg==',
-            prompt: '测试图片2 - SVG图片',
-            action: 'IMAGINE',
-            time: Date.now() - 2000000,
-            isLoad: 1
-        }
-    ];
-
-    mlog('创建测试图片数据', testImages);
-    list.value = testImages;
-}
 
 // 清除图片缓存
 const clearCache = async () => {
@@ -290,7 +264,7 @@ const loadImagFormLocal = async () => {
             galleryImages = await getGalleryImages();
 
             if (galleryImages.length === 0) {
-                createTestImages();
+                list.value = [];
                 return;
             }
         }
