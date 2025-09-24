@@ -69,7 +69,7 @@ initLoad();
     <div  class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         <div v-for="(item, index) in list" :key="index" class="relative" @mousemove="st.pIndex=index" @mouseout="st.pIndex=-1">
             <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85] ">
-                <video v-if="item.video?.url|| item.video?.download_url" :src="item.video?.download_url? item.video?.download_url:item.video?.url" @error="$event.target.src=item.video?.url" loop  playsinline  :controls="st.pIndex==index" class="w-full h-full object-cover"></video>
+                <video v-if="item.video?.url|| item.video?.download_url" :src="item.video?.download_url? item.video?.download_url:item.video?.url" @error="$event.target.src=item.video?.url" loop  playsinline  :controls="st.pIndex==index" controlsList="nodownload" class="w-full h-full object-cover"></video>
                 <div class=" text-center" v-else>
                     <div v-if="item.state=='failed'" class="pt-2" >{{ $t('video.failed') }}</div> 
                     <NButton  size="small" type="primary" @click="FeedLumaTask( item.id )"   v-else-if="!item.last_feed|| ((new Date().getTime())-item.last_feed)>20*1000" >{{$t('video.repeat')}}</NButton>

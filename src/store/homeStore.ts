@@ -65,7 +65,7 @@ const  getDefault=()=>{
 const amodel = homeStore.myData.session.amodel??'gpt-5-nano'
 let v:gptConfigType={
         model: amodel,
-        max_tokens:1024,
+        max_tokens:4096,
         userModel:'',
         talkCount:10,
         systemMessage:'',
@@ -152,7 +152,7 @@ let v:gptServerType={
         LUMA_KEY:'',
         VIGGLE_SERVER:'',
         VIGGLE_KEY:'',
-        TAB_VIDEO:'luma',
+        TAB_VIDEO:'runway',
         RUNWAY_SERVER:'',
         RUNWAY_KEY:'',
         IDEO_SERVER:'',

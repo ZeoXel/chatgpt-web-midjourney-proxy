@@ -48,7 +48,7 @@ initLoad()
             <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85] ">
                 <video class="bg-[#242424] object-contain w-full h-full transition-all"
                  v-if="item.result"   referrerpolicy="no-referrer"
-                :poster="item.resultCover" loop  playsinline  :controls="st.pIndex==index" >
+                :poster="item.resultCover" loop  playsinline  :controls="st.pIndex==index" controlsList="nodownload" >
                     <source :src="item.result" referrerpolicy="no-referrer" type="video/mp4" v-if="st.pIndex==index">
                 </video>
                 <div class=" text-center" v-else>

@@ -43,7 +43,7 @@ initLoad()
         <div v-for="(item, index) in list" :key="index" class="relative" @mousemove="st.pIndex=index" @mouseout="st.pIndex=-1">
             <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85] ">
                 <template  v-if="item.data && item.data.video_status==1  "> 
-                   <video :src=" item.data.url"  :poster="item.data.first_frame" loop  playsinline  :controls="st.pIndex==index" class="w-full h-full object-cover"></video>
+                   <video :src=" item.data.url"  :poster="item.data.first_frame" loop  playsinline  :controls="st.pIndex==index" controlsList="nodownload" class="w-full h-full object-cover"></video>
                 </template>
                 <div class=" text-center" v-else>
                     <div v-if="!item.data || item.data.video_status==100"   >

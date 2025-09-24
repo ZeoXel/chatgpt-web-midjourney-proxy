@@ -111,7 +111,7 @@ const deleteGo=(item:any)=>{
            
             <template v-else>
                 <div v-if="item.task.cat!='image' && item.src" style="padding-bottom: 0%;" >
-                    <video v-if="item.src" :src="item.src"   loop  playsinline disableremoteplayback disablepictureinpicture  :controls="st.pIndex==index" class="w-full h-full object-cover"></video>   
+                    <video v-if="item.src" :src="item.src"   loop  playsinline disableremoteplayback disablepictureinpicture  :controls="st.pIndex==index" controlsList="nodownload" class="w-full h-full object-cover"></video>   
                     <a target="_blank" :href="item.src" class=" absolute right-[10px] top-[10px] text-[20px] w-[30px] h-[30px] rounded-full bg-white/20 flex justify-center items-center">
                         <SvgIcon icon="ri:play-fill" size="lg" />
                     </a>

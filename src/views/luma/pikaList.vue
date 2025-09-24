@@ -47,8 +47,8 @@ onMounted(() => {
                 
                 <template v-if="item.videos.length>0">
                     <video   loop  playsinline  :controls="st.pIndex==index" v-if="  item.videos[0].resultUrl"
-                        referrerpolicy="no-referrer" :poster="item.videos[0].videoPoster" 
-                        class="w-full h-full object-cover"   >
+                        referrerpolicy="no-referrer" :poster="item.videos[0].videoPoster"
+                        controlsList="nodownload" class="w-full h-full object-cover"   >
                             <source  :src="item.videos[0].resultUrl" referrerpolicy="no-referrer" type="video/mp4" v-if="st.pIndex==index">
                     </video>
                     <div v-else-if="'error'==item.videos[0].status" >

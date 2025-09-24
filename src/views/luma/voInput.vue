@@ -21,15 +21,16 @@ const handleUpdateValue=(v:string)=>{
 const initLoad=()=>{
     if(route.query.tab){
         //st.value.tab=route.query.tab as string;
-        st.value.tab= 'luma' 
+        st.value.tab= 'runway'
         let tt= (route.query.tab as string).toLocaleLowerCase();
-        if( ['luma','runway','pika','kling','runwayml','pixverse'].indexOf(tt)>-1 ){
+        if( ['runway','pika','kling','runwayml','pixverse'].indexOf(tt)>-1 ){
            st.value.tab=tt;
         }
         handleUpdateValue(  st.value.tab )
     }
-    else st.value.tab=( gptServerStore.myData.TAB_VIDEO?gptServerStore.myData.TAB_VIDEO:'Luma')
+    else st.value.tab=( gptServerStore.myData.TAB_VIDEO && gptServerStore.myData.TAB_VIDEO !== 'luma' ? gptServerStore.myData.TAB_VIDEO:'runway')
     if( st.value.tab=='runwayml') st.value.tab='runway'
+    if( st.value.tab=='luma') st.value.tab='runway'
 }
 initLoad();
 </script>
@@ -39,9 +40,9 @@ initLoad();
     <n-tabs type="line"  :tabs-padding="1" class="abc1234" animated :default-value="st.tab"  @update:value="handleUpdateValue" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-text-color-hover:#7f0df9;--n-tab-border-color:#445ff6">
         <!-- <n-tab-pane name="" tab="">
         </n-tab-pane> -->
-        <n-tab-pane name="luma" tab="Luma">
+        <!-- <n-tab-pane name="luma" tab="Luma">
             <LumaInput />
-        </n-tab-pane>
+        </n-tab-pane> -->
         <n-tab-pane name="runway" tab="Runway" style="--n-tab-gap:10px">
             <RunwayInput />
         </n-tab-pane>

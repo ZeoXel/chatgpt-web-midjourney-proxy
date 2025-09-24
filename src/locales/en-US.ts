@@ -360,7 +360,7 @@ export default {
     "blendStart": "Start Blending",
     "no2add": "Do not add duplicate images",
     "add2more": "Please add two or more images",
-    "no1m": "Image size cannot exceed 1M",
+    "no1m": "Image size cannot exceed {m}M",
     "imgExt": "Images support only jpg, gif, png, jpeg formats"
     ,"setSync": "Synchronize Midjourney and Suno"
 

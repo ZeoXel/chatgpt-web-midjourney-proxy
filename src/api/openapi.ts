@@ -477,7 +477,8 @@ return DEFAULT_SYSTEM_TEMPLATE;
 }
 
 export const isNewModel=(model:string)=>{
-    return model.startsWith('o1-') || model.includes('gpt-5')
+    // O1模型需要特殊的非流式处理，但GPT-5应该使用标准流式
+    return model.startsWith('o1-')
 }
 export const subModel= async (opt: subModelType)=>{
     //
@@ -495,7 +496,7 @@ export const subModel= async (opt: subModelType)=>{
         frequency_penalty = gStore.frequency_penalty??frequency_penalty;
         max_tokens= gStore.max_tokens;
     }
-    if(model=='gpt-4-vision-preview' && max_tokens>2048) max_tokens=2048;
+    if(model=='gpt-4-vision-preview' && max_tokens>4096) max_tokens=4096;
 
     //gptServerStore.myData.GPTS_GX
     if( gptServerStore.myData.GPTS_GX ){
@@ -541,19 +542,38 @@ export const subModel= async (opt: subModelType)=>{
                     //mlog('🐞测试'  ,  data )  ;
                     if(data=='[DONE]') opt.onMessage({text:'',isFinish:true})
                     else {
-                        const obj= JSON.parse(data );
-                        if( obj.choices[0].delta?.reasoning_content ){
-                            if (!is_reasoning_content){
-                                opt.onMessage({text:"\n<think>\n"  ,isFinish: false})
+                        try {
+                            const obj= JSON.parse(data );
+                            // 安全检查：确保choices数组存在且不为空
+                            if (!obj.choices || !Array.isArray(obj.choices) || obj.choices.length === 0) {
+                                mlog('⚠️ GPT响应格式异常，choices为空:', obj);
+                                return;
                             }
-                            opt.onMessage({text:obj.choices[0].delta?.reasoning_content  ,isFinish:obj.choices[0].finish_reason!=null })
-                            is_reasoning_content=true
-                        }else{
-                            if(is_reasoning_content){
-                                 opt.onMessage({text:"\n</think>\n" ,isFinish: false})
+
+                            const choice = obj.choices[0];
+                            // 安全检查：确保delta对象存在
+                            if (!choice || typeof choice !== 'object') {
+                                mlog('⚠️ GPT响应格式异常，choice对象无效:', choice);
+                                return;
                             }
-                            is_reasoning_content=false
-                            opt.onMessage({text:obj.choices[0].delta?.content??'' ,isFinish:obj.choices[0].finish_reason!=null })
+
+                            if( choice.delta?.reasoning_content ){
+                                if (!is_reasoning_content){
+                                    opt.onMessage({text:"\n<think>\n"  ,isFinish: false})
+                                }
+                                opt.onMessage({text:choice.delta.reasoning_content  ,isFinish:choice.finish_reason!=null })
+                                is_reasoning_content=true
+                            }else{
+                                if(is_reasoning_content){
+                                     opt.onMessage({text:"\n</think>\n" ,isFinish: false})
+                                }
+                                is_reasoning_content=false
+                                opt.onMessage({text:choice.delta?.content??'' ,isFinish:choice.finish_reason!=null })
+                            }
+                        } catch (parseError) {
+                            mlog('❌ JSON解析错误:', parseError, 'Raw data:', data);
+                            // 解析失败时不中断流，继续处理后续数据
+                            return;
                         }
                     }
                 },
@@ -776,7 +796,9 @@ const getModelMax=( model:string )=>{
     }else if( model.indexOf('grok')>-1 ){
        return 128; 
     }else if(  model.indexOf('gpt-4.5')>-1|| model.indexOf('gpt-4-turbo')>-1||  model.indexOf('gpt-4o')>-1 ||   model.indexOf('o1-')>-1){
-        return 128; 
+        return 128;
+    }else if( model.indexOf('gpt-5')>-1 ){
+        return 128; // GPT-5系列支持128K上下文
     }else if( model.indexOf('64k')>-1 || model.indexOf('deepseek')>-1 ){
         return 64;
     }else if( model.indexOf('128k')>-1 

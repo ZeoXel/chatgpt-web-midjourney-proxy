@@ -19,8 +19,8 @@ export async function fetchSSE(
   let res ;
   try{
      res = await fetch(url, fetchOptions)
-  }catch(e :any ){ 
-    throw {reason: JSON.stringify({message:'fetch error, pleace check url',url ,code:'fetch_error'}) } 
+  }catch(e :any ){
+    throw {reason: JSON.stringify({message:'fetch error, pleace check url',url ,code:'fetch_error'}) }
   }
   if (!res.ok) {
     let reason: string

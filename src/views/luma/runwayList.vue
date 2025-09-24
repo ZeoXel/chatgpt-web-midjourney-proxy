@@ -77,8 +77,8 @@ initLoad();
                         <NButton  size="small" type="primary" @click="reRunwayFeed( item.id )"   >{{$t('video.repeat2')}}</NButton>
                     </div>
                     <video v-else  loop  playsinline  :controls="st.pIndex==index"
-                    referrerpolicy="no-referrer" :poster="item.artifacts[0].previewUrls[0]" 
-                    class="w-full h-full object-cover" @error="videoError(item, index)"  >
+                    referrerpolicy="no-referrer" :poster="item.artifacts[0].previewUrls[0]"
+                    controlsList="nodownload" class="w-full h-full object-cover" @error="videoError(item, index)"  >
                         <source  :src="item.artifacts[0].url" referrerpolicy="no-referrer" type="video/mp4" v-if="st.pIndex==index">
                     </video>
                 </template>

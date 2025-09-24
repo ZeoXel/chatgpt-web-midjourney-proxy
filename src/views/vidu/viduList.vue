@@ -319,13 +319,14 @@ const stats = computed(() => {
               :key="creation.id"
               class="relative"
             >
-              <video 
+              <video
                 :src="creation.url"
                 :poster="creation.cover_url"
                 :controls="st.pIndex === index"
                 loop
                 playsinline
                 preload="metadata"
+                controlsList="nodownload"
                 class="rounded-lg bg-black"
                 :style="getVideoStyle(task.aspect_ratio)"
               />

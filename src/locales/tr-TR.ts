@@ -356,7 +356,7 @@ export default {
         "blendStart": "Karışımı Başlat",
         "no2add": "Çift resim ekleme",
         "add2more": "Lütfen iki veya daha fazla resim ekleyin",
-        "no1m": "Resim boyutu 1M'yi aşamaz",
+        "no1m": "Resim boyutu {m}M'yi aşamaz",
         "imgExt": "Resimler sadece jpg, gif, png, jpeg formatlarını destekler",
         "setSync": "Midjourney ve Suno'yu senkronize et",
         "addGPTS": "GPT'ler Ekle",

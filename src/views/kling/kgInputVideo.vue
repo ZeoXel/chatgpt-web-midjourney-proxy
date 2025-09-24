@@ -30,6 +30,8 @@ const mvOption= [
 ,{label:'kling-v1-5',value: 'kling-v1-5'}
 ,{label:'kling-v1',value: 'kling-v1'}
 ,{label:'kling-v2-master',value: 'kling-v2-master'}
+,{label:'kling-video-v2-1',value: 'kling-video-v2-1'}
+,{label:'kling-video-v2-1-master',value: 'kling-video-v2-1-master'}
  ]
 
 function selectFile(input:any){
@@ -75,7 +77,7 @@ const createImg = async ()=>{
         }
         //  mlog('abc>> ',  abc  );
         // return 
-        if (abc.model=='kling-v2-master') {
+        if (abc.model=='kling-v2-master' || abc.model=='kling-video-v2-1' || abc.model=='kling-video-v2-1-master') {
             delete abc.mode;
         }
 
