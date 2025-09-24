@@ -6,7 +6,7 @@ import {  isDallImageModel, localGet,mlog, url2base64 } from '@/api'
 import { homeStore } from '@/store'
 const { isMobile } = useBasicLayout()
 const st = ref({isLoadImg:false,uri_base64:''})
-const props = defineProps<{chat:Chat.Chat}>();
+const props = defineProps<{chat:Chat.Chat, loading?:boolean}>();
 const chat = computed(() =>props.chat);
 
 const load = async ()=>{
@@ -55,12 +55,24 @@ load();
 </script>
 <template>
 <div>
-    <div v-if="st.isLoadImg">
-        <NImage   v-if="chat.opt?.imageUrl" :src="st.uri_base64?st.uri_base64:chat.opt.imageUrl" class=" rounded-sm " :class="[isMobile?'':'!max-w-[500px]']"  /> 
+    <!-- 生成完成，显示图片 -->
+    <div v-if="st.isLoadImg && chat.opt?.imageUrl">
+        <NImage :src="st.uri_base64?st.uri_base64:chat.opt.imageUrl" class=" rounded-sm " :class="[isMobile?'':'!max-w-[500px]']"  />
     </div>
+    <!-- 生成完成但图片加载中 -->
     <div v-else-if="chat.opt?.imageUrl" class="w-[200px] h-[150px] flex flex-col justify-center items-center" >
         <div class="p-4">{{ $t('mjchat.loading') }}</div>
-        <NButton type="primary"  ><a :href="chat.opt?.imageUrl" target="_blank">{{ $t('mjchat.openurl') }}</a></NButton> 
+        <NButton type="primary"  ><a :href="chat.opt?.imageUrl" target="_blank">{{ $t('mjchat.openurl') }}</a></NButton>
     </div>
+    <!-- 生成过程中，显示loading状态 -->
+    <div v-else-if="loading || chat.loading" class="w-[300px] h-[120px] flex flex-col justify-center items-center border border-gray-200 rounded-lg bg-gray-50" >
+        <div class="flex items-center space-x-3 p-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <div class="text-sm text-gray-600">{{ chat.text || $t('mjchat.wait3') }}</div>
+        </div>
+        <div class="text-xs text-gray-400 px-4 text-center">{{ $t('mjchat.generateProgress') }}</div>
+    </div>
+    <!-- 纯文本消息（fallback） -->
+    <div v-else class="markdown-body" v-html="chat.text" />
 </div>
 </template>

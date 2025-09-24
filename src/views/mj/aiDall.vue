@@ -63,6 +63,17 @@ const create= async ()=>{
         obj.data= {...obj.data, 'base64Array':base64Array.value,quality:st.value.quality};
         mlog("data", '我加东西了：',  base64Array.value  )
     }
+
+    // 保存原始配置用于重新编辑和再次生成
+    obj.originalConfig = {
+        model: f.value.model,
+        size: f.value.size,
+        prompt: f.value.prompt,
+        n: f.value.n,
+        quality: st.value.quality,
+        base64Array: base64Array.value.length > 0 ? [...base64Array.value] : []
+    };
+
     homeStore.setMyData({act:'draw', actData:obj});
     st.value.isGo=true;
 }
@@ -71,7 +82,22 @@ watch(()=>homeStore.myData.act,(n)=>{
         st.value.isGo=false;
         f.value.prompt='';
     }
-    if(n=='updateChat')  st.value.isGo=false;  
+    if(n=='updateChat')  st.value.isGo=false;
+    // 处理重新编辑：将配置重新填入界面
+    if(n=='image.edit') {
+        const data = homeStore.myData.actData;
+        if(data && data.config) {
+            const config = data.config;
+            f.value.model = config.model || 'nano-banana';
+            f.value.size = config.size || '1024x1024';
+            f.value.prompt = config.prompt || '';
+            f.value.n = config.n || 1;
+            st.value.quality = config.quality || 'medium';
+
+            // 重新填入参考图片
+            base64Array.value = config.base64Array || [];
+        }
+    }
 })
 
  

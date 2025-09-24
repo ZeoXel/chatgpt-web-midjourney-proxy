@@ -22,6 +22,7 @@ declare namespace Chat {
 			,videoUrls?:VideoUrl[]
 			,imageUrls?:VideoUrl[]
 		} //
+		originalConfig?: any // 保存原始生成配置，用于重新编辑和再次生成
 		uuid?:number
 		index?:number
 		myid?:string //唯一随机

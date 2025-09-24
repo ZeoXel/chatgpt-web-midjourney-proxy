@@ -152,7 +152,7 @@ const isDall=(chat: Chat.Chat)=>{
           
         <!-- 修复：确保MJ任务只被mjText处理，防止dallText重复渲染 -->
         <mjText v-if="chat.mjID" class="whitespace-pre-wrap" :chat="chat" :mdi="mdi" :key="`mjtext-${chat.mjID}`"></mjText>
-        <dallText :chat="chat" v-else-if=" chat.model && chat.model?.indexOf('chat') == -1 && isDall( chat ) " class="whitespace-pre-wrap" />
+        <dallText :chat="chat" :loading="loading" v-else-if="chat.model && chat.model?.indexOf('chat') == -1 && (isDall(chat) || isDallImageModel(chat.model))" class="whitespace-pre-wrap" />
         <ttsText v-else-if="chat.model && isTTS(chat.model) && chat.text=='ok'" :chat="chat"/>
         <template v-else>
           <div v-if="!asRawText" class="markdown-body" :class="{ 'markdown-body-generate': loading }" v-html="text" />
@@ -161,7 +161,24 @@ const isDall=(chat: Chat.Chat)=>{
       </div>
       <whisperText v-else-if="text=='whisper' && chat.opt?.lkey "  :chat="chat" />
       <div v-else-if="asRawText" class="whitespace-pre-wrap" v-text="text" />
-      <div v-else class="markdown-body "  style="--color-fg-default:#24292f"  v-html="text" />
+      <div v-else>
+        <!-- 用户输入消息：显示文本 + 参考图片 -->
+        <div class="markdown-body" style="--color-fg-default:#24292f" v-html="text" />
+
+        <!-- 显示参考图片（仅在有originalConfig且有base64Array时显示） -->
+        <div v-if="chat.originalConfig && chat.originalConfig.base64Array && chat.originalConfig.base64Array.length > 0"
+             class="mt-2 flex flex-wrap gap-2">
+          <div class="text-xs text-gray-500 w-full mb-1">{{ $t('mjchat.referenceImages') }}</div>
+          <div v-for="(img, index) in chat.originalConfig.base64Array"
+               :key="index"
+               class="w-16 h-16 rounded overflow-hidden border border-gray-200 hover:border-gray-400 transition-colors cursor-pointer"
+               @click="$emit('previewImage', img.base64)">
+            <img :src="img.base64"
+                 class="w-full h-full object-cover"
+                 :alt="`参考图片 ${index + 1}`">
+          </div>
+        </div>
+      </div>
       <!-- <div v-else class="whitespace-pre-wrap" v-text="text" /> -->
       <!-- 移除MjTextAttr渲染 - mjID场景已由mjText.vue处理 -->
       <!-- <MjTextAttr :image="chat.opt?.images[0]" v-if="chat.opt?.images && !chat.mjID"></MjTextAttr> -->

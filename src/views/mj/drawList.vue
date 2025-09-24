@@ -107,7 +107,7 @@ async function onConversation() {
 
     
   }else if( message.action && ['gpt.dall-e-3','shorten'].indexOf(message.action) >-1   ){ //gpt.dall-e-3 //subTas
-    let promptMsg: Chat.Chat= getInitChat( message.data.prompt ); 
+    let promptMsg: Chat.Chat= getInitChat( message.data.prompt );
     mlog( 'gpt.dall-e-3' ,  message.data.fileBase64 );
     if(  message.data.fileBase64 &&  message.data.fileBase64.length>0 ){
        // promptMsg.opt={  images: message.fileBase64 }
@@ -118,6 +118,10 @@ async function onConversation() {
        }catch(e){
            mlog('localSaveAny error',e);
        }
+    }
+    // 保存原始配置
+    if (message.originalConfig) {
+        promptMsg.originalConfig = message.originalConfig;
     }
      addChat(  +uuid, promptMsg );
   }else if( message.drawText){
@@ -159,8 +163,12 @@ async function onConversation() {
       uuid:+uuid,
       myid: `${Date.now()}`
       ,model:message.action=='gpt.dall-e-3'? message.data.model :'midjourney'
-     
+
     }
+  // 保存原始配置到输出消息
+  if (message.originalConfig) {
+      outMsg.originalConfig = message.originalConfig;
+  }
   //mlog('outMsg model',outMsg.model );
   addChat(  +uuid, outMsg  )
   outMsg.index=  dataSources.value.length - 1;

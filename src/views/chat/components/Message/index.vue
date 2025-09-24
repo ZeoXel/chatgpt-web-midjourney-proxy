@@ -124,6 +124,47 @@ function handleRegenerate2() {
   mlog('重新发送！');
   homeStore.setMyData({act:'gpt.resubmit', actData:{ index:props.index , uuid:props.chat.uuid } });
 }
+
+// 重新编辑功能：将原始配置重新填入生图界面
+function handleEditImage() {
+  if (props.chat.originalConfig) {
+    homeStore.setMyData({
+      act: 'image.edit',
+      actData: {
+        config: props.chat.originalConfig,
+        model: props.chat.model
+      }
+    });
+    message.success('配置已重新填入生图界面');
+  } else {
+    message.error('未找到原始配置信息');
+  }
+}
+
+// 再次生成功能：使用相同配置重新生成
+function handleRegenerateImage() {
+  if (props.chat.originalConfig) {
+    const config = props.chat.originalConfig;
+    homeStore.setMyData({
+      act: 'draw',
+      actData: {
+        action: 'gpt.dall-e-3',
+        data: {
+          model: config.model,
+          size: config.size,
+          prompt: config.prompt,
+          n: config.n,
+          quality: config.quality,
+          base64Array: config.base64Array || []
+        },
+        originalConfig: config
+      }
+    });
+    message.success('正在使用相同配置重新生成');
+  } else {
+    message.error('未找到原始配置信息');
+  }
+}
  
 </script>
 
@@ -166,17 +207,10 @@ function handleRegenerate2() {
           :as-raw-text="asRawText"
           :chat="chat"
         />
-        <!-- <div class="flex flex-col" v-if="!chat.mjID && chat.model!='dall-e-3' && chat.model!='dall-e-2' "> -->
-        <div class="flex flex-col" v-if="!chat.mjID &&   !isDallImageModel(chat.model) ">
-          <!-- <button
-            v-if="!inversion "
-            class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
-            @click="handleRegenerate"
-          >
-            <SvgIcon icon="ri:restart-line" />
-          </button> -->
+        <!-- 普通聊天消息的操作按钮 -->
+        <div class="flex flex-col" v-if="!chat.mjID && !isDallImageModel(chat.model)">
           <button
-            v-if="!inversion "
+            v-if="!inversion"
             class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
             @click="handleRegenerate2"
           >
@@ -186,7 +220,35 @@ function handleRegenerate2() {
             :trigger="isMobile ? 'click' : 'hover'"
             :placement="!inversion ? 'right' : 'left'"
             :options="options"
-            @select="handleSelect" 
+            @select="handleSelect"
+          >
+            <button class="transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-200">
+              <SvgIcon icon="ri:more-2-fill" />
+            </button>
+          </NDropdown>
+        </div>
+
+        <!-- 生图模型的操作按钮 -->
+        <div class="flex flex-col" v-if="!chat.mjID && isDallImageModel(chat.model) && !inversion && chat.originalConfig">
+          <button
+            class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
+            @click="handleEditImage"
+            :title="$t('mjchat.editAgain')"
+          >
+            <SvgIcon icon="ri:edit-line" />
+          </button>
+          <button
+            class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
+            @click="handleRegenerateImage"
+            :title="$t('mjchat.generateAgain')"
+          >
+            <SvgIcon icon="ri:restart-line" />
+          </button>
+          <NDropdown
+            :trigger="isMobile ? 'click' : 'hover'"
+            :placement="!inversion ? 'right' : 'left'"
+            :options="options"
+            @select="handleSelect"
           >
             <button class="transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-200">
               <SvgIcon icon="ri:more-2-fill" />

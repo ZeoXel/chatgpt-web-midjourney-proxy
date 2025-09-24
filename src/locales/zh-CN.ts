@@ -468,6 +468,10 @@ export default {
       portrait: '肖像 (2:3)',
       landscape: '风景 (3:2)',
     },
+    referenceImages: '参考图片',
+    editAgain: '重新编辑',
+    generateAgain: '再次生成',
+    generateProgress: '图片生成中，请耐心等待...',
   },
 
   suno: {
