@@ -3,40 +3,48 @@ import { mlog } from "./mjapi";
 import { ViduTask, viduStore } from "./viduStore";
 import { sleep } from "./suno";
 
-// 获取认证头部
+// 获取认证头部 - NewAPI网关版本
 function getHeaderAuthorization() {
   let headers = {};
 
-  // 使用配置的VIDU_KEY或fallback密钥
-  const viduKey = gptServerStore.myData.VIDU_KEY || 'vda_843332282906320896_cRNYnyjLA2GnhGRUQtb6aDcb1ngTaSxy';
+  // 优先使用vtoken
+  if (homeStore.myData.vtoken) {
+    const vtokenh = { 'x-vtoken': homeStore.myData.vtoken, 'x-ctoken': homeStore.myData.ctoken };
+    headers = {...headers, ...vtokenh};
+  }
 
-  const bmi = {
-    'Authorization': 'Token ' + viduKey
-  };
-  headers = {...headers, ...bmi};
+  // NewAPI网关：使用核心OPENAI_API_KEY，不需要专用VIDU_KEY
+  if (gptServerStore.myData.OPENAI_API_KEY) {
+    const bmi = {
+      'Authorization': 'Bearer ' + gptServerStore.myData.OPENAI_API_KEY
+    };
+    headers = {...headers, ...bmi};
+  } else {
+    // 备用认证
+    const authStore = useAuthStore();
+    if (authStore.token) {
+      const bmi = { 'x-ptoken': authStore.token };
+      headers = {...headers, ...bmi};
+    }
+  }
 
   return headers;
 }
 
-// 获取API URL
+// 获取API URL - NewAPI网关版本，参考openapi.ts的实现
 const getUrl = (url: string) => {
   if (url.indexOf('http') === 0) return url;
 
   const pro_prefix = url.indexOf('/pro') > -1 ? '/pro' : '';
   url = url.replaceAll('/pro', '');
 
-  // 在开发环境中始终使用本地代理
-  if (import.meta.env.DEV) {
-    return `${pro_prefix}/vidu${url}`;
+  // 使用用户配置的OPENAI_API_BASE_URL，就像其他API一样
+  if (gptServerStore.myData.OPENAI_API_BASE_URL) {
+    return `${gptServerStore.myData.OPENAI_API_BASE_URL}/v1/video/generations${url}`;
   }
 
-  if (gptServerStore.myData.VIDU_SERVER) {
-    if (gptServerStore.myData.VIDU_SERVER.indexOf('/pro') > 0) {
-      return `${gptServerStore.myData.VIDU_SERVER}/vidu${url}`;
-    }
-    return `${gptServerStore.myData.VIDU_SERVER}${pro_prefix}/vidu${url}`;
-  }
-  return `${pro_prefix}/vidu${url}`;
+  // 开发环境和生产环境都使用后端代理
+  return `${pro_prefix}/v1/video/generations${url}`;
 }
 
 // 通用的API请求封装
@@ -66,7 +74,7 @@ export const viduFetch = (url: string, data?: any, opt2?: any) => {
     });
 };
 
-// 生成视频（参考生视频）
+// 生成视频 - 适配NewAPI网关
 export const viduGenerate = async (params: {
   model: 'viduq1' | 'vidu2.0' | 'vidu1.5';
   images: string[];
@@ -79,10 +87,11 @@ export const viduGenerate = async (params: {
   bgm?: boolean;
   off_peak?: boolean;
   payload?: string;
+  mode?: 'img2video' | 'firstTail' | 'reference';
 }) => {
   try {
     mlog('viduGenerate', params);
-    const response = await viduFetch('/tasks', params);
+    const response = await viduFetch('', params); // NewAPI: /v1/video/generations
     
     if (response && response.task_id) {
       // 保存到本地存储（不包含大量的base64图片数据）
@@ -117,12 +126,12 @@ export const viduGenerate = async (params: {
   }
 };
 
-// 查询任务状态
+// 查询任务状态 - 适配NewAPI网关
 export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => {
   try {
     mlog('viduGetTask', task_id);
-    const response = await viduFetch(`/tasks/${task_id}/creations`);
-    
+    const response = await viduFetch(`/${task_id}`);
+
     if (response) {
       const task = viduStore.getObj(task_id);
       if (task) {
@@ -132,7 +141,7 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           url: fixS3Url(creation.url),
           cover_url: fixS3Url(creation.cover_url)
         }));
-        
+
         const updatedTask = {
           ...task,
           state: response.state,
@@ -141,7 +150,7 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           creations: fixedCreations,
           last_feed: Date.now()
         };
-        
+
         viduStore.save(updatedTask);
         return updatedTask;
       } else {
@@ -151,7 +160,7 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           url: fixS3Url(creation.url),
           cover_url: fixS3Url(creation.cover_url)
         }));
-        
+
         const newTask: ViduTask = {
           task_id: response.id || task_id, // 使用API的id字段
           state: response.state,
@@ -170,7 +179,7 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           creations: fixedCreations,
           last_feed: Date.now()
         };
-        
+
         viduStore.save(newTask);
         return newTask;
       }
@@ -187,8 +196,8 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
 export const viduCancelTask = async (task_id: string): Promise<boolean> => {
   try {
     mlog('viduCancelTask', task_id);
-    await viduFetch(`/tasks/${task_id}/cancel`, { id: task_id });
-    
+    await viduFetch(`/${task_id}/cancel`, { id: task_id });
+
     // 更新本地状态
     viduStore.updateTaskState(task_id, { state: 'failed', err_code: 'UserCancelled' });
     return true;

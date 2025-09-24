@@ -249,32 +249,29 @@ export const viduProxy = proxy(process.env.VIDU_SERVER ?? 'https://api.vidu.cn',
 
     // 根据请求路径映射到正确的API端点
     if (url.includes('/vidu/tasks') && req.method === 'POST') {
-      // 创建视频任务
       console.log('📝 映射到创建任务端点: /ent/v2/reference2video')
       return '/ent/v2/reference2video'
     }
     else if (url.includes('/vidu/tasks/') && url.includes('/creations') && req.method === 'GET') {
-      // 查询任务状态 - 使用官方端点格式
       const taskId = url.match(/\/vidu\/tasks\/([^\/]+)\/creations/)?.[1]
       const targetPath = `/ent/v2/tasks/${taskId}/creations`
       console.log('🔍 映射到查询任务端点:', targetPath)
       return targetPath
     }
     else if (url.includes('/vidu/tasks/') && url.includes('/cancel') && req.method === 'POST') {
-      // 取消任务
       const taskId = url.match(/\/vidu\/tasks\/([^\/]+)\/cancel/)?.[1]
       const targetPath = `/ent/v2/tasks/${taskId}/cancel`
       console.log('❌ 映射到取消任务端点:', targetPath)
       return targetPath
     }
 
-    // 默认移除 /vidu 前缀，映射到 /ent/v2
+    // 默认映射
     const defaultPath = url.replace('/vidu', '/ent/v2')
     console.log('🔄 默认映射:', defaultPath)
     return defaultPath
   },
   proxyReqOptDecorator(proxyReqOpts, srcReq) {
-    // Vidu API使用Token认证，不是Bearer
+    // Vidu API认证
     if (process.env.VIDU_KEY)
       proxyReqOpts.headers.Authorization = `Token ${process.env.VIDU_KEY}`
     else

@@ -4,19 +4,15 @@ import { NInput, NButton, useMessage, NSelect, NSwitch, NImage } from 'naive-ui'
 import { SvgIcon } from '@/components/common';
 import { viduGenerate, viduFeed, mlog, upImg } from '@/api';
 import { homeStore, gptServerStore } from '@/store';
-import { MODEL_CONFIGS } from '@/api/viduStore';
 
-// 表单数据
+// 表单数据 - NewAPI网关版本
 const formData = ref({
-  model: 'viduq1' as 'viduq1' | 'vidu2.0' | 'vidu1.5',
+  model: 'viduq1', // 固定模型
   images: [] as string[],
   prompt: '',
-  duration: 5,
-  aspect_ratio: '16:9' as '16:9' | '9:16' | '1:1',
-  resolution: '1080p',
-  movement_amplitude: 'auto' as 'auto' | 'small' | 'medium' | 'large',
-  off_peak: false,
-  seed: '0' as string
+  mode: 'auto' as 'auto' | 'img2video' | 'firstTail' | 'reference', // 新增模式选择
+  duration: 4,
+  aspect_ratio: '16:9' as '16:9' | '9:16' | '1:1'
 });
 
 // 状态管理
@@ -31,55 +27,34 @@ const aspectRatioOptions = [
   { label: '方形 1:1', value: '1:1' }
 ];
 
-// 运动幅度选项
-const movementOptions = [
-  { label: '自动', value: 'auto' },
-  { label: '小幅', value: 'small' },
-  { label: '中幅', value: 'medium' },
-  { label: '大幅', value: 'large' }
+// 生成模式选项
+const modeOptions = [
+  { label: '🤖 自动识别 (根据图片数量)', value: 'auto' },
+  { label: '🖼️ 图生视频 (单张图片优化)', value: 'img2video' },
+  { label: '📚 参考生视频 (1-7张图片)', value: 'reference' },
+  { label: '🎞️ 首尾生视频 (两张图片专用)', value: 'firstTail' }
 ];
 
-// 模型选项
-const modelOptions = [
-  { label: 'Vidu Q1 - 高质量 (5秒)', value: 'viduq1' },
-  { label: 'Vidu 2.0 - 快速生成 (4秒)', value: 'vidu2.0' },
-  { label: 'Vidu 1.5 - 动态增强 (4/8秒)', value: 'vidu1.5' }
+// 时长选项
+const durationOptions = [
+  { label: '4秒', value: 4 },
+  { label: '8秒', value: 8 }
 ];
 
 onMounted(() => {
   homeStore.setMyData({ ms: ms });
-  updateModelDefaults();
 });
 
-// 监听模型变化，更新默认参数
-watch(() => formData.value.model, updateModelDefaults);
-
-function updateModelDefaults() {
-  const config = MODEL_CONFIGS[formData.value.model];
-  if (config) {
-    if (formData.value.model === 'vidu1.5') {
-      formData.value.duration = (config as any).durations[0]; // 默认4秒
-      formData.value.resolution = config.resolutions[0]; // 默认360p
-    } else {
-      formData.value.duration = (config as any).duration;
-      formData.value.resolution = config.resolutions[0];
-    }
+// 根据选择的模式自动调整图片要求提示
+const imageRequirementText = computed(() => {
+  const mode = formData.value.mode;
+  switch (mode) {
+    case 'img2video': return '上传 1 张图片，使用单图生视频优化算法';
+    case 'firstTail': return '上传 2 张图片，分别作为开始帧和结束帧';
+    case 'reference': return '上传 1-7 张图片，支持灵活的图片数量';
+    case 'auto':
+    default: return '自动模式：1张选择图生视频，2张选择首尾生视频，3+张选择参考生视频';
   }
-}
-
-// 获取可用时长选项
-const durationOptions = computed(() => {
-  const config = MODEL_CONFIGS[formData.value.model];
-  if (formData.value.model === 'vidu1.5') {
-    return (config as any).durations.map((d: number) => ({ label: `${d}秒`, value: d }));
-  }
-  return [{ label: `${(config as any).duration}秒`, value: (config as any).duration }];
-});
-
-// 获取可用分辨率选项
-const resolutionOptions = computed(() => {
-  const config = MODEL_CONFIGS[formData.value.model];
-  return config.resolutions.map(r => ({ label: r, value: r }));
 });
 
 // 核心密钥检查 - 临时禁用进行调试
@@ -170,16 +145,31 @@ const generate = async () => {
   try {
     mlog('vidu generate', formData.value);
     
+    // 确定最终生成模式
+    let finalMode: 'img2video' | 'reference' | 'firstTail' | undefined;
+    const imageCount = formData.value.images.length;
+
+    if (formData.value.mode === 'auto') {
+      // 自动模式：根据图片数量判断
+      if (imageCount === 1) {
+        finalMode = 'img2video';
+      } else if (imageCount === 2) {
+        finalMode = 'firstTail';
+      } else if (imageCount >= 3 && imageCount <= 7) {
+        finalMode = 'reference';
+      }
+    } else {
+      // 手动指定模式：参考生视频支持 1-7 张图片
+      finalMode = formData.value.mode;
+    }
+
     const task = await viduGenerate({
       model: formData.value.model,
       images: formData.value.images,
       prompt: formData.value.prompt,
       duration: formData.value.duration,
       aspect_ratio: formData.value.aspect_ratio,
-      resolution: formData.value.resolution,
-      movement_amplitude: formData.value.movement_amplitude,
-      off_peak: formData.value.off_peak,
-      seed: parseInt(formData.value.seed) || undefined
+      mode: finalMode
     });
 
     ms.success('视频生成请求已提交！');
@@ -192,10 +182,9 @@ const generate = async () => {
       viduFeed(task.task_id);
     }
     
-    // 清空表单（保留模型选择）
+    // 清空表单（保留模式选择）
     formData.value.prompt = '';
     formData.value.images = [];
-    formData.value.seed = '0';
 
   } catch (error) {
     mlog('vidu generate error', error);
@@ -205,27 +194,24 @@ const generate = async () => {
   }
 };
 
-// 随机种子
-const randomSeed = () => {
-  formData.value.seed = Math.floor(Math.random() * 999999999).toString();
-};
+// NewAPI网关版本：简化配置，移除了复杂的种子和高级参数"
 </script>
 
 <template>
   <div class="p-4 space-y-4">
-    <!-- 模型选择 -->
+    <!-- 生成模式选择 -->
     <div>
       <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        <SvgIcon icon="material-symbols:psychology" size="sm" class="inline mr-1" />
-        模型选择
+        <SvgIcon icon="material-symbols:auto-awesome" size="sm" class="inline mr-1" />
+        生成模式
       </label>
       <NSelect
-        v-model:value="formData.model"
-        :options="modelOptions"
+        v-model:value="formData.mode"
+        :options="modeOptions"
         :disabled="st.isDo"
       />
       <div class="mt-1 text-xs text-gray-500">
-        {{ MODEL_CONFIGS[formData.model].description }}
+        {{ imageRequirementText }}
       </div>
     </div>
 
@@ -323,63 +309,6 @@ const randomSeed = () => {
           :options="durationOptions"
           :disabled="st.isDo"
         />
-      </div>
-    </div>
-
-    <!-- 高级参数 -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <!-- 分辨率 -->
-      <div>
-        <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-          分辨率
-        </label>
-        <NSelect
-          v-model:value="formData.resolution"
-          :options="resolutionOptions"
-          :disabled="st.isDo"
-        />
-      </div>
-
-      <!-- 运动幅度 -->
-      <div>
-        <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-          运动幅度
-        </label>
-        <NSelect
-          v-model:value="formData.movement_amplitude"
-          :options="movementOptions"
-          :disabled="st.isDo"
-        />
-      </div>
-    </div>
-
-    <!-- 其他选项 -->
-    <div class="space-y-3">
-      <!-- 错峰模式 -->
-      <div class="flex items-center justify-between">
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          错峰模式 (节省积分)
-        </label>
-        <NSwitch v-model:value="formData.off_peak" :disabled="st.isDo" />
-      </div>
-
-      <!-- 随机种子 -->
-      <div>
-        <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-          随机种子 (0为随机)
-        </label>
-        <div class="flex gap-2">
-          <NInput
-            v-model:value="formData.seed"
-            :min="0"
-            :max="999999999"
-            :disabled="st.isDo"
-            class="flex-1"
-          />
-          <NButton @click="randomSeed" :disabled="st.isDo">
-            <SvgIcon icon="material-symbols:shuffle" size="md" />
-          </NButton>
-        </div>
       </div>
     </div>
 
