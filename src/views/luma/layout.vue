@@ -16,7 +16,12 @@ const chatStore = useChatStore()
 const authStore = useAuthStore()
 
 mlog('layout', route.name )
-router.replace({ name:  route.name??'video', params: { uuid: chatStore.active } })
+// 延迟路由替换以避免DOM操作问题
+if (route.name !== 'video') {
+  setTimeout(() => {
+    router.replace({ name: route.name ?? 'video', params: { uuid: chatStore.active } })
+  }, 0)
+}
 homeStore.setMyData({local:  route.name??'video' });
 const { isMobile } = useBasicLayout()
 

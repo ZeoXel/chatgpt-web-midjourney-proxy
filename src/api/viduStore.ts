@@ -10,7 +10,7 @@ export type ViduVideo = {
 // Vidu任务数据结构
 export type ViduTask = {
   task_id: string;
-  state: 'created' | 'queueing' | 'processing' | 'success' | 'failed';
+  state: 'created' | 'queueing' | 'processing' | 'success' | 'succeeded' | 'failed'; // 添加succeeded状态
   model: 'viduq1' | 'vidu2.0' | 'vidu1.5';
   prompt: string;
   images: string[];
@@ -28,6 +28,7 @@ export type ViduTask = {
   creations?: ViduVideo[];
   liked?: boolean | null;
   last_feed?: number;
+  url?: string; // 添加视频URL字段
 }
 
 // 模型配置映射

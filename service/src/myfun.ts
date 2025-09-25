@@ -240,48 +240,7 @@ export const viggleProxyFileDo = async (req: Request, res: Response, next?: Next
   }
 }
 
-export const viduProxy = proxy(process.env.VIDU_SERVER ?? 'https://api.vidu.cn', {
-  https: false,
-  limit: '15mb',
-  proxyReqPathResolver(req) {
-    const url = req.originalUrl
-    console.log('🔍 VIDU代理请求:', req.method, url)
-
-    // 根据请求路径映射到正确的API端点
-    if (url.includes('/vidu/tasks') && req.method === 'POST') {
-      console.log('📝 映射到创建任务端点: /ent/v2/reference2video')
-      return '/ent/v2/reference2video'
-    }
-    else if (url.includes('/vidu/tasks/') && url.includes('/creations') && req.method === 'GET') {
-      const taskId = url.match(/\/vidu\/tasks\/([^\/]+)\/creations/)?.[1]
-      const targetPath = `/ent/v2/tasks/${taskId}/creations`
-      console.log('🔍 映射到查询任务端点:', targetPath)
-      return targetPath
-    }
-    else if (url.includes('/vidu/tasks/') && url.includes('/cancel') && req.method === 'POST') {
-      const taskId = url.match(/\/vidu\/tasks\/([^\/]+)\/cancel/)?.[1]
-      const targetPath = `/ent/v2/tasks/${taskId}/cancel`
-      console.log('❌ 映射到取消任务端点:', targetPath)
-      return targetPath
-    }
-
-    // 默认映射
-    const defaultPath = url.replace('/vidu', '/ent/v2')
-    console.log('🔄 默认映射:', defaultPath)
-    return defaultPath
-  },
-  proxyReqOptDecorator(proxyReqOpts, srcReq) {
-    // Vidu API认证
-    if (process.env.VIDU_KEY)
-      proxyReqOpts.headers.Authorization = `Token ${process.env.VIDU_KEY}`
-    else
-      proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
-
-    proxyReqOpts.headers['Content-Type'] = 'application/json'
-    proxyReqOpts.headers['Mj-Version'] = pkg.version
-    return proxyReqOpts
-  },
-})
+// viduProxy已移除 - 现在使用NewAPI格式端点 /v1/video/generations
 
 export const sunoProxy = proxy(process.env.SUNO_SERVER ?? API_BASE_URL, {
   https: false,

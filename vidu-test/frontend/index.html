@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vidu 生成模式测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .mode-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .mode-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+        }
+
+        .mode-card.active {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .mode-card h3 {
+            color: #1e293b;
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+        }
+
+        .mode-card p {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .mode-card .example {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .test-form {
+            background: #f8fafc;
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .file-upload {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #6366f1;
+            background: #f8fafc;
+        }
+
+        .file-upload.dragover {
+            border-color: #6366f1;
+            background: #eff6ff;
+        }
+
+        .image-preview {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .image-item {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-item .remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .response {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .response.success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .response.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Vidu 生成模式测试</h1>
+            <p>测试不同的视频生成模式和API调用</p>
+        </div>
+
+        <div class="content">
+            <!-- 模式选择卡片 -->
+            <div class="mode-cards">
+                <div class="mode-card" data-mode="text2video">
+                    <h3>📝 文生视频</h3>
+                    <p>仅使用文本描述生成视频，无需上传图片</p>
+                    <div class="example">mode: 不指定 (默认)<br>images: []</div>
+                </div>
+
+                <div class="mode-card" data-mode="img2video">
+                    <h3>🖼️ 图生视频</h3>
+                    <p>基于单张图片生成视频动画</p>
+                    <div class="example">mode: "img2video"<br>images: [1张图片]</div>
+                </div>
+
+                <div class="mode-card" data-mode="firstTail">
+                    <h3>🎞️ 首尾帧生视频</h3>
+                    <p>基于开始和结束帧生成中间过渡视频</p>
+                    <div class="example">mode: "firstTail"<br>images: [开始帧, 结束帧]</div>
+                </div>
+
+                <div class="mode-card" data-mode="reference">
+                    <h3>📚 参考图生视频</h3>
+                    <p>基于多张参考图生成风格一致的视频</p>
+                    <div class="example">mode: "reference"<br>images: [参考图1, 参考图2, ...]</div>
+                </div>
+            </div>
+
+            <!-- 测试表单 -->
+            <div class="test-form">
+                <div class="form-group">
+                    <label>API 基础地址</label>
+                    <input type="text" id="apiBaseUrl" placeholder="API 基础地址 (如: http://localhost:3000)" value="http://localhost:3000">
+                </div>
+                <div class="form-group">
+                    <label>API Token</label>
+                    <input type="text" id="apiToken" placeholder="输入你的 API Token (sk-xxx)" value="">
+                </div>
+
+                <div class="form-group">
+                    <label>生成模式</label>
+                    <select id="modeSelect">
+                        <option value="">自动判断（根据图片数量）</option>
+                        <option value="img2video">图生视频</option>
+                        <option value="firstTail">首尾帧生视频</option>
+                        <option value="reference">参考图生视频</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>模型</label>
+                    <select id="modelSelect">
+                        <option value="viduq1">viduq1</option>
+                        <option value="vidu2.0" selected>vidu2.0</option>
+                        <option value="vidu1.5">vidu1.5</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>提示词</label>
+                    <textarea id="prompt" rows="3" placeholder="描述你想要生成的视频内容...">一个美丽的日落场景，海浪轻拍着海岸</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>上传图片</label>
+                    <div class="file-upload" id="fileUpload">
+                        <div>📁 点击或拖拽上传图片</div>
+                        <small>支持 PNG, JPG, JPEG 格式</small>
+                    </div>
+                    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                    <div class="image-preview" id="imagePreview"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>视频分辨率</label>
+                    <select id="sizeSelect">
+                        <option value="1920x1080">1920x1080 (1080p)</option>
+                        <option value="1280x720">1280x720 (720p)</option>
+                        <option value="512x512">512x512</option>
+                        <option value="768x768">768x768</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>视频时长 (秒)</label>
+                    <input type="number" id="duration" value="5" min="1" max="10">
+                </div>
+
+                <button class="btn" id="submitBtn">🚀 生成视频</button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div>正在生成视频...</div>
+                </div>
+
+                <div class="response" id="response" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

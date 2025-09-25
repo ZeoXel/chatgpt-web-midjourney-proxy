@@ -50,18 +50,23 @@ const getUrl = (url: string) => {
 // 通用的API请求封装
 export const viduFetch = (url: string, data?: any, opt2?: any) => {
   mlog('viduFetch', url);
+  mlog('viduFetch data:', JSON.stringify(data, null, 2)); // 打印请求数据
   let headers = {'Content-Type': 'application/json'};
   if (opt2 && opt2.headers) headers = opt2.headers;
-  
+
   headers = {...headers, ...getHeaderAuthorization()};
-  
+  mlog('viduFetch headers:', headers); // 打印请求头
+
   const requestOptions = {
     method: data ? 'POST' : 'GET',
     headers,
     ...(data && { body: JSON.stringify(data) })
   };
-  
-  return fetch(getUrl(url), requestOptions)
+
+  const finalUrl = getUrl(url);
+  mlog('viduFetch final URL:', finalUrl); // 打印最终URL
+
+  return fetch(finalUrl, requestOptions)
     .then(response => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -91,7 +96,63 @@ export const viduGenerate = async (params: {
 }) => {
   try {
     mlog('viduGenerate', params);
-    const response = await viduFetch('', params); // NewAPI: /v1/video/generations
+
+    // 构建符合NewAPI网关格式的请求体 - 参照成功的示例格式
+    const aspectRatioToSize = {
+      '16:9': '1920x1080',
+      '9:16': '1080x1920',
+      '1:1': '1080x1080'
+    };
+
+    const requestData: any = {
+      model: params.model,
+      prompt: params.prompt,
+      size: aspectRatioToSize[params.aspect_ratio || '16:9'] || '1920x1080',
+      duration: params.duration || 5,
+      metadata: {
+        duration: params.duration || 5,
+        seed: params.seed || 0,
+        resolution: params.resolution || '1080p',
+        movement_amplitude: params.movement_amplitude || 'auto',
+        bgm: params.bgm || false,
+        payload: params.payload || '',
+        callback_url: ''
+      }
+    };
+
+    // 根据模式处理图片参数和模式选择
+    if (params.mode === 'img2video' && params.images.length === 1) {
+      // 图生视频：使用image字段（单数）
+      requestData.image = params.images[0];
+      requestData.mode = 'img2video';
+    } else if (params.mode === 'firstTail' && params.images.length === 2) {
+      // 首尾生视频：使用images数组，需要恰好2张图片
+      requestData.images = params.images;
+      requestData.mode = 'firstTail';
+    } else if (params.mode === 'reference' && params.images.length >= 1) {
+      // 参考生视频：使用images数组，支持1-7张图片
+      requestData.images = params.images;
+      requestData.mode = 'reference';
+    } else if (params.mode === 'auto') {
+      // 自动模式：根据图片数量自动判断
+      if (params.images.length === 1) {
+        requestData.image = params.images[0];
+        requestData.mode = 'img2video';
+      } else if (params.images.length === 2) {
+        requestData.images = params.images;
+        requestData.mode = 'firstTail';
+      } else if (params.images.length >= 3) {
+        requestData.images = params.images;
+        requestData.mode = 'reference';
+      }
+      // 无图片的情况下进行文生视频（不设置mode）
+    } else if (params.images.length > 0) {
+      // 其他情况：有图片但模式不明确
+      requestData.images = params.images;
+      if (params.mode) requestData.mode = params.mode;
+    }
+
+    const response = await viduFetch('', requestData); // NewAPI: /v1/video/generations
     
     if (response && response.task_id) {
       // 保存到本地存储（不包含大量的base64图片数据）
@@ -132,11 +193,22 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
     mlog('viduGetTask', task_id);
     const response = await viduFetch(`/${task_id}`);
 
-    if (response) {
+    if (response && response.data) {
       const task = viduStore.getObj(task_id);
+      const responseData = response.data; // 实际数据在response.data中
+      const taskData = responseData.data; // 任务详情在response.data.data中
+
       if (task) {
-        // 更新任务状态 - 适配官方API响应格式，并修复S3链接
-        const fixedCreations = (response.creations || []).map((creation: any) => ({
+        // 更新任务状态 - 适配NewAPI网关响应格式
+        let state = 'processing';
+        if (responseData.status === 'SUCCESS' && taskData.state === 'success') {
+          state = 'success';
+        } else if (responseData.status === 'FAILED' || taskData.state === 'failed') {
+          state = 'failed';
+        }
+
+        // 处理creations数组，修复S3链接
+        const fixedCreations = (taskData.creations || []).map((creation: any) => ({
           ...creation,
           url: fixS3Url(creation.url),
           cover_url: fixS3Url(creation.cover_url)
@@ -144,26 +216,35 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
 
         const updatedTask = {
           ...task,
-          state: response.state,
-          err_code: response.err_code,
-          credits: response.credits,
+          state,
+          err_code: taskData.err_code,
+          credits: taskData.credits,
           creations: fixedCreations,
-          last_feed: Date.now()
+          last_feed: Date.now(),
+          url: fixedCreations[0]?.url // 保存第一个视频URL
         };
 
         viduStore.save(updatedTask);
         return updatedTask;
       } else {
-        // 如果本地没有任务记录，从API响应创建一个基本的任务对象，并修复S3链接
-        const fixedCreations = (response.creations || []).map((creation: any) => ({
+        // 如果本地没有任务记录，从API响应创建一个基本的任务对象
+        let state = 'processing';
+        if (responseData.status === 'SUCCESS' && taskData.state === 'success') {
+          state = 'success';
+        } else if (responseData.status === 'FAILED' || taskData.state === 'failed') {
+          state = 'failed';
+        }
+
+        // 处理creations数组，修复S3链接
+        const fixedCreations = (taskData.creations || []).map((creation: any) => ({
           ...creation,
           url: fixS3Url(creation.url),
           cover_url: fixS3Url(creation.cover_url)
         }));
 
         const newTask: ViduTask = {
-          task_id: response.id || task_id, // 使用API的id字段
-          state: response.state,
+          task_id: taskData.id || task_id,
+          state,
           model: 'viduq1', // 默认模型，因为查询API不返回这些信息
           prompt: '未知提示词',
           images: [],
@@ -173,11 +254,12 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           movement_amplitude: 'auto',
           bgm: false,
           off_peak: false,
-          credits: response.credits,
+          credits: taskData.credits,
           created_at: new Date().toISOString(),
-          err_code: response.err_code,
+          err_code: taskData.err_code,
           creations: fixedCreations,
-          last_feed: Date.now()
+          last_feed: Date.now(),
+          url: fixedCreations[0]?.url // 保存第一个视频URL
         };
 
         viduStore.save(newTask);

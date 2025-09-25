@@ -16,7 +16,7 @@ import { auth, authV2, regCookie, turnstileCheck, verify } from './middleware/au
 import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
-import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viduProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 
 const app = express()
 const router = express.Router()
@@ -429,7 +429,9 @@ router.get('/proxy-image', async (req, res) => {
 
 // NewAPI 网关格式的 Vidu 端点 - 使用统一的OPENAI_API_KEY
 app.post('/v1/video/generations', authV2, async (req, res) => {
-  console.log('🎬 NewAPI Vidu 视频生成请求:', req.body)
+  console.log('🎬 NewAPI Vidu 视频生成请求:')
+  console.log('Headers:', req.headers)
+  console.log('Body:', JSON.stringify(req.body, null, 2))
 
   try {
     // NewAPI网关：使用统一的核心API密钥，无需专用VIDU配置
@@ -520,10 +522,7 @@ app.get('/v1/video/generations/:id', authV2, async (req, res) => {
   }
 })
 
-// 原有的 Vidu 代理路由
-// 临时禁用认证进行调试
-app.use('/vidu', viduProxy)
-app.use('/pro/vidu', viduProxy)
+// 注意：旧的Vidu代理已移除，现在使用NewAPI格式 /v1/video/generations
 
 app.use('', router)
 app.use('/api', router)

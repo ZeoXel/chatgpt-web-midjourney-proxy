@@ -77,14 +77,6 @@ const chatId= computed(()=>chatStore.active??'1002' );
                     </div>
             </a>
 
-            <!-- Vidu -->
-            <a v-if="!isDisableMenu ( 'vidu')"      @click="st.active='vidu'; urouter.push('/vidu')"
-                class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'vidu' }">
-                    <div  class="flex  h-full justify-center items-center py-1 flex-col " :class="[ goHome =='vidu' ? 'text-[#445ff6]' : '']">
-                      <SvgIcon icon="material-symbols:engineering" size="2xl" class="flex-1" />
-                      <span class="text-[10px]">{{ $t('vidu.menu') }}</span>
-                    </div>
-            </a>
 
             <!-- 画廊 -->
              <a  v-if="!isDisableMenu ( 'gallery')"  @click="homeStore.setMyData({act:'gallery'}) " class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': homeStore.myData.act === 'gallery' }">
