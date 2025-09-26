@@ -6,8 +6,7 @@
  import PikaList from './pikaList.vue';
  import KlingList from '../kling/kgList.vue';
  import RunmlList from './runmlList.vue';
- import PixList from './pixList.vue';
-import ViduList from './viduList.vue';
+ import ViduList from './viduList.vue';
 import { gptServerStore } from '@/store';
  </script>
 <template>
@@ -18,14 +17,13 @@ import { gptServerStore } from '@/store';
     </div>
     <div class=" flex-1  h-full bg-[#fafbfc] pt-2 dark:bg-[#18181c] overflow-y-auto " >
 
-        <RunwayList v-if="gptServerStore.myData.TAB_VIDEO=='runway'"/>
+        <ViduList v-if="gptServerStore.myData.TAB_VIDEO=='vidu'"/>
+        <RunwayList v-else-if="gptServerStore.myData.TAB_VIDEO=='runway'"/>
         <KlingList v-else-if="gptServerStore.myData.TAB_VIDEO=='kling'"/>
         <PikaList v-else-if="gptServerStore.myData.TAB_VIDEO=='pika'"/>
         <RunmlList v-else-if="gptServerStore.myData.TAB_VIDEO=='runwayml'"/>
-        <PixList v-else-if="gptServerStore.myData.TAB_VIDEO=='pixverse'"/>
-        <ViduList v-else-if="gptServerStore.myData.TAB_VIDEO=='vidu'"/>
         <!-- <VoList v-else-if="gptServerStore.myData.TAB_VIDEO=='luma'"/> -->
-        <RunwayList v-else/>
+        <ViduList v-else/>
     </div>
      
 </div>

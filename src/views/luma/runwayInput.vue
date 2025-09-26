@@ -35,7 +35,7 @@ function getRandomInt(min: number, max: number): number {
 }
 
 const canPost = computed(() => {
-    return (runway.value.image_prompt!='' || runway.value.text_prompt!='' ) && !st.value.isDo
+    return (runway.value.image_prompt!='' || runway.value.text_prompt!='' ) && !st.value.isDo && homeStore.myData.hasBalance
 })
 
 const generate= async ()=>{
@@ -325,7 +325,7 @@ watch(()=>homeStore.myData.act, (n)=>{
                         <NTag v-if="runway.text_prompt!='' || runway.image_prompt!='' || exRunway" type="primary" size="small" round  ><span class="cursor-pointer" @click="clearInput()" >{{$t('video.clear')}}</span></NTag>
                      
                 </div>
-                <NButton :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line" size="sm" /> {{$t('video.generate')}}</NButton> 
+                <NButton :loading="st.isDo" type="primary" :disabled="!canPost" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:video-add-line" size="sm" /> {{$t('video.generate')}}</NButton> 
             </div>
         </div>
     </div>

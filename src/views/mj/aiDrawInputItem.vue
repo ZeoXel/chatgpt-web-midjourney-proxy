@@ -62,11 +62,14 @@ const $emit=defineEmits(['drawSent','close']);
 const props = defineProps({buttonDisabled:Boolean});
 
 const isDisabled = computed(() => {
-    return props.buttonDisabled || st.value.isLoad || st.value.text.trim()==''
+    return props.buttonDisabled || st.value.isLoad || st.value.text.trim()=='' || !homeStore.myData.hasBalance
 })
 const ms=   useMessage();
 function create( ){
-
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用绘图功能');
+        return;
+    }
 
     st.value.isLoad=true
     train( st.value.text.trim()).then(ps=>{
@@ -83,6 +86,10 @@ function create( ){
 }
 
 const shorten= ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用Shorten功能');
+        return;
+    }
 
     if( st.value.text.trim()=='') {
         mlog('empty');
@@ -182,6 +189,10 @@ function selectFile(input:any){
 
 //图生文
 function selectFile2(input:any){
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用图生文功能');
+        return;
+    }
 
     upImg(input.target.files[0]).then(d=>{
         mlog('f2base64>> ',d );

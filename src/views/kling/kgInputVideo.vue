@@ -171,7 +171,7 @@ onMounted(() => {
         </div>
         <div class="text-right">
 
-            <NButton :loading="st.isLoading" type="primary" @click="createImg()" :disabled="!f.prompt"  >{{$t('video.generate')}}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : createImg()" :disabled="!f.prompt || !homeStore.myData.hasBalance"  >{{$t('video.generate')}}</NButton>
         </div>
     </section>
 

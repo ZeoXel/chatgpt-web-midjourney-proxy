@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { mlog, upImg } from '@/api'; 
+import { ref, onMounted } from 'vue';
+import { mlog, upImg } from '@/api';
 import { useMessage,NButton,NInput,NTag,NSelect,NPopover,NSwitch } from 'naive-ui';
+import { homeStore } from '@/store';
  
 import { t } from "@/locales"; 
 import { pikaFeed, pikaFetch } from '@/api/pika';
@@ -157,6 +158,10 @@ const selecteffect = (i:number)=>{
     pika.value.pe_index= i ;
     pika.value.prompt= ezOption[i].title+' it';
 }
+
+onMounted(() => {
+    homeStore.setMyData({ms:ms})
+});
 </script>
 <template>
 <div class="p-2"> 
@@ -224,7 +229,7 @@ const selecteffect = (i:number)=>{
             
             <div class="text-right">
 
-                    <NButton :loading="st.isLoading" type="primary" @click="createVideo()" :disabled="!pika.prompt" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
+                    <NButton :loading="st.isLoading" type="primary" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : createVideo()" :disabled="!pika.prompt || !homeStore.myData.hasBalance" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
             </div>
     </section>
 </div>

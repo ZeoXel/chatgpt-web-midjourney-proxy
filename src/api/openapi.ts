@@ -240,82 +240,148 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
    let action= data.action;
    // mlog("gp-image-1 base64Array ",   data.base64Array   )
    //chat.myid=  `${Date.now()}`;
-   if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model === 'nano-banana' && data.data.base64Array && data.data.base64Array.length > 0 ){ // nano-banana 图生图
-        mlog("nano-banana 图生图数据 ", data.data, data.data.base64Array)
-        const formData = new FormData(); 
-        for(let o in data.data ){
-            if(o=='base64Array'){
-                for(let f of data.data.base64Array){
-                     formData.append('image', f.file ) // nano-banana 使用 image 字段
-                }
-            }else if(o=='model'){
-                formData.append('model', 'nano-banana') // 使用 nano-banana 模型名
-            }else{
-                formData.append(o, data.data[o])
-            }
-        }
-        mlog("nano-banana formData  ",  formData)
-        
-        try {
-            const ds = await gptUploadFile('/v1/images/edits', formData) // 使用 edits 接口
-            const d=ds.data;
-            if(ds.status!=200) throw "Fail with status:"+ ds.status
-            
-            let key= 'dall:'+chat.myid;
-            const rz : any= d.data[0];
-            if(rz.b64_json){
-                const base64='data:image/png;base64,'+rz.b64_json;
-                await localSaveAny(base64,key)
-            }
-           
-            chat.text= rz.revised_prompt ?? `nano-banana 图片已完成`;
-            chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
-            chat.loading = false;
-            homeStore.setMyData({act:'updateChat', actData:chat });
-        } catch (e) {
-            mlog('nano-banana 图生图失败', e);
-            chat.text='nano-banana 图生图失败！'+"\n```json\n"+ e +"\n```\n";
-            chat.loading=false;
-            homeStore.setMyData({act:'updateChat', actData:chat });
-        }
-   }else if( action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model === 'nano-banana' ){ // nano-banana 文生图
-       mlog("nano-banana 文生图数据 ", data.data)
-       
-       // 构造请求数据，支持参考图
-       let requestData = {
-           model: 'nano-banana',
-           prompt: data.data.prompt,
-           response_format: 'url',  // 强制使用 url 格式
-           size: data.data.size || '1024x1024',
-           n: data.data.n || 1
-       };
-       
-       // 如果有参考图，添加 image_urls 字段
+   if( action=='gpt.dall-e-3' && data.data && data.data.model && (data.data.model === 'nano-banana' || data.data.model === 'nano-banana-hd') ){ // nano-banana 系列
+       mlog("nano-banana 请求数据 ", data.data)
+
+       // 判断是使用 generations 还是 edits 端点
+       let endpoint = '/v1/images/generations';
+       let hasImage = false;
+       let requestData: any;
+       let useFormData = false;
+
+       // 如果有上传的图片，使用 edits 端点
        if(data.data.base64Array && data.data.base64Array.length > 0) {
-           requestData.image_urls = data.data.base64Array.map(img => img.base64);
-           mlog("nano-banana 添加参考图:", data.data.base64Array.length, "张");
+           endpoint = '/v1/images/edits';
+           hasImage = true;
+           useFormData = true; // edits端点需要FormData
+
+           mlog("nano-banana 包含参考图片:", data.data.base64Array.length, "张，将使用 /v1/images/edits 端点");
+           mlog("nano-banana 第一张图片数据结构:", data.data.base64Array[0]);
+
+           // 创建FormData对象
+           const formData = new FormData();
+           formData.append('model', data.data.model);
+           formData.append('prompt', data.data.prompt);
+           formData.append('response_format', 'url');
+
+           // 处理图片数据
+           const firstImage = data.data.base64Array[0];
+           if(firstImage && firstImage.base64) {
+               // 将base64转换为Blob
+               let base64Data = firstImage.base64;
+               if(base64Data.includes(',')) {
+                   base64Data = base64Data.split(',')[1];
+               }
+
+               // 将base64转换为Blob
+               const byteCharacters = atob(base64Data);
+               const byteNumbers = new Array(byteCharacters.length);
+               for (let i = 0; i < byteCharacters.length; i++) {
+                   byteNumbers[i] = byteCharacters.charCodeAt(i);
+               }
+               const byteArray = new Uint8Array(byteNumbers);
+               const blob = new Blob([byteArray], { type: 'image/png' });
+
+               // 添加图片到FormData
+               formData.append('image', blob, 'image.png');
+               mlog("nano-banana 已将图片转换为Blob并添加到FormData");
+           }
+
+           requestData = formData;
+       } else {
+           // 没有图片时使用JSON格式
+           requestData = {
+               model: data.data.model,
+               prompt: data.data.prompt,
+               response_format: 'url'
+           };
+
+           if(data.data.size) {
+               requestData.size = data.data.size;
+           }
+           if(data.data.quality) {
+               requestData.quality = data.data.quality;
+           }
+           if(data.data.n) {
+               requestData.n = data.data.n;
+           }
        }
 
        try{
-            mlog("nano-banana 即将发起请求:", requestData);
-            let d = await gptFetch('/v1/images/generations', requestData); // 使用标准 generations 接口
-            mlog("nano-banana 文生图返回 ", d)
+            mlog(`nano-banana 即将发起请求到 ${endpoint}:`, useFormData ? "FormData格式" : requestData);
+
+            // 根据是否使用FormData调用不同的方法
+            let d;
+            if(useFormData) {
+                // FormData需要特殊处理
+                d = await gptFetch(endpoint, requestData, { upFile: true, headers: {} });
+            } else {
+                d = await gptFetch(endpoint, requestData);
+            }
+            mlog("nano-banana 返回结果 ", d)
+
+            // 验证响应数据结构
+            if (!d || !d.data || !Array.isArray(d.data) || d.data.length === 0) {
+                mlog("nano-banana 响应数据格式错误:", d);
+                throw new Error(`响应数据格式错误: ${JSON.stringify(d)}`);
+            }
+
             const rz : any= d.data[0];
+            if (!rz) {
+                throw new Error("响应数据为空");
+            }
+
             let key= 'dall:'+chat.myid;
-      
+
             if(rz.b64_json){
                 const base64='data:image/png;base64,'+rz.b64_json;
                 await localSaveAny(base64,key)
             }
-            chat.text= rz.revised_prompt ?? `nano-banana 图片已完成`;
+
+            // 确保有URL
+            if (!rz.url && !rz.b64_json) {
+                mlog("nano-banana 响应缺少图片URL:", rz);
+                throw new Error("响应中没有图片URL或base64数据");
+            }
+
+            chat.text= rz.revised_prompt ?? `${data.data.model} 图片已完成`;
             chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
             chat.loading = false;
             homeStore.setMyData({act:'updateChat', actData:chat });
        }catch(e){
-            mlog('nano-banana 文生图失败', e);
-            chat.text='nano-banana 文生图失败！'+"\n```json\n"+ e +"\n```\n";
-            chat.loading=false;
+            mlog('nano-banana 请求失败', e);
+
+            // 确保loading状态被正确清除
+            chat.loading = false;
+
+            // 提供更详细的错误信息
+            let errorMessage = `${data.data.model} 请求失败！`;
+            if (e && typeof e === 'object') {
+                if (e.message) {
+                    errorMessage += `\n错误: ${e.message}`;
+                }
+                if (e.response && e.response.data) {
+                    errorMessage += "\n```json\n" + JSON.stringify(e.response.data, null, 2) + "\n```\n";
+                } else {
+                    errorMessage += "\n```json\n" + JSON.stringify(e, null, 2) + "\n```\n";
+                }
+            } else {
+                errorMessage += "\n```\n" + String(e) + "\n```\n";
+            }
+
+            chat.text = errorMessage;
+            chat.error = true; // 标记为错误状态
+
+            // 强制更新UI
             homeStore.setMyData({act:'updateChat', actData:chat });
+
+            // 额外的状态重置，确保UI响应
+            setTimeout(() => {
+                homeStore.setMyData({act:'forceUpdate'});
+            }, 100);
+
+            // 抛出错误以便上层捕获
+            throw new Error(errorMessage);
        }
    }else if(  action=='gpt.dall-e-3' && data.data && data.data.model && data.data.model.indexOf('ideogram')>-1 ){ //ideogram
          mlog("ddlog 数据 ", data.data  )
@@ -409,9 +475,9 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
 export const isDallImageModel =(model:string|undefined)=>{
     if(!model) return false;
     if( model.indexOf('flux')>-1 ) return true; 
-    if( model.indexOf('ideogram')>-1 ) return true; 
-    if( model.indexOf('gpt-image')>-1 ) return true; 
-    if( model === 'nano-banana' ) return true;
+    if( model.indexOf('ideogram')>-1 ) return true;
+    if( model.indexOf('gpt-image')>-1 ) return true;
+    if( model === 'nano-banana' || model === 'nano-banana-hd' ) return true;
     return ['dall-e-2' ,'dall-e-3','ideogram' ].indexOf(model)>-1
       
 }
@@ -697,6 +763,16 @@ export const  gptUsage=async ()=>{
 export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
     //mlog()
     mlog('setting', q )
+
+    // 处理hasBalance参数
+    if(q.hasBalance !== undefined) {
+        const hasBalance = q.hasBalance === 'true';
+        homeStore.setMyData({ hasBalance });
+        mlog('hasBalance设置为:', hasBalance);
+
+        // hasBalance状态已设置，由BalanceWarning组件统一处理UI提示
+    }
+
     if(q.settings){
         mlog('q.setting', q.settings )
         try {
@@ -705,8 +781,8 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
             const key = obj.key ?? undefined;
             //let setQ= { }
             gptServerStore.setMyData(  {
-                OPENAI_API_BASE_URL:url, 
-                MJ_SERVER:url, 
+                OPENAI_API_BASE_URL:url,
+                MJ_SERVER:url,
                 SUNO_SERVER:url,
                 LUMA_SERVER:url,
                 RUNWAY_SERVER:url,
@@ -717,11 +793,11 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
                 UDIO_SERVER:url,
                 PIXVERSE_SERVER:url,
                 RIFF_SERVER:url,
-                
-                
-                
+                VIDU_SERVER:url,
+
+
                 OPENAI_API_KEY:key,
-                MJ_API_SECRET:key, 
+                MJ_API_SECRET:key,
                 SUNO_KEY:key,
                 LUMA_KEY:key,
                 RUNWAY_KEY:key,
@@ -732,13 +808,14 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
                 UDIO_KEY:key,
                 PIXVERSE_KEY:key,
                 RIFF_KEY:key,
+                VIDU_KEY:key,
              } )
             blurClean();
             gptServerStore.setMyData( gptServerStore.myData );
             ms.success("设置服务端成功！")
-            
+
         } catch (error) {
-            
+
         }
     }
     else if(isObject(q)){

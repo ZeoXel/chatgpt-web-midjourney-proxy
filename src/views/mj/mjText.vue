@@ -25,14 +25,18 @@ const reload= ()=>{
     flechTask(chat.value);
 }
 const sub= (type:string,index:number)=>{
-     
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用MidJourney功能');
+        return;
+    }
+
     let text= chat.value.opt?.promptEn+` ${type} ${index}`;
     let obj={
         action:'change',
         version:1,text,
         data:{
             "action": type,
-            "index": index, 
+            "index": index,
             "taskId":  chat.value.mjID
             }
     }
@@ -69,6 +73,11 @@ const uniqueImageUrls = computed(() => {
 });
 
 const subV2= (b:{k:string,n:string})=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用MidJourney功能');
+        return;
+    }
+
     if(chat.value.opt?.buttons ==undefined ) return;
     //mlog('subV2', b );
     let i = getIndex( chat.value.opt?.buttons, b);
@@ -85,9 +94,9 @@ const subV2= (b:{k:string,n:string})=>{
     }
      let obj={
         action:'changeV2',
-        version:1, 
+        version:1,
         data:{
-            "customId": chat.value.opt?.buttons[i].customId, 
+            "customId": chat.value.opt?.buttons[i].customId,
             "taskId":  chat.value.mjID
             }
     }
@@ -96,16 +105,21 @@ const subV2= (b:{k:string,n:string})=>{
 }
 
 const subCustom = ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用MidJourney功能');
+        return;
+    }
+
     if(chat.value.opt?.buttons ==undefined ) return;
     let i = getIndex( chat.value.opt?.buttons, {k: 'CustomZoom::' ,n: t('mj.czoom') } );
     let obj={
         action:'CustomZoom',
-        version:1, 
+        version:1,
         data:{
-            "customId": chat.value.opt?.buttons[i].customId, 
+            "customId": chat.value.opt?.buttons[i].customId,
             "taskId":  chat.value.mjID
             },
-        maskData:{  
+        maskData:{
             "prompt": st.value.customText ,
         }
     }
@@ -113,25 +127,30 @@ const subCustom = ()=>{
     homeStore.setMyData({act:'draw',actData:obj});
 
     st.value.isCustom= false;
-    
+
 }
 
 const maskOk=(d:any)=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用MidJourney功能');
+        return;
+    }
+
     if(chat.value.opt?.buttons ==undefined ) return;
-   
+
    mlog('maskOk',d  );
     let i = getIndex( chat.value.opt?.buttons, {k:':Inpaint::1',n: t('mj.redraw') } );
     let obj={
         action:'mask',
-        version:1, 
+        version:1,
         data:{
-            "customId": chat.value.opt?.buttons[i].customId, 
+            "customId": chat.value.opt?.buttons[i].customId,
             "taskId":  chat.value.mjID
             },
-        maskData:{ 
+        maskData:{
   "maskBase64": d.mask ,
   "prompt": d.prompt ,
-   //"taskId": "14001934816969359" 
+   //"taskId": "14001934816969359"
         }
     }
    homeStore.setMyData({act:'draw',actData:obj});

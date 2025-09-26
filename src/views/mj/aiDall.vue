@@ -5,11 +5,13 @@ import {gptFetch, mlog, upImg} from '@/api'
 import { homeStore } from '@/store';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
+import { checkBalance } from '@/utils/balanceGuard';
 
 const ms = useMessage();
 const config = ref( {
 model:[
 {  "label": "nano-banana", "value": "nano-banana" }
+ ,{  "label": "nano-banana-hd", "value": "nano-banana-hd" }
  ,{  "label": "DALL·E 3", "value": "dall-e-3" }
  ,{  "label": "GPT-Image-1", "value": "gpt-image-1" }
  ,{  "label": "flux-kontext-pro", "value": "flux-kontext-pro" }
@@ -39,9 +41,17 @@ const isDisabled= computed(()=>{
         //console.log('prompt',"空");
         return true;
     }
+    if(!homeStore.myData.hasBalance) {
+        return true;
+    }
     return false;
 });
 const create= async ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用图片生成功能');
+        return;
+    }
+
     // const d= await gptFetch('/v1/embeddings',{
     // "input":  f.value.prompt,
     // "model": "text-embedding-ada-002"
@@ -136,7 +146,7 @@ const dimensionsList= computed(()=>{
             }
     ];
     }
-    if(f.value.model=='nano-banana'){
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd'){
     return [{
                 "label": "1024px*1024px",
                 "value": "1024x1024"
@@ -169,7 +179,7 @@ const isCanImageEdit= computed(()=>{
     if(f.value.model=='dall-e-2') return true;
     if(f.value.model=='gpt-image-1') return true;
     if(f.value.model.indexOf('kontext')>-1) return true;
-    if(f.value.model=='nano-banana') return true;
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd') return true;
     return false;
 })
 

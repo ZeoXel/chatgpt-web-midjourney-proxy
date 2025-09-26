@@ -9,7 +9,6 @@ import { mlog } from '@/api';
 import { gptServerStore } from '@/store';
 import {  ref } from 'vue';
 import { useRoute } from 'vue-router';
-import PixInput from './pixInput.vue';
 
 const route = useRoute(); // 获取当前路由对象
 
@@ -24,14 +23,15 @@ const initLoad=()=>{
         //st.value.tab=route.query.tab as string;
         st.value.tab= 'runway'
         let tt= (route.query.tab as string).toLocaleLowerCase();
-        if( ['runway','pika','kling','runwayml','pixverse','vidu'].indexOf(tt)>-1 ){
+        if( ['runway','pika','kling','runwayml','vidu'].indexOf(tt)>-1 ){
            st.value.tab=tt;
         }
         handleUpdateValue(  st.value.tab )
     }
-    else st.value.tab=( gptServerStore.myData.TAB_VIDEO && gptServerStore.myData.TAB_VIDEO !== 'luma' ? gptServerStore.myData.TAB_VIDEO:'runway')
+    else st.value.tab=( gptServerStore.myData.TAB_VIDEO && gptServerStore.myData.TAB_VIDEO !== 'luma' ? gptServerStore.myData.TAB_VIDEO:'vidu')
     if( st.value.tab=='runwayml') st.value.tab='runway'
-    if( st.value.tab=='luma') st.value.tab='runway'
+    if( st.value.tab=='luma') st.value.tab='vidu'
+    if( st.value.tab=='pixverse') st.value.tab='vidu'
 }
 initLoad();
 </script>
@@ -44,7 +44,10 @@ initLoad();
         <!-- <n-tab-pane name="luma" tab="Luma">
             <LumaInput />
         </n-tab-pane> -->
-        <n-tab-pane name="runway" tab="Runway" style="--n-tab-gap:10px">
+        <n-tab-pane name="vidu" tab="Vidu" style="--n-tab-gap:10px">
+            <ViduInput />
+        </n-tab-pane>
+        <n-tab-pane name="runway" tab="Runway">
             <RunwayInput />
         </n-tab-pane>
         <n-tab-pane name="pika" tab="Pika">
@@ -53,12 +56,6 @@ initLoad();
         <n-tab-pane name="kling" :tab="$t('mj.kling')">
             <KlingInput />
         </n-tab-pane>
-        <n-tab-pane name="pixverse" tab="Pixverse">
-            <PixInput />
-        </n-tab-pane>
-        <n-tab-pane name="vidu" tab="Vidu">
-            <ViduInput />
-        </n-tab-pane>
     </n-tabs>
 </div>
 </template>
@@ -66,5 +63,22 @@ initLoad();
 <style lang="css"  scoped>
 .abc1234  {
     --n-tab-gap:20px  !important;
+}
+.abc1234 :deep(.n-tabs-nav) {
+    justify-content: center !important;
+    display: flex !important;
+}
+.abc1234 :deep(.n-tabs-nav-scroll-wrapper) {
+    justify-content: center !important;
+    display: flex !important;
+    width: 100% !important;
+}
+.abc1234 :deep(.n-tabs-nav-scroll-content) {
+    justify-content: center !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+}
+.abc1234 :deep(.n-tabs-tab) {
+    margin: 0 10px !important;
 }
 </style>

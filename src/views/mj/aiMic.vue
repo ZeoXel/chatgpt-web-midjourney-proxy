@@ -4,8 +4,9 @@ import { SvgIcon } from '@/components/common';
 import Recorder from 'js-audio-recorder';
 import  { NButton,useMessage,NButtonGroup } from "naive-ui"
 import { useBasicLayout } from '@/hooks/useBasicLayout'
-import { ref,watch,onUnmounted } from 'vue'
+import { ref,watch,onUnmounted,computed } from 'vue'
 import { t } from '@/locales';
+import { homeStore } from '@/store';
 
 const emit = defineEmits(['process' ,'send','cancel']);
 let recorder = new Recorder();
@@ -25,6 +26,12 @@ recorder.onprogress =  (params) => {
     //emit('process', stat.value);
 }
 const start = ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用音频功能');
+        emit('cancel');
+        return;
+    }
+
     recorder.start().then(()=>{
         st.value.start=1;
         st.value.isGo=true;
@@ -46,6 +53,11 @@ const pauseGoon=()=>{
     recorder.stopPlay();
 }
 const send=()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用音频功能');
+        return;
+    }
+
     stop();
     emit('send',{blob: recorder.getWAVBlob() , stat:stat.value });
     stat.value= {duration:0,fileSize:0,vol:0} ;
@@ -72,14 +84,18 @@ const cancal=()=>{
 onUnmounted(() => {
     recorder.stop();
     recorder.destroy();
-}),
+})
+const isDisabled = computed(() => {
+    return !homeStore.myData.hasBalance;
+});
+
 watch(()=> stat.value , (n)=> emit('process', stat.value) ,{deep:true} );
 
 start();
 </script>
 <template> 
 <template v-if="!st.isGo">
-    <NButton @click="start()" type="primary" block round> 
+    <NButton @click="start()" type="primary" block round :disabled="isDisabled">
         <template #icon><SvgIcon icon="bi:mic"/></template>{{ $t('mj.mStart') }}
     </NButton>
 </template>
@@ -103,7 +119,7 @@ start();
         <NButton @click="cancal()" type="info">
         <template #icon><SvgIcon icon="ri:close-circle-line"/></template>{{ $t('mj.mCanel') }}</NButton> 
 
-        <NButton type="primary" @click="send()">
+        <NButton type="primary" @click="send()" :disabled="isDisabled">
         <template #icon><SvgIcon icon="ri:send-plane-fill"></SvgIcon></template>
         {{ $t('mj.mSent') }}
         <span class="w-[30px]" v-if="stat.duration>0 ">{{ stat?.duration.toFixed(1) }}s</span>

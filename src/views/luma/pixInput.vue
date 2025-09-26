@@ -311,7 +311,7 @@ const pixCamera = computed(()=>{
         </div>
         <div class="text-right">
 
-            <NButton :loading="st.isLoading" type="primary" @click="create()" :disabled="!f.prompt" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : create()" :disabled="!f.prompt || !homeStore.myData.hasBalance" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
         </div>
     </section>
 

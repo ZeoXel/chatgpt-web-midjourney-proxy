@@ -5,11 +5,12 @@ import {   useDialog, useMessage } from 'naive-ui'
  
 import { useScroll } from '../chat/hooks/useScroll'
 import { useChat } from '../chat/hooks/useChat'
-import { useUsingContext } from '../chat/hooks/useUsingContext' 
+import { useUsingContext } from '../chat/hooks/useUsingContext'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { homeStore, useChatStore, usePromptStore } from '@/store'
 import {   mlog,subTask,localSaveAny, subGPT, isDallImageModel, addToGallery } from '@/api'
 import { t } from '@/locales'
+import { checkBalance } from '@/utils/balanceGuard'
 
 let controller = new AbortController()
 
@@ -60,6 +61,8 @@ async function onConversation() {
 
   if (loading.value)
     return
+
+
   if( !message.drawText && dataSources.value.length==0){
       message.drawText=  t('mjset.sysname');//'零素觉醒AI工具平台';
   }
@@ -119,10 +122,12 @@ async function onConversation() {
            mlog('localSaveAny error',e);
        }
     }
-    // 保存原始配置
+    // 保存原始配置和模型信息到用户输入消息
     if (message.originalConfig) {
         promptMsg.originalConfig = message.originalConfig;
     }
+    // 为用户输入消息设置模型信息（用于显示重新编辑按钮）
+    promptMsg.model = message.data.model;
      addChat(  +uuid, promptMsg );
   }else if( message.drawText){
     let promptMsg: Chat.Chat= getInitChat(message.drawText)

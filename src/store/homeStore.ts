@@ -6,7 +6,7 @@ export const homeStore = reactive({
     myData:{
         act:'',//动作
         act2:'',//动作
-        actData:{} //动作类别 
+        actData:{} //动作类别
         ,local:'' //当前所处的版本
         ,session:{} as any
         ,isLoader:false
@@ -16,7 +16,9 @@ export const homeStore = reactive({
         ,ms:{} as any
         ,is_luma_pro:false
         ,is_viggle_pro:false
-       
+        ,hasBalance:true //用户余额状态，默认为true
+        ,balanceWarningDismissed:false //余额警告是否已关闭
+
     }
     
     ,setMyData( v:object){

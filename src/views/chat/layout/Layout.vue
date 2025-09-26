@@ -12,6 +12,7 @@ import { t } from '@/locales'
 import { mlog, openaiSetting } from '@/api'
 import { isObject } from '@/utils/is'
 import { getLastChatUuid } from '@/store/modules/chat/helper'
+import { BalanceWarning } from '@/components/common'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -90,7 +91,10 @@ const getContainerClass = computed(() => {
     </div>
     <Permission :visible="needPermission" />
   </div>
-   <aiMobileMenu v-if="isMobile"   /> 
+   <aiMobileMenu v-if="isMobile"   />
+
+  <!-- 余额警告悬浮窗 -->
+  <BalanceWarning />
 
   <aiFooter/>
 </template>

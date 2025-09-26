@@ -11,6 +11,16 @@ const ms = useMessage();
 const fsRef= ref() ;
 const st= ref({status:'',isGo:false,dimensions:'SQUARE'})
 const base64Array= ref<string[]>([]);
+const isDisabled = computed(() => {
+    if (!st.value.isGo) {
+        return true;
+    }
+    if (!homeStore.myData.hasBalance) {
+        return true;
+    }
+    return false;
+});
+
 const selectFile=(input:any)=>{
     upImg(input.target.files[0]).then(d=>{
         fsRef.value.value='';
@@ -25,6 +35,11 @@ const selectFile=(input:any)=>{
     }).catch(e=>ms.error(e));
 }
 const send= ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用混合功能');
+        return;
+    }
+
     if(base64Array.value.length<2){
         ms.error( t('mjchat.add2more') )
         return ;
@@ -74,7 +89,7 @@ const drawlocalized = computed(() => {
         <SvgIcon icon="mdi:add-bold" class="text-[40px] text-[#fff]"></SvgIcon>
     </div>
 </div>
-<div   class="flex justify-end pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo" style="background-color: #445ff6;">{{$t('mjchat.blendStart')}}</NButton> </div>
+<div   class="flex justify-end pt-5"><NButton @click="send" type="primary" :disabled="isDisabled" style="background-color: #445ff6;">{{$t('mjchat.blendStart')}}</NButton> </div>
 
 <ul class="pt-4" v-html="$t('mjchat.blendInfo')">
 

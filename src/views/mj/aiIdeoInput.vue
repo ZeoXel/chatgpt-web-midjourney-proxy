@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { NSelect,NInput, useMessage,NButton,NTag } from 'naive-ui';
 import { IdeoImageData, ideoFetch, mlog, upImg } from '@/api';
 import { homeStore } from '@/store';
@@ -34,6 +34,11 @@ function selectFile(input:any){
     
 }
 const createImg= async ()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用Ideogram图片生成功能');
+        return;
+    }
+
     if(st.value.seed && !isNaN(parseInt(st.value.seed))){
         f.value.seed= parseInt(st.value.seed);
     }
@@ -48,9 +53,9 @@ const createImg= async ()=>{
     if(st.value.image_url){
         data.fileBase64=   st.value.image_url
     }
-    // const d:any = await ideoFetch('/generate ' ,data ) 
-    // mlog('img', d ); 
-    // const dimg:IdeoImageData= d.data.data  
+    // const d:any = await ideoFetch('/generate ' ,data )
+    // mlog('img', d );
+    // const dimg:IdeoImageData= d.data.data
     let obj= {
         action:'gpt.dall-e-3',
         data:data
@@ -67,6 +72,16 @@ const clearInput = ()=>{
     f.value.seed=123456;
     fsFile.value= null;
 }
+
+const isDisabled = computed(() => {
+    if (!f.value.prompt) {
+        return true;
+    }
+    if (!homeStore.myData.hasBalance) {
+        return true;
+    }
+    return false;
+});
 </script>
 <template>
 <div class="overflow-y-auto bg-[#fafbfc]   dark:bg-[#18181c] h-full ">
@@ -116,7 +131,7 @@ const clearInput = ()=>{
         <div class="text-right">
             <div  class=" cursor-pointer pb-2" @click="clearInput"  v-if="st.image_url|| f.prompt "><NTag type="primary" size="small" :bordered="false" round  ><span class="cursor-pointer">{{$t('video.clear')}}</span></NTag></div>
 
-            <NButton type="primary" @click="createImg()" :disabled="!f.prompt" style="background-color: #445ff6;" >{{ $t('mjchat.imgcreate') }}</NButton>
+            <NButton type="primary" @click="createImg()" :disabled="isDisabled" style="background-color: #445ff6;" >{{ $t('mjchat.imgcreate') }}</NButton>
         </div>
     </section>
     

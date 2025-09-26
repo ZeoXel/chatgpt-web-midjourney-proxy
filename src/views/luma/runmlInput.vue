@@ -71,7 +71,7 @@ const clearInput = ()=>{
     fsRef2.value=''
 }
 const canPost= computed(()=>{
-    return f.value.promptText && luma.value.image_url
+    return f.value.promptText && luma.value.image_url && homeStore.myData.hasBalance
 });
 
 const create= async ()=>{ 
@@ -159,7 +159,7 @@ const mvOption= [
         </div>
         <div class="text-right">
 
-            <NButton :loading="st.isLoading" type="primary" @click="create()"  :disabled="!canPost" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
+            <NButton :loading="st.isLoading" type="primary" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : create()"  :disabled="!canPost" style="background-color: #445ff6;" >{{$t('video.generate')}}</NButton>
         </div>
     </section>
 

@@ -60,7 +60,7 @@ const search=()=>{
     
 }
 const canPost= computed(()=>{
-    return (f.value.templateID|| f.value.videoID) && f.value.imageID 
+    return (f.value.templateID|| f.value.videoID) && f.value.imageID && homeStore.myData.hasBalance
 })
 
 const clear=(type:number)=>{
@@ -238,7 +238,7 @@ onMounted(() => {
     </div>
 
     <div class="pt-2 flex justify-center items-center w-full">
-         <NButton block :loading="st.isDo" type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;">
+         <NButton block :loading="st.isDo" type="primary" :disabled="!canPost" @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : generate()" style="background-color: #445ff6;">
             <!-- <SvgIcon icon="ri:video-add-line"  />  -->
             {{$t('video.generate')}}
             <template v-if="st.fee>0">

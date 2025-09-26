@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { NDropdown, useMessage } from 'naive-ui'
 import AvatarComponent from './Avatar.vue'
 import TextComponent from './Text.vue'
@@ -36,6 +36,37 @@ const { isMobile } = useBasicLayout()
 const { iconRender } = useIconRender()
 
 const message = useMessage()
+
+// 监听存储空间提示
+const handleStorageNotification = (data: any) => {
+  // 余额不足时不显示存储相关提示，避免重复警告
+  if (!homeStore.myData.hasBalance) {
+    return
+  }
+
+  if (data.act === 'showStorageWarning') {
+    message.warning(data.actData?.message || '存储空间不足，正在清理...', {
+      duration: 3000
+    })
+  } else if (data.act === 'showStorageSuccess') {
+    message.success(data.actData?.message || '存储空间清理完成', {
+      duration: 2000
+    })
+  } else if (data.act === 'showStorageError') {
+    message.error(data.actData?.message || '存储空间严重不足，请清理浏览器缓存', {
+      duration: 8000,
+      closable: true
+    })
+  }
+}
+
+// 监听store变化
+watch(() => homeStore.myData.act, (newAct) => {
+  const actData = homeStore.myData.actData
+  if (newAct && (newAct.includes('Storage') || ['showStorageWarning', 'showStorageSuccess', 'showStorageError'].includes(newAct))) {
+    handleStorageNotification({ act: newAct, actData })
+  }
+})
 
 const textRef = ref<HTMLElement>()
 
@@ -228,8 +259,8 @@ function handleRegenerateImage() {
           </NDropdown>
         </div>
 
-        <!-- 生图模型的操作按钮 -->
-        <div class="flex flex-col" v-if="!chat.mjID && isDallImageModel(chat.model) && !inversion && chat.originalConfig">
+        <!-- 生图模型的操作按钮 - 移至用户气泡旁 -->
+        <div class="flex flex-col" v-if="!chat.mjID && isDallImageModel(chat.model) && inversion && chat.originalConfig">
           <button
             class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
             @click="handleEditImage"

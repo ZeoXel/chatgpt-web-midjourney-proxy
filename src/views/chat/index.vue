@@ -27,6 +27,7 @@ import {
   useChatStore,
   usePromptStore,
 } from "@/store";
+import { checkBalance } from '@/utils/balanceGuard';
 import {
   chatSetting,
   fetchChatAPIProcess,
@@ -108,6 +109,7 @@ async function onConversation() {
   if (loading.value) return;
 
   if (!message || message.trim() === "") return;
+
 
   controller = new AbortController();
 
@@ -449,6 +451,7 @@ function handleStop() {
   }
 }
 
+
 // 可优化部分
 // 搜索选项计算，这里使用value作为索引项，所以当出现重复value时渲染异常(多项同时出现选中效果)
 // 理想状态下其实应该是key作为索引项,但官方的renderOption会出现问题，所以就需要value反renderLabel实现
@@ -545,7 +548,7 @@ const placeholder = computed(() => {
 });
 
 const buttonDisabled = computed(() => {
-  return loading.value || !prompt.value || prompt.value.trim() === "";
+  return loading.value || !prompt.value || prompt.value.trim() === "" || !homeStore.myData.hasBalance;
 });
 
 const footerClass = computed(() => {

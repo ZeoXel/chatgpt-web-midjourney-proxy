@@ -52,7 +52,7 @@ onMounted(() => {
 const canPost = computed(() => {
   // 至少需要有提示词或图片其中之一
   const hasContent = vidu.value.prompt !== '' || vidu.value.images.length > 0;
-  return hasContent && !st.value.isDo;
+  return hasContent && !st.value.isDo && homeStore.myData.hasBalance;
 });
 
 // 根据模式自动调整图片要求提示
@@ -255,7 +255,7 @@ const removeImage = (index: number) => {
             :loading="st.isDo"
             type="primary"
             :disabled="!canPost"
-            @click="generate()"
+            @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : generate()"
             style="background-color: #445ff6;"
           >
             <SvgIcon icon="ri:video-add-line" size="sm" /> {{ $t('video.generate') }}

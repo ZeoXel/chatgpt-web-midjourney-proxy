@@ -17,11 +17,26 @@ function selectFile(input:any){
     }).catch(e=>ms.error(e));
     
 }
+const isDisabled = computed(() => {
+    if (!st.value.isGo) {
+        return true;
+    }
+    if (!homeStore.myData.hasBalance) {
+        return true;
+    }
+    return false;
+});
+
 const send=()=>{
+    if (!homeStore.myData.hasBalance) {
+        ms.info('账户余额不足，无法使用换脸功能');
+        return;
+    }
+
     if( f.value.targetBase64 && f.value.sourceBase64){
         let obj={
             action:'face',
-            version:1, 
+            version:1,
             data:f.value
         }
         homeStore.setMyData({act:'draw',actData:obj});
@@ -43,7 +58,7 @@ const send=()=>{
         <div class="text-center" v-else>{{ $t('mjchat.your2Head') }}</div> 
     </div>
 </div>
-<div   class="flex justify-center pt-5"><NButton @click="send" type="primary" :disabled="!st.isGo" style="background-color: #445ff6;">{{ $t('mjchat.submit') }}</NButton> </div>
+<div   class="flex justify-center pt-5"><NButton @click="send" type="primary" :disabled="isDisabled" style="background-color: #445ff6;">{{ $t('mjchat.submit') }}</NButton> </div>
 <ul class="pt-4" v-html="$t('mjchat.tipInfo')">
     
 </ul>
