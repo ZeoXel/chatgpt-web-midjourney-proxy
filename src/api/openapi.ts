@@ -256,7 +256,6 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
            useFormData = true; // edits端点需要FormData
 
            mlog("nano-banana 包含参考图片:", data.data.base64Array.length, "张，将使用 /v1/images/edits 端点");
-           mlog("nano-banana 第一张图片数据结构:", data.data.base64Array[0]);
 
            // 创建FormData对象
            const formData = new FormData();
@@ -264,28 +263,30 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
            formData.append('prompt', data.data.prompt);
            formData.append('response_format', 'url');
 
-           // 处理图片数据
-           const firstImage = data.data.base64Array[0];
-           if(firstImage && firstImage.base64) {
-               // 将base64转换为Blob
-               let base64Data = firstImage.base64;
-               if(base64Data.includes(',')) {
-                   base64Data = base64Data.split(',')[1];
-               }
+           // 处理所有图片数据（支持多图参考）
+           for(let i = 0; i < data.data.base64Array.length; i++) {
+               const imageItem = data.data.base64Array[i];
+               if(imageItem && imageItem.base64) {
+                   // 将base64转换为Blob
+                   let base64Data = imageItem.base64;
+                   if(base64Data.includes(',')) {
+                       base64Data = base64Data.split(',')[1];
+                   }
 
-               // 将base64转换为Blob
-               const byteCharacters = atob(base64Data);
-               const byteNumbers = new Array(byteCharacters.length);
-               for (let i = 0; i < byteCharacters.length; i++) {
-                   byteNumbers[i] = byteCharacters.charCodeAt(i);
-               }
-               const byteArray = new Uint8Array(byteNumbers);
-               const blob = new Blob([byteArray], { type: 'image/png' });
+                   // 将base64转换为Blob
+                   const byteCharacters = atob(base64Data);
+                   const byteNumbers = new Array(byteCharacters.length);
+                   for (let j = 0; j < byteCharacters.length; j++) {
+                       byteNumbers[j] = byteCharacters.charCodeAt(j);
+                   }
+                   const byteArray = new Uint8Array(byteNumbers);
+                   const blob = new Blob([byteArray], { type: 'image/png' });
 
-               // 添加图片到FormData
-               formData.append('image', blob, 'image.png');
-               mlog("nano-banana 已将图片转换为Blob并添加到FormData");
+                   // 添加图片到FormData（使用相同字段名 "image"）
+                   formData.append('image', blob, `image${i}.png`);
+               }
            }
+           mlog(`nano-banana 已将 ${data.data.base64Array.length} 张图片转换为Blob并添加到FormData`);
 
            requestData = formData;
        } else {
