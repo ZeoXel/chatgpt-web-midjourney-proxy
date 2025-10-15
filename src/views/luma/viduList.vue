@@ -76,7 +76,7 @@ onMounted(() => {
               loop
               playsinline
               :controls="st.pIndex === index"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-contain"
               :poster="item.creations[0].cover_url"
               controlsList="nodownload"
             >
