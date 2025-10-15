@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref ,computed,watch} from 'vue';
 import {useMessage, NButton,NSelect,NInput, NImage, c} from 'naive-ui';
-import {gptFetch, mlog, upImg} from '@/api'
+import {gptFetch, mlog, upImg, localGet, localSaveAny} from '@/api'
 import { homeStore } from '@/store';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
@@ -75,13 +75,22 @@ const create= async ()=>{
     }
 
     // 保存原始配置用于重新编辑和再次生成
+    // 关键修改：不再将base64Array直接存入localStorage，而是存到IndexedDB
+    let base64ArrayKey = '';
+    if (base64Array.value.length > 0) {
+        // 将base64Array存储到IndexedDB，只保存key到localStorage
+        base64ArrayKey = `dall-images:${Date.now()}`;
+        await localSaveAny(JSON.stringify(base64Array.value), base64ArrayKey);
+        mlog('base64Array已存储到IndexedDB, key:', base64ArrayKey);
+    }
+
     obj.originalConfig = {
         model: f.value.model,
         size: f.value.size,
         prompt: f.value.prompt,
         n: f.value.n,
         quality: st.value.quality,
-        base64Array: base64Array.value.length > 0 ? [...base64Array.value] : []
+        base64ArrayKey: base64ArrayKey || undefined // 只存储key引用，不存储实际数据
     };
 
     homeStore.setMyData({act:'draw', actData:obj});
@@ -104,8 +113,31 @@ watch(()=>homeStore.myData.act,(n)=>{
             f.value.n = config.n || 1;
             st.value.quality = config.quality || 'medium';
 
-            // 重新填入参考图片
-            base64Array.value = config.base64Array || [];
+            // 重新填入参考图片 - 从 IndexedDB 恢复
+            if (config.base64ArrayKey) {
+                // 如果有 key，从 IndexedDB 加载
+                localGet(config.base64ArrayKey).then((data: any) => {
+                    if (data) {
+                        try {
+                            base64Array.value = JSON.parse(data);
+                            mlog('从 IndexedDB 恢复 base64Array:', base64Array.value.length);
+                        } catch(e) {
+                            mlog('解析 base64Array 失败:', e);
+                            base64Array.value = [];
+                        }
+                    } else {
+                        base64Array.value = [];
+                    }
+                }).catch((e: any) => {
+                    mlog('从 IndexedDB 加载失败:', e);
+                    base64Array.value = [];
+                });
+            } else if (config.base64Array) {
+                // 兼容旧数据：直接使用 base64Array
+                base64Array.value = config.base64Array;
+            } else {
+                base64Array.value = [];
+            }
         }
     }
 })
