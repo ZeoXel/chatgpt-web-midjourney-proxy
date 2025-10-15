@@ -97,18 +97,28 @@ export const viduGenerate = async (params: {
   try {
     mlog('viduGenerate', params);
 
-    // 构建符合Vidu官方API格式的请求体
+    // 构建请求体 - 同时支持NewAPI网关和Vidu官方API格式
+    const aspectRatioToSize = {
+      '16:9': '1920x1080',
+      '9:16': '1080x1920',
+      '1:1': '1080x1080'
+    };
+
     const requestData: any = {
       model: params.model,
       prompt: params.prompt,
-      aspect_ratio: params.aspect_ratio || '16:9', // 直接使用aspect_ratio，不转换为size
+      size: aspectRatioToSize[params.aspect_ratio || '16:9'] || '1920x1080', // NewAPI网关格式
+      aspect_ratio: params.aspect_ratio || '16:9', // Vidu官方API格式
       duration: params.duration || 5,
-      seed: params.seed || 0,
-      resolution: params.resolution || '1080p',
-      movement_amplitude: params.movement_amplitude || 'auto',
-      bgm: params.bgm || false,
-      off_peak: params.off_peak || false,
-      payload: params.payload || ''
+      metadata: {
+        duration: params.duration || 5,
+        seed: params.seed || 0,
+        resolution: params.resolution || '1080p',
+        movement_amplitude: params.movement_amplitude || 'auto',
+        bgm: params.bgm || false,
+        payload: params.payload || '',
+        callback_url: ''
+      }
     };
 
     // 根据模式处理图片参数和模式选择
