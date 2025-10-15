@@ -108,13 +108,11 @@ export const viduGenerate = async (params: {
     const requestData: any = {
       model: params.model,
       prompt: params.prompt,
-      size: aspectRatioToSize[selectedAspectRatio] || '1920x1080', // NewAPI网关格式
-      aspect_ratio: selectedAspectRatio, // Vidu官方API格式
+      size: aspectRatioToSize[selectedAspectRatio] || '1920x1080', // NewAPI网关只认size
       duration: params.duration || 5,
       metadata: {
         duration: params.duration || 5,
         seed: params.seed || 0,
-        aspect_ratio: selectedAspectRatio, // 在metadata中也添加，防止被覆盖
         resolution: params.resolution || '1080p',
         movement_amplitude: params.movement_amplitude || 'auto',
         bgm: params.bgm || false,
