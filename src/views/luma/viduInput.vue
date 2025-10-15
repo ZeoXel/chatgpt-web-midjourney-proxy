@@ -150,19 +150,30 @@ const removeImage = (index: number) => {
 <template>
   <div class="p-2">
     <!-- 宽高比选择 - 参考Luma样式 -->
-    <div class="flex items-center justify-between space-x-1 mb-3">
-      <template v-for="(item, index) in vf" :key="index">
-        <section
-          class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"
-          :class="{'border-primary': vidu.aspect_ratio === item.value}"
-          @click="vidu.aspect_ratio = item.value"
-        >
-          <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
-            <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
-          </div>
-          <p class="mb-1 text-center text-sm">{{ item.label }}</p>
-        </section>
-      </template>
+    <div class="mb-3">
+      <div class="flex items-center justify-between space-x-1">
+        <template v-for="(item, index) in vf" :key="index">
+          <section
+            class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"
+            :class="{
+              'border-primary': vidu.aspect_ratio === item.value,
+              'opacity-50 cursor-not-allowed': vidu.images.length > 0
+            }"
+            @click="vidu.images.length === 0 && (vidu.aspect_ratio = item.value)"
+          >
+            <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
+              <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
+            </div>
+            <p class="mb-1 text-center text-sm">{{ item.label }}</p>
+          </section>
+        </template>
+      </div>
+      <div v-if="vidu.images.length > 0" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+        ⚠️ 图生视频模式：视频比例将自动跟随参考图片比例
+      </div>
+      <div v-else class="text-xs text-gray-500 mt-2">
+        💡 仅在文生视频模式下有效，图生视频会自动跟随图片比例
+      </div>
     </div>
 
     <!-- 模型选择 -->
