@@ -99,6 +99,11 @@ initLoad();
                         <SvgIcon icon="line-md:downloading-loop" size="3xl" class="text-green-300" />
                         </div>
                     </template>
+                    <template #fallback>
+                        <div class="w-full h-full justify-center items-center flex bg-gray-200 dark:bg-gray-800">
+                        <SvgIcon icon="mdi:music" size="3xl" class="text-gray-400" />
+                        </div>
+                    </template>
                 </n-image>
                 <div class="absolute top-0 right-0 w-full h-full flex justify-center items-center" v-if="st.playid==item.id">
                     <SvgIcon icon="mdi:pause-circle-outline" size="3xl" class="text-[#fff]" v-if="sp.status=='pause'" />

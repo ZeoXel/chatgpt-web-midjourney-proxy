@@ -43,6 +43,18 @@ const loadPay=()=>{
     
 }
 
+const stopPlay=()=>{
+    try {
+        player.pause();
+        player.currentTime = 0;
+        st.value.isLoad = 0;
+        homeStore.setMyData({act:'playStatus',actData:{a:'stopped'}});
+        mlog('stopped');
+    } catch (error) {
+        mlog('stopPlay error', error);
+    }
+}
+
 const goPlay=()=>{
     if(player.src!=pObj.value?.audio_url){
         if(st.value.isLoad==1 ) player.pause();
@@ -86,6 +98,15 @@ watch(()=>homeStore.myData.act, (n)=>{
          if( data ) player.currentTime = data.v as number
          //player.set
     }
+    if(n=='stopPlay' || n=='closePlayer'){
+        stopPlay();
+    }
+})
+
+// 组件卸载时清理播放器
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+    stopPlay();
 })
 </script>
 <template>
