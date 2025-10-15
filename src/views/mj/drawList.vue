@@ -124,7 +124,21 @@ async function onConversation() {
     }
     // 保存原始配置和模型信息到用户输入消息
     if (message.originalConfig) {
-        promptMsg.originalConfig = message.originalConfig;
+        // 清理 base64 数据，避免存储超限
+        const configToSave = { ...message.originalConfig };
+        if (configToSave.base64Array && configToSave.base64Array.length > 0) {
+            try {
+                // 将 base64 数组保存到 IndexedDB
+                const base64Key = await localSaveAny( JSON.stringify(configToSave.base64Array) );
+                configToSave.base64ArrayKey = base64Key;  // 只保存 key
+                delete configToSave.base64Array;  // 删除原始 base64 数据
+                mlog('base64Array 已保存到 IndexedDB:', base64Key);
+            } catch(e) {
+                mlog('保存 base64Array 失败:', e);
+                delete configToSave.base64Array;  // 失败时也删除，避免存储超限
+            }
+        }
+        promptMsg.originalConfig = configToSave;
     }
     // 为用户输入消息设置模型信息（用于显示重新编辑按钮）
     promptMsg.model = message.data.model;
@@ -172,7 +186,21 @@ async function onConversation() {
     }
   // 保存原始配置到输出消息
   if (message.originalConfig) {
-      outMsg.originalConfig = message.originalConfig;
+      // 清理 base64 数据，避免存储超限
+      const configToSave = { ...message.originalConfig };
+      if (configToSave.base64Array && configToSave.base64Array.length > 0) {
+          try {
+              // 将 base64 数组保存到 IndexedDB
+              const base64Key = await localSaveAny( JSON.stringify(configToSave.base64Array) );
+              configToSave.base64ArrayKey = base64Key;  // 只保存 key
+              delete configToSave.base64Array;  // 删除原始 base64 数据
+              mlog('outMsg base64Array 已保存到 IndexedDB:', base64Key);
+          } catch(e) {
+              mlog('保存 outMsg base64Array 失败:', e);
+              delete configToSave.base64Array;  // 失败时也删除，避免存储超限
+          }
+      }
+      outMsg.originalConfig = configToSave;
   }
   //mlog('outMsg model',outMsg.model );
   addChat(  +uuid, outMsg  )

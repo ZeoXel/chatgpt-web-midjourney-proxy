@@ -18,27 +18,50 @@ export interface gptsType{
  //const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } = useChat()
 export function upImg(file:any   ):Promise<any>
 {
-    const maxSize= homeStore.myData.session.uploadImgSize? (+homeStore.myData.session.uploadImgSize):5
+    const maxSize= homeStore.myData.session.uploadImgSize? (+homeStore.myData.session.uploadImgSize):10
     return new Promise((h,r)=>{
         const filename = file.name;
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
         if(file.size>(1024*1024 * maxSize)){
-            r(t('mjchat.no1m',{m:maxSize}))
+            const errorMsg = t('mjchat.no1m',{m:maxSize});
+            const detailedMsg = `${errorMsg}\n\n当前图片大小：${fileSizeMB}MB\n允许的最大大小：${maxSize}MB\n\n建议：\n1. 使用图片压缩工具压缩图片\n2. 调整图片分辨率\n3. 转换为更高效的格式`;
+
+            // 使用 window.alert 确保用户看到错误信息
+            setTimeout(() => {
+                window.alert(detailedMsg);
+            }, 0);
+
+            r(errorMsg);
             return ;
         }
         if (! (filename.endsWith('.jpg') ||
             filename.endsWith('.gif') ||
             filename.endsWith('.png') ||
             filename.endsWith('.jpeg') )) {
-            r(t('mjchat.imgExt') );
+            const errorMsg = t('mjchat.imgExt');
+
+            setTimeout(() => {
+                window.alert(`${errorMsg}\n\n当前文件：${filename}\n支持的格式：JPG, JPEG, PNG, GIF`);
+            }, 0);
+
+            r(errorMsg);
             return ;
         }
         const reader = new FileReader();
         // 当读取操作完成时触发该事件
         //reader.onload = (e:any)=> st.value.fileBase64 = e.target.result;
         reader.onload = (e:any)=>  h( e.target.result);
+        reader.onerror = (e:any) => {
+            const errorMsg = '图片读取失败，请重试';
+            setTimeout(() => {
+                window.alert(`${errorMsg}\n\n文件：${filename}\n错误：${e}`);
+            }, 0);
+            r(errorMsg);
+        };
         reader.readAsDataURL(file);
     })
-    
+
 }
 
 export const clearImageBase64= ( str:string)=>{

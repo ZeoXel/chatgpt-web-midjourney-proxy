@@ -25,16 +25,24 @@ export function createLocalStorage(options?: { expire?: number | null }) {
         try {
           window.localStorage.setItem(key, json)
         } catch (retryError) {
-          console.warn('配额仍然超限，清理聊天历史...')
-          cleanChatHistory()
+          console.warn('配额仍然超限，清理大型存储项...')
+          cleanLargeData()
 
           try {
             window.localStorage.setItem(key, json)
             console.info('存储空间清理完成')
-          } catch (finalError) {
-            console.error('存储失败，请手动清理浏览器缓存')
-            alert('存储空间不足！请清理浏览器缓存，或删除部分聊天记录。')
-            throw new Error('存储空间不足，请清理浏览器缓存')
+          } catch (thirdError) {
+            console.warn('配额仍然超限，清理聊天历史...')
+            cleanChatHistory()
+
+            try {
+              window.localStorage.setItem(key, json)
+              console.info('存储空间清理完成')
+            } catch (finalError) {
+              console.error('存储失败，请前往设置页面手动清理')
+              alert('存储空间严重不足！\n\n建议操作：\n1. 前往【设置】清理存储空间\n2. 导出重要聊天记录\n3. 删除旧的聊天会话')
+              throw new Error('存储空间不足，请清理浏览器缓存')
+            }
           }
         }
       } else {
@@ -68,8 +76,12 @@ export function createLocalStorage(options?: { expire?: number | null }) {
     const chatStorageKey = 'chatStorage'
     const chatData = get(chatStorageKey)
     if (chatData && chatData.chat) {
-      const recentChats = chatData.chat.slice(-5)
-      const recentHistory = chatData.history.slice(-5)
+      // 只保留最近2条聊天记录，并限制每条记录的消息数量
+      const recentChats = chatData.chat.slice(-2).map((chat: any) => ({
+        ...chat,
+        data: chat.data.slice(-20) // 每条聊天只保留最近20条消息
+      }))
+      const recentHistory = chatData.history.slice(-2)
       const cleanedData = {
         ...chatData,
         chat: recentChats,
@@ -81,6 +93,32 @@ export function createLocalStorage(options?: { expire?: number | null }) {
         expire: null
       })
       window.localStorage.setItem(chatStorageKey, json)
+      console.info(`已清理聊天历史，保留最近 ${recentChats.length} 条会话`)
+    }
+  }
+
+  function cleanLargeData() {
+    // 清理其他可能占用大量空间的数据
+    const keysToClean = [
+      'mjDrawStore',
+      'sunoStore',
+      'lumaStore',
+      'viduStore',
+      'galleryData',
+      'audioHistory',
+      'videoHistory'
+    ]
+
+    let cleanedCount = 0
+    keysToClean.forEach(key => {
+      if (window.localStorage.getItem(key)) {
+        window.localStorage.removeItem(key)
+        cleanedCount++
+      }
+    })
+
+    if (cleanedCount > 0) {
+      console.info(`已清理 ${cleanedCount} 个大型数据存储项`)
     }
   }
 
@@ -115,7 +153,34 @@ export function createLocalStorage(options?: { expire?: number | null }) {
     window.localStorage.clear()
   }
 
-  return { set, get, remove, clear }
+  function getStorageInfo() {
+    let total = 0
+    let details: Record<string, number> = {}
+
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i)
+      if (key) {
+        const value = window.localStorage.getItem(key)
+        const size = value ? new Blob([value]).size : 0
+        details[key] = size
+        total += size
+      }
+    }
+
+    // 按大小排序
+    const sortedDetails = Object.entries(details)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10) // 只返回前10个最大的项
+
+    return {
+      total,
+      totalMB: (total / 1024 / 1024).toFixed(2),
+      details: Object.fromEntries(sortedDetails),
+      usage: ((total / (10 * 1024 * 1024)) * 100).toFixed(1) // 假设限制为10MB
+    }
+  }
+
+  return { set, get, remove, clear, cleanExpiredData, cleanChatHistory, cleanLargeData, getStorageInfo }
 }
 
 export const ls = createLocalStorage()

@@ -4,6 +4,7 @@ import { setupI18n } from './locales'
 import { setupAssets, setupScrollbarStyle } from './plugins'
 import { setupStore } from './store'
 import { setupRouter } from './router'
+import './utils/storage/monitor' // 启动存储空间监控
 
 async function bootstrap() {
   const app = createApp(App)

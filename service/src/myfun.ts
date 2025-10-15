@@ -246,10 +246,9 @@ export const sunoProxy = proxy(process.env.SUNO_SERVER ?? API_BASE_URL, {
   https: false,
   limit: '15mb',
   proxyReqPathResolver(req) {
-    return req.originalUrl.replace('/sunoapi', '') // 将URL中的 `/openapi` 替换为空字符串
+    return req.originalUrl.replace('/sunoapi', '')
   },
   proxyReqOptDecorator(proxyReqOpts, srcReq) {
-    // mlog("sunoapi")
     if (process.env.SUNO_KEY)
       proxyReqOpts.headers.Authorization = `Bearer ${process.env.SUNO_KEY}`
     else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`

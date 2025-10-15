@@ -10,7 +10,14 @@ const st= ref({isLoad:0, url:''});
 const pObj= ref({audio_url:''})
 const player = new window.Audio(); 
 const loadPay=()=>{
-    if(  !pObj.value ) return 
+    if(!pObj.value) return
+
+    // 检查音频URL有效性
+    if(!pObj.value.audio_url || pObj.value.audio_url.trim() === '') {
+        mlog('loadPay: invalid audio_url', pObj.value.audio_url);
+        return;
+    }
+
     mlog('pObj', pObj.value.audio_url )
     player.src = pObj.value.audio_url;
     player.addEventListener('ended', () => {
@@ -22,7 +29,7 @@ const loadPay=()=>{
         mlog('play')
         st.value.isLoad=1;
         homeStore.setMyData({act:'playStatus',actData:{a:'play',d:{ currentTime: player.currentTime, duration: player.duration }}})
-    }) 
+    })
     player.addEventListener('pause', function() {
          st.value.isLoad=2;
           mlog('pause')
@@ -40,7 +47,7 @@ const loadPay=()=>{
     });
     player.load();
     player.play();
-    
+
 }
 
 const stopPlay=()=>{

@@ -98,6 +98,10 @@ export const useChatStore = defineStore('chat-store', {
     },
 
     addChatByUuid(uuid: number, chat: Chat.Chat) {
+      // 定义生图UUID的最大记录数限制
+      const DRAW_UUID_MAX_MESSAGES = 50 // 生图历史最多保留50条消息
+      const DRAW_UUID = 1002 // 默认生图UUID
+
       if (!uuid || uuid === 0) {
         if (this.history.length === 0) {
           const uuid = Date.now()
@@ -110,8 +114,17 @@ export const useChatStore = defineStore('chat-store', {
           this.chat[0].data.push(chat)
           if (this.history[0].title === 'New Chat')
             this.history[0].title = chat.text
+
+          // 对生图UUID进行记录数量限制
+          if (this.chat[0].uuid === DRAW_UUID && this.chat[0].data.length > DRAW_UUID_MAX_MESSAGES) {
+            const excessCount = this.chat[0].data.length - DRAW_UUID_MAX_MESSAGES
+            this.chat[0].data.splice(0, excessCount)
+            mlog('自动清理生图历史', `删除了 ${excessCount} 条旧记录`)
+          }
+
           this.recordState()
         }
+        return
       }
 
       const index = this.chat.findIndex(item => item.uuid === uuid)
@@ -119,6 +132,14 @@ export const useChatStore = defineStore('chat-store', {
         this.chat[index].data.push(chat)
         if (this.history[index].title === 'New Chat')
           this.history[index].title = chat.text
+
+        // 对生图UUID进行记录数量限制
+        if (uuid === DRAW_UUID && this.chat[index].data.length > DRAW_UUID_MAX_MESSAGES) {
+          const excessCount = this.chat[index].data.length - DRAW_UUID_MAX_MESSAGES
+          this.chat[index].data.splice(0, excessCount)
+          mlog('自动清理生图历史', `删除了 ${excessCount} 条旧记录`)
+        }
+
         this.recordState()
       }
     },

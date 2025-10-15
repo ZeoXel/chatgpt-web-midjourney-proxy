@@ -65,16 +65,22 @@ export function randStyle(): string {
 export const FeedTask= async (ids:string[])=>{
     const sunoS = new sunoStore();
     if(ids.length<=0) return;
-    
-    let d:any[] = await sunoFetch('/feed/'+ ids.join(','));
-    mlog('FeedTask',d )
-    d.forEach( (item:SunoMedia) =>{
-         sunoS.save( item)
-        if(item.status== "complete" || item.status== "error" ){
-            ids= ids.filter(v=>v!=item.id )
-        }
-    });
-    homeStore.setMyData({act:'FeedTask'});
+
+    try {
+        let d:any[] = await sunoFetch('/feed/'+ ids.join(','));
+        mlog('FeedTask',d )
+        d.forEach( (item:SunoMedia) =>{
+             sunoS.save( item)
+            if(item.status== "complete" || item.status== "error" ){
+                ids= ids.filter(v=>v!=item.id )
+            }
+        });
+        homeStore.setMyData({act:'FeedTask'});
+    } catch (error) {
+        // 静默处理Feed错误，不中断轮询
+        mlog('FeedTask error (non-fatal)', error);
+    }
+
     await sleep(5*1020 );
     FeedTask(ids)
 
