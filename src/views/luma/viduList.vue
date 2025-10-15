@@ -61,26 +61,15 @@ onMounted(() => {
 
 <template>
   <div v-if="list.length > 0" class="p-4">
-    <div class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       <div
         v-for="(item, index) in list"
         :key="index"
         class="relative"
-        :class="{
-          'max-w-[300px] mx-auto': item.aspect_ratio === '9:16'
-        }"
         @mousemove="st.pIndex = index"
         @mouseout="st.pIndex = -1"
       >
-        <div
-          class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden"
-          :class="{
-            'aspect-[16/9]': item.aspect_ratio === '16:9',
-            'aspect-[9/16]': item.aspect_ratio === '9:16',
-            'aspect-square': item.aspect_ratio === '1:1',
-            'aspect-[16/8.85]': !item.aspect_ratio
-          }"
-        >
+        <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85]">
           <!-- 成功状态：显示视频 -->
           <template v-if="item.state === 'success' && item.creations && item.creations.length > 0">
             <video
