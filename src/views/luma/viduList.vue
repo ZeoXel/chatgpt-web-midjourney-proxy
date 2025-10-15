@@ -61,16 +61,14 @@ onMounted(() => {
 
 <template>
   <div v-if="list.length > 0" class="p-4">
-    <div class="grid gap-5" :class="[
-      'grid-cols-1',
-      'md:grid-cols-2',
-      'lg:grid-cols-3',
-      'xl:grid-cols-4'
-    ]">
+    <div class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div
         v-for="(item, index) in list"
         :key="index"
         class="relative"
+        :class="{
+          'max-w-[300px] mx-auto': item.aspect_ratio === '9:16'
+        }"
         @mousemove="st.pIndex = index"
         @mouseout="st.pIndex = -1"
       >
