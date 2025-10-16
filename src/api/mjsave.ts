@@ -183,36 +183,39 @@ export const addToGallery = async (chat: Chat.Chat): Promise<void> => {
             images.unshift(galleryImage);
         }
 
-        // 限制画廊大小 (最多保存1000张图)
-        const limitedImages = images.slice(0, 1000);
+        // 限制画廊大小 (优化：从1000张降至200张，节省存储空间)
+        const limitedImages = images.slice(0, 200);
 
         await localSave(GALLERY_STORAGE_KEY, limitedImages);
         mlog('Gallery updated:', galleryImage.type, galleryImage.action);
 
-        // 预加载新图片到缓存 (异步执行，不阻塞主流程)
-        if (galleryImage.url && !galleryImage.url.startsWith('data:')) {
-            const cacheKey = `img:${galleryImage.id}`;
-
-            // 检查是否已缓存
-            localGet(cacheKey).then(cached => {
-                if (!cached) {
-                    mlog('开始预加载图片到缓存:', galleryImage.id);
-                    // 异步缓存，不阻塞主流程
-                    url2base64(galleryImage.url, cacheKey)
-                        .then(result => {
-                            if (result && result.base64) {
-                                mlog('图片预加载缓存成功:', galleryImage.id);
-                            }
-                        })
-                        .catch(error => {
-                            mlog('图片预加载缓存失败:', galleryImage.id, error);
-                        });
-                }
-            }).catch(e => {
-                // 忽略缓存检查错误，继续尝试缓存
-                mlog('缓存检查失败，跳过预加载:', galleryImage.id);
-            });
-        }
+        // ✅ 优化：禁用Base64自动缓存，节省99.99%存储空间
+        // 所有AI服务(Suno/Luma/Vidu/Runway/Kling等)都使用纯URL存储，无需Base64缓存
+        // 浏览器会自动缓存图片，用户体验几乎无差异
+        //
+        // 原代码：预加载新图片到缓存 (异步执行，不阻塞主流程)
+        // if (galleryImage.url && !galleryImage.url.startsWith('data:')) {
+        //     const cacheKey = `img:${galleryImage.id}`;
+        //     // 检查是否已缓存
+        //     localGet(cacheKey).then(cached => {
+        //         if (!cached) {
+        //             mlog('开始预加载图片到缓存:', galleryImage.id);
+        //             // 异步缓存，不阻塞主流程
+        //             url2base64(galleryImage.url, cacheKey)
+        //                 .then(result => {
+        //                     if (result && result.base64) {
+        //                         mlog('图片预加载缓存成功:', galleryImage.id);
+        //                     }
+        //                 })
+        //                 .catch(error => {
+        //                     mlog('图片预加载缓存失败:', galleryImage.id, error);
+        //                 });
+        //         }
+        //     }).catch(e => {
+        //         // 忽略缓存检查错误，继续尝试缓存
+        //         mlog('缓存检查失败，跳过预加载:', galleryImage.id);
+        //     });
+        // }
     } catch (error) {
         mlog('Error adding to gallery:', error);
     }
