@@ -23,7 +23,8 @@
     "lint:fix": "eslint . --fix",
     "common:cleanup": "rimraf node_modules && rimraf pnpm-lock.yaml",
     "setup:supabase": "esno ./src/scripts/setup-supabase.ts",
-    "test:supabase": "esno ./src/scripts/test-supabase-connection.ts"
+    "test:supabase": "esno ./src/scripts/test-supabase-connection.ts",
+    "query:supabase": "esno ./src/scripts/query-supabase-data.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
