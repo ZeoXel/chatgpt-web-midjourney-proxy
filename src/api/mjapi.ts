@@ -253,17 +253,25 @@ export const flechTask= ( chat:Chat.Chat)=>{
 
 
         chat.opt= ts;
-        chat.loading=   (cnt>=99)?false:true; 
+        chat.loading=   (cnt>=99)?false:true;
         //chat.progress=ts.progress;
-    
+
         if(ts.progress && ts.progress== "100%") chat.loading=false;
 
         homeStore.setMyData({act:'updateChat', actData:chat });
+
+        // 阶段1: 生成完成后保存到数据库
+        if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
+            saveMJAssetToDatabase(chat).catch(err => {
+                console.warn('[MJ Asset Save] 保存到数据库失败（不影响用户体验）:', err);
+            });
+        }
+
         //"NOT_START" //["SUBMITTED","IN_PROGRESS"].indexOf(ts.status)>-1
         if( ["FAILURE","SUCCESS"].indexOf(ts.status)==-1 && cnt<100 ){
-           
+
             setTimeout(() =>   check( ) , 5000 )
-        } 
+        }
         mlog('task', ts.progress,ts, chat.uuid,chat.index  );
     }
     check();
@@ -501,4 +509,59 @@ export   function getFileFromClipboard(event:any ){
     }
     //console.log('passs>>' ,rz );
     return rz;
+}
+
+// ==================== 阶段1: 数据库集成 ====================
+
+/**
+ * 保存Midjourney资产到数据库
+ * 当生成完成时自动调用（SUCCESS + 100% + 有图片URL）
+ */
+async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
+    try {
+        // 获取用户的API Key
+        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.warn('[MJ Asset Save] 未配置API Key，跳过保存');
+            return;
+        }
+
+        // 构建资产数据
+        const assetData = {
+            service: 'midjourney',
+            type: 'image',
+            asset_data: {
+                ...chat.opt,
+                mjID: chat.mjID,
+                model: chat.model || 'midjourney',
+                timestamp: new Date().toISOString()
+            },
+            task_id: chat.mjID,
+            main_url: chat.opt?.imageUrl || chat.opt?.imageUrls?.[0]?.url,
+            prompt: chat.text || chat.requestOptions?.prompt || ''
+        };
+
+        // 调用后端API
+        const response = await fetch('/api/assets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+            },
+            body: JSON.stringify(assetData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(`API error: ${response.status} - ${JSON.stringify(error)}`);
+        }
+
+        const result = await response.json();
+        console.log('[MJ Asset Save] ✅ 保存成功:', result.asset?.id);
+
+    } catch (error) {
+        // 静默失败，不影响用户体验
+        console.error('[MJ Asset Save] ❌ 保存失败:', error);
+        throw error; // 重新抛出以便上层catch处理
+    }
 }

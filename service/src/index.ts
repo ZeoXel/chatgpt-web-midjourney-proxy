@@ -17,6 +17,7 @@ import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
 import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import assetsRouter from './api/assets'
 
 const app = express()
 const router = express.Router()
@@ -757,6 +758,10 @@ app.get('/workflows/:workflowId/history/:executeId', authV2, async (req, res) =>
 
 app.use('', router)
 app.use('/api', router)
+
+// AI资产存储API
+app.use('/api/assets', assetsRouter)
+
 app.set('trust proxy', 1)
 
 app.listen(3002, () => globalThis.console.log('Server is running on port 3002'))
