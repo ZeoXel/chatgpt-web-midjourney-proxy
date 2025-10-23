@@ -524,6 +524,237 @@ app.get('/v1/video/generations/:id', authV2, async (req, res) => {
 
 // 注意：旧的Vidu代理已移除，现在使用NewAPI格式 /v1/video/generations
 
+// Coze Workflow 异步执行端点 - 转发到网关
+app.post('/workflows/:workflowId/run-async', authV2, async (req, res) => {
+  const { workflowId } = req.params
+  console.log('🔄 Coze Workflow异步执行请求:', workflowId)
+  console.log('请求体:', JSON.stringify(req.body, null, 2))
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY
+    const gatewayServer = process.env.OPENAI_API_BASE_URL || 'http://localhost:3000'
+
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'OPENAI_API_KEY未配置'
+      })
+    }
+
+    // 处理图片路径：将相对路径转换为完整URL
+    let parameters = req.body.parameters || { input: req.body.input || '' }
+    if (parameters.image && parameters.image.startsWith('/')) {
+      // 本地开发：使用内网穿透URL（ngrok/cloudflare tunnel等）
+      // 生产环境：使用实际的公网域名
+      const publicUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`
+      parameters = {
+        ...parameters,
+        image: `${publicUrl}${parameters.image}`
+      }
+      console.log('图片相对路径已转换为完整URL:', parameters.image)
+    }
+
+    // 转换为网关格式
+    const gatewayRequest = {
+      model: 'coze-workflow-async',  // 使用异步模型
+      stream: false,
+      messages: req.body.messages || [{ role: 'user', content: req.body.input || '' }],
+      workflow_id: workflowId,
+      workflow_parameters: parameters
+    }
+
+    console.log('转发到网关:', `${gatewayServer}/v1/chat/completions`)
+    console.log('网关请求体:', JSON.stringify(gatewayRequest, null, 2))
+
+    const response = await axios.post(
+      `${gatewayServer}/v1/chat/completions`,
+      gatewayRequest,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        }
+      }
+    )
+
+    // 转换网关响应为前端期望的格式
+    const gatewayResponse = response.data
+    return res.json({
+      success: true,
+      message: gatewayResponse.message || '工作流已开始异步执行',
+      workflowId: workflowId,
+      executeId: gatewayResponse.execute_id,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Coze Workflow异步执行错误:', error.response?.data || error.message)
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message
+    })
+  }
+})
+
+// Coze Workflow 同步执行端点 - 转发到网关
+app.post('/workflows/:workflowId/run', authV2, async (req, res) => {
+  const { workflowId } = req.params
+  console.log('🔄 Coze Workflow同步执行请求:', workflowId)
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY
+    const gatewayServer = process.env.OPENAI_API_BASE_URL || 'http://localhost:3000'
+
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'OPENAI_API_KEY未配置'
+      })
+    }
+
+    // 处理图片路径：将相对路径转换为完整URL
+    let parameters = req.body.parameters || { input: req.body.input || '' }
+    if (parameters.image && parameters.image.startsWith('/')) {
+      // 本地开发：使用内网穿透URL（ngrok/cloudflare tunnel等）
+      // 生产环境：使用实际的公网域名
+      const publicUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`
+      parameters = {
+        ...parameters,
+        image: `${publicUrl}${parameters.image}`
+      }
+      console.log('图片相对路径已转换为完整URL:', parameters.image)
+    }
+
+    // 转换为网关格式
+    const gatewayRequest = {
+      model: 'coze-workflow',  // 使用同步流式模型
+      stream: true,
+      messages: req.body.messages || [{ role: 'user', content: req.body.input || '' }],
+      workflow_id: workflowId,
+      workflow_parameters: parameters
+    }
+
+    // 流式转发
+    const response = await axios.post(
+      `${gatewayServer}/v1/chat/completions`,
+      gatewayRequest,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        responseType: 'stream'
+      }
+    )
+
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+
+    response.data.pipe(res)
+  } catch (error) {
+    console.error('Coze Workflow同步执行错误:', error.response?.data || error.message)
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message
+    })
+  }
+})
+
+// Coze Workflow 执行结果查询端点（标准格式）
+app.get('/workflows/executions/:executeId', authV2, async (req, res) => {
+  const { executeId } = req.params
+  console.log('🔍 查询Workflow执行结果:', executeId)
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY
+    const gatewayServer = process.env.OPENAI_API_BASE_URL || 'http://localhost:3000'
+
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'OPENAI_API_KEY未配置'
+      })
+    }
+
+    const response = await axios.get(
+      `${gatewayServer}/v1/workflows/executions/${executeId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      }
+    )
+
+    res.json(response.data)
+  } catch (error) {
+    console.error('查询执行结果错误:', error.response?.data || error.message)
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message
+    })
+  }
+})
+
+// Coze Workflow 执行结果查询端点（兼容前端history格式）
+app.get('/workflows/:workflowId/history/:executeId', authV2, async (req, res) => {
+  const { workflowId, executeId } = req.params
+  console.log('🔍 查询Workflow历史记录:', { workflowId, executeId })
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY
+    const gatewayServer = process.env.OPENAI_API_BASE_URL || 'http://localhost:3000'
+
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'OPENAI_API_KEY未配置'
+      })
+    }
+
+    const response = await axios.get(
+      `${gatewayServer}/v1/workflows/executions/${executeId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      }
+    )
+
+    // 转换为前端期望的格式
+    const result = response.data
+    res.json({
+      success: true,
+      data: {
+        executeId: result.execute_id,
+        workflowId: result.workflow_id || workflowId,
+        status: result.status,
+        progress: result.progress,
+        output: result.output,
+        error: result.error,
+        usage: result.usage,
+        submitTime: result.submit_time,
+        startTime: result.start_time,
+        finishTime: result.finish_time
+      }
+    })
+  } catch (error) {
+    console.error('查询历史记录错误:', error.response?.data || error.message)
+
+    // 如果是404错误，返回友好的错误信息
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        error: '执行记录不存在或接口不存在'
+      })
+    }
+
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message
+    })
+  }
+})
+
 app.use('', router)
 app.use('/api', router)
 app.set('trust proxy', 1)
