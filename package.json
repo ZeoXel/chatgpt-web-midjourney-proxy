@@ -31,6 +31,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
+    "@supabase/supabase-js": "^2.76.1",
     "@tauri-apps/api": "^2.7.0",
     "@traptitech/markdown-it-katex": "^3.6.0",
     "@vicons/ionicons5": "^0.13.0",
