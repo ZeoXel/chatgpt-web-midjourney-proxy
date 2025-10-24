@@ -261,10 +261,19 @@ export const flechTask= ( chat:Chat.Chat)=>{
         homeStore.setMyData({act:'updateChat', actData:chat });
 
         // 阶段1: 生成完成后保存到数据库
+        // 只保存UPSCALE结果（单图），不保存4宫格IMAGINE结果
         if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
-            saveMJAssetToDatabase(chat).catch(err => {
-                console.warn('[MJ Asset Save] 保存到数据库失败（不影响用户体验）:', err);
-            });
+            // 检查是否为UPSCALE操作（action='UPSCALE'表示单图放大结果）
+            const isUpscale = ts.action === 'UPSCALE';
+            const isSingleImage = ts.imageUrl && (!ts.imageUrls || ts.imageUrls.length === 1);
+
+            if (isUpscale || isSingleImage) {
+                saveMJAssetToDatabase(chat).catch(err => {
+                    console.warn('[MJ Asset Save] 保存到数据库失败（不影响用户体验）:', err);
+                });
+            } else {
+                console.log('[MJ Asset Save] 跳过4宫格结果，仅保存UPSCALE单图');
+            }
         }
 
         //"NOT_START" //["SUBMITTED","IN_PROGRESS"].indexOf(ts.status)>-1
@@ -542,7 +551,9 @@ async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
         };
 
         // 调用后端API
-        const response = await fetch('/api/assets', {
+        // Vite会将 /api/assets 代理并重写为 /assets，后端监听 /api/assets
+        // 所以前端需要请求 /api/api/assets 才能到达后端的 /api/assets
+        const response = await fetch('/api/api/assets', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
