@@ -62,41 +62,118 @@ export function randStyle(): string {
     return randomS + " " + randomL ;
 }
 
-export const FeedTask= async (ids:string[])=>{
-    const sunoS = new sunoStore();
-    if(ids.length<=0) return;
+// 全局轮询任务管理器 - 防止重复轮询
+const activeFeedTasks = new Map<string, boolean>();
 
-    try {
-        let d:any[] = await sunoFetch('/feed/'+ ids.join(','));
-        mlog('FeedTask',d )
-        d.forEach( (item:SunoMedia) =>{
-             sunoS.save( item)
-            if(item.status== "complete" || item.status== "error" ){
-                ids= ids.filter(v=>v!=item.id )
-            }
-        });
-        homeStore.setMyData({act:'FeedTask'});
-    } catch (error) {
-        // 静默处理Feed错误，不中断轮询
-        mlog('FeedTask error (non-fatal)', error);
+export const FeedTask = async (ids: string[]) => {
+    if (ids.length <= 0) return;
+
+    // 生成唯一标识符（排序后的ID列表）
+    const taskKey = ids.sort().join(',');
+
+    // 如果该任务已在轮询中，直接返回
+    if (activeFeedTasks.has(taskKey)) {
+        mlog('FeedTask already running for:', taskKey);
+        return;
     }
 
-    await sleep(5*1020 );
-    FeedTask(ids)
+    // 标记任务开始
+    activeFeedTasks.set(taskKey, true);
 
+    // 启动轮询循环
+    await feedTaskLoop(ids, taskKey);
+}
+
+async function feedTaskLoop(ids: string[], taskKey: string, retryCount = 0) {
+    const sunoS = new sunoStore();
+    const maxRetries = 50; // 最大轮询次数（约4分钟）
+
+    // 超过最大重试次数，停止轮询
+    if (retryCount >= maxRetries) {
+        mlog('FeedTask max retries reached for:', taskKey);
+        activeFeedTasks.delete(taskKey);
+        return;
+    }
+
+    // 🔑 关键修复1：首次查询前等待3秒，让API准备资源
+    if (retryCount === 0) {
+        mlog('FeedTask initial delay 3s for:', ids);
+        await sleep(3000);
+    }
+
+    try {
+        // 🔑 关键修复2：批量查询失败时，尝试单个查询
+        let d: any[] = [];
+
+        try {
+            // 使用静默模式，不显示500错误弹窗
+            d = await sunoFetch('/feed/' + ids.join(','), undefined, undefined, true);
+            mlog('FeedTask batch success:', d);
+        } catch (batchError) {
+            mlog('FeedTask batch failed, trying individual queries:', batchError);
+
+            // 批量查询失败，逐个查询（静默模式）
+            for (const id of ids) {
+                try {
+                    const single = await sunoFetch('/feed/' + id, undefined, undefined, true);
+                    if (Array.isArray(single)) {
+                        d.push(...single);
+                    } else {
+                        d.push(single);
+                    }
+                } catch (singleError) {
+                    mlog('FeedTask single query failed for:', id, singleError);
+                }
+            }
+        }
+
+        // 处理返回的数据
+        d.forEach((item: SunoMedia) => {
+            sunoS.save(item);
+            if (item.status === "complete" || item.status === "error") {
+                ids = ids.filter(v => v !== item.id);
+            }
+        });
+
+        homeStore.setMyData({ act: 'FeedTask' });
+
+        // 重置错误计数
+        retryCount = 0;
+
+    } catch (error) {
+        retryCount++;
+        mlog(`FeedTask error (retry ${retryCount}/${maxRetries}):`, error);
+
+        // 🔑 关键修复3：连续失败5次后停止
+        if (retryCount >= 5) {
+            mlog('FeedTask stopped due to consecutive errors');
+            activeFeedTasks.delete(taskKey);
+            return;
+        }
+    }
+
+    // 如果还有未完成的任务，继续轮询
+    if (ids.length > 0) {
+        await sleep(5000); // 等待5秒
+        await feedTaskLoop(ids, taskKey, retryCount);
+    } else {
+        // 所有任务完成，清理
+        activeFeedTasks.delete(taskKey);
+        mlog('FeedTask completed for:', taskKey);
+    }
 }
 
 
-export const sunoFetch=(url:string,data?:any,opt2?:any )=>{
+export const sunoFetch=(url:string,data?:any,opt2?:any, silent = false )=>{
     mlog('sunoFetch', url  );
     let headers= {'Content-Type':'application/json'}
     if(opt2 && opt2.headers ) headers= opt2.headers;
 
     headers={...headers,...getHeaderAuthorization()}
-   
+
     return new Promise<any>((resolve, reject) => {
         let opt:RequestInit ={method:'GET'};
-       
+
         opt.headers= headers ;
         if(opt2?.upFile ){
              opt.method='POST';
@@ -108,28 +185,36 @@ export const sunoFetch=(url:string,data?:any,opt2?:any )=>{
         }
         fetch(getUrl(url),  opt )
         .then( async (d) =>{
-            if (!d.ok) { 
+            if (!d.ok) {
                 let msg = '发生错误: '+ d.status
-                try{ 
+                try{
                   let bjson:any  = await d.json();
-                  msg = '('+ d.status+')发生错误: '+(bjson?.error?.message??'' ) 
-                }catch( e ){ 
+                  msg = '('+ d.status+')发生错误: '+(bjson?.error?.message??'' )
+                }catch( e ){
                 }
-                homeStore.myData.ms &&  homeStore.myData.ms.error(msg )
+                // 🔑 静默模式：不显示错误弹窗
+                if (!silent) {
+                    homeStore.myData.ms &&  homeStore.myData.ms.error(msg )
+                }
                 throw new Error( msg );
             }
-     
-            d.json().then(d=> resolve(d)).catch(e=>{ 
-            
-                homeStore.myData.ms &&  homeStore.myData.ms.error('发生错误'+ e )
-                reject(e) 
+
+            d.json().then(d=> resolve(d)).catch(e=>{
+                // 🔑 静默模式：不显示错误弹窗
+                if (!silent) {
+                    homeStore.myData.ms &&  homeStore.myData.ms.error('发生错误'+ e )
+                }
+                reject(e)
             }
         )})
-        .catch(e=>{ 
-            if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
-                homeStore.myData.ms &&  homeStore.myData.ms.error('跨域|CORS error'  )
+        .catch(e=>{
+            // 🔑 静默模式：不显示错误弹窗
+            if (!silent) {
+                if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
+                    homeStore.myData.ms &&  homeStore.myData.ms.error('跨域|CORS error'  )
+                }
+                else homeStore.myData.ms &&  homeStore.myData.ms.error('发生错误:'+e )
             }
-            else homeStore.myData.ms &&  homeStore.myData.ms.error('发生错误:'+e )
             mlog('e', e.stat )
             reject(e)
         })
