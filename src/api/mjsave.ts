@@ -351,7 +351,7 @@ export const migrateToNewGallery = async (ChatState: Chat.ChatState): Promise<vo
  */
 export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
     try {
-        console.log('🌐 开始加载画廊（DB + localStorage）...');
+        console.log('🎨 [Gallery DB] 开始加载画廊（DB + localStorage）...');
 
         // 并行加载两个数据源
         const [dbAssets, localImages] = await Promise.all([
@@ -359,18 +359,20 @@ export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
             getGalleryImages() // 原有localStorage加载
         ]);
 
+        console.log(`📊 [Gallery DB] 数据源统计:
+  - 数据库: ${dbAssets.length} 张
+  - 本地: ${localImages.length} 张`);
+
         // 合并并去重（DB优先）
         const merged = mergeGalleryImages(dbAssets, localImages);
 
-        console.log(`📊 画廊统计:
-  - 数据库: ${dbAssets.length} 张
-  - 本地: ${localImages.length} 张
-  - 合并后: ${merged.length} 张 (去重)`);
+        console.log(`✅ [Gallery DB] 合并完成: ${merged.length} 张图片 (已去重)`);
 
         return merged;
     } catch (error) {
-        console.error('❌ 画廊加载错误:', error);
+        console.error('❌ [Gallery DB] 加载错误:', error);
         // 降级到仅本地数据
+        console.log('⚠️ [Gallery DB] 降级到仅使用本地数据');
         return await getGalleryImages();
     }
 }
@@ -380,14 +382,28 @@ export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
  */
 async function loadFromDatabase(): Promise<GalleryImage[]> {
     try {
+        console.log('📡 [DB Gallery] 正在从数据库加载...');
+
         // 动态导入以避免循环依赖
         const { getMJAssetsFromDatabase } = await import('./mjapi');
 
         const dbAssets = await getMJAssetsFromDatabase({ limit: 200 });
 
-        return dbAssets.map(asset => convertAssetToGalleryImage(asset));
+        console.log(`🔄 [DB Gallery] 转换 ${dbAssets.length} 个数据库资产为画廊格式`);
+
+        const converted = dbAssets.map(asset => convertAssetToGalleryImage(asset));
+
+        console.log(`✅ [DB Gallery] 数据库加载完成:`, {
+            总数: converted.length,
+            示例: converted[0] ? {
+                id: converted[0].id,
+                prompt: converted[0].prompt?.substring(0, 20) + '...'
+            } : '无'
+        });
+
+        return converted;
     } catch (error) {
-        console.warn('[DB Gallery] 数据库加载失败，使用本地数据:', error);
+        console.warn('⚠️ [DB Gallery] 数据库加载失败，使用本地数据:', error);
         return [];
     }
 }

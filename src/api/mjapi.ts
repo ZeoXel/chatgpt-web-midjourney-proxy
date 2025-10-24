@@ -263,16 +263,28 @@ export const flechTask= ( chat:Chat.Chat)=>{
         // 阶段1: 生成完成后保存到数据库
         // 只保存UPSCALE结果（单图），不保存4宫格IMAGINE结果
         if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
-            // 检查是否为UPSCALE操作（action='UPSCALE'表示单图放大结果）
-            const isUpscale = ts.action === 'UPSCALE';
-            const isSingleImage = ts.imageUrl && (!ts.imageUrls || ts.imageUrls.length === 1);
+            // 调试：打印完整任务数据
+            console.log('[MJ Asset Save] 任务完成数据:', {
+                action: ts.action,
+                prompt: ts.prompt,
+                promptEn: ts.promptEn,
+                imageUrl: ts.imageUrl ? '有' : '无',
+                buttons: ts.buttons ? ts.buttons.map((b: any) => b.label) : []
+            });
 
-            if (isUpscale || isSingleImage) {
+            // 方法：检查是否有U1-U4按钮（4宫格特征）
+            const hasUpscaleButtons = ts.buttons && ts.buttons.some((b: any) =>
+                b.label && ['U1', 'U2', 'U3', 'U4'].includes(b.label)
+            );
+
+            // 只保存没有U1-U4按钮的结果（即UPSCALE后的单图）
+            if (!hasUpscaleButtons) {
+                console.log('[MJ Asset Save] ✅ 保存UPSCALE单图到数据库');
                 saveMJAssetToDatabase(chat).catch(err => {
-                    console.warn('[MJ Asset Save] 保存到数据库失败（不影响用户体验）:', err);
+                    console.warn('[MJ Asset Save] 保存失败（不影响用户体验）:', err);
                 });
             } else {
-                console.log('[MJ Asset Save] 跳过4宫格结果，仅保存UPSCALE单图');
+                console.log('[MJ Asset Save] ⏭️ 跳过4宫格结果（检测到U1-U4按钮）');
             }
         }
 
@@ -541,10 +553,12 @@ export async function getMJAssetsFromDatabase(options?: {
     limit?: number;
     offset?: number;
 }): Promise<any[]> {
+    console.log('[MJ Asset Load] 🌐 开始从数据库加载资产...');
+
     try {
         const apiKey = gptServerStore.myData.OPENAI_API_KEY;
         if (!apiKey) {
-            console.warn('[MJ Asset Load] 未配置API Key，跳过数据库读取');
+            console.warn('[MJ Asset Load] ⚠️ 未配置API Key，跳过数据库读取');
             return [];
         }
 
@@ -556,6 +570,8 @@ export async function getMJAssetsFromDatabase(options?: {
         });
 
         const apiPath = getAssetsApiPath();
+        console.log('[MJ Asset Load] 请求路径:', `${apiPath}?${params}`);
+
         const response = await fetch(`${apiPath}?${params}`, {
             method: 'GET',
             headers: {
@@ -563,12 +579,24 @@ export async function getMJAssetsFromDatabase(options?: {
             }
         });
 
+        console.log('[MJ Asset Load] 响应状态:', response.status, response.statusText);
+
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            const errorText = await response.text();
+            console.error('[MJ Asset Load] API错误响应:', errorText);
+            throw new Error(`API error: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
         console.log(`[MJ Asset Load] ✅ 从数据库加载 ${result.assets?.length || 0} 个资产`);
+
+        if (result.assets && result.assets.length > 0) {
+            console.log('[MJ Asset Load] 第一个资产示例:', {
+                id: result.assets[0].id,
+                prompt: result.assets[0].prompt?.substring(0, 30) + '...',
+                created_at: result.assets[0].created_at
+            });
+        }
 
         return result.assets || [];
 
@@ -592,6 +620,9 @@ async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
         }
 
         // 构建资产数据
+        // 优先从 opt 中获取 prompt（MJ API返回的原始prompt）
+        const actualPrompt = chat.opt?.prompt || chat.opt?.promptEn || chat.requestOptions?.prompt || '';
+
         const assetData = {
             service: 'midjourney',
             type: 'image',
@@ -603,8 +634,14 @@ async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
             },
             task_id: chat.mjID,
             main_url: chat.opt?.imageUrl || chat.opt?.imageUrls?.[0]?.url,
-            prompt: chat.text || chat.requestOptions?.prompt || ''
+            prompt: actualPrompt
         };
+
+        console.log('[MJ Asset Save] 保存数据:', {
+            mjID: chat.mjID,
+            prompt: actualPrompt ? `${actualPrompt.substring(0, 50)}...` : '(空)',
+            main_url: assetData.main_url ? '有' : '无'
+        });
 
         // 调用后端API
         // 开发环境: /api/api/assets (经过Vite代理重写)
