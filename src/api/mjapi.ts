@@ -523,6 +523,50 @@ export   function getFileFromClipboard(event:any ){
 // ==================== 阶段1: 数据库集成 ====================
 
 /**
+ * 从数据库获取Midjourney资产列表
+ * 返回用户的历史生成记录
+ */
+export async function getMJAssetsFromDatabase(options?: {
+    limit?: number;
+    offset?: number;
+}): Promise<any[]> {
+    try {
+        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.warn('[MJ Asset Load] 未配置API Key，跳过数据库读取');
+            return [];
+        }
+
+        const params = new URLSearchParams({
+            service: 'midjourney',
+            type: 'image',
+            limit: (options?.limit || 100).toString(),
+            offset: (options?.offset || 0).toString()
+        });
+
+        const response = await fetch(`/api/api/assets?${params}`, {
+            method: 'GET',
+            headers: {
+                'x-api-key': apiKey
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log(`[MJ Asset Load] ✅ 从数据库加载 ${result.assets?.length || 0} 个资产`);
+
+        return result.assets || [];
+
+    } catch (error) {
+        console.error('[MJ Asset Load] ❌ 加载失败:', error);
+        return [];
+    }
+}
+
+/**
  * 保存Midjourney资产到数据库
  * 当生成完成时自动调用（SUCCESS + 100% + 有图片URL）
  */

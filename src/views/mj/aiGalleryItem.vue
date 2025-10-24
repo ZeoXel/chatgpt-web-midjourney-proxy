@@ -11,7 +11,7 @@ import {NSpin ,NEmpty,NImage, NTag } from 'naive-ui'
 import { homeStore ,useChatStore} from "@/store"
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 //import { ViewCard } from 'vue-waterfall-plugin-next/dist/types/types/waterfall'
-import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl, getGalleryImages, addToGallery, migrateToNewGallery, smartImageUrl, localSave } from '@/api'
+import { getMjAll, localGet, mlog ,loadGallery, url2base64, wsrvUrl, getGalleryImages, getGalleryImagesWithDB, addToGallery, migrateToNewGallery, smartImageUrl, localSave } from '@/api'
 import localforage from 'localforage'
 
 // 限制日志输出，仅在开发环境
@@ -218,8 +218,8 @@ const loadImagFormLocal = async () => {
         // 迁移旧数据到新画廊格式
         await migrateToNewGallery(chatStore.$state);
 
-        // 从新画廊系统获取图片
-        let galleryImages = await getGalleryImages();
+        // 从新画廊系统获取图片（DB + localStorage合并）
+        let galleryImages = await getGalleryImagesWithDB();
 
         // 检查画廊中的图片是否过期，清理失效数据
         if (galleryImages.length > 0) {
@@ -260,8 +260,8 @@ const loadImagFormLocal = async () => {
                 await addToGallery(chat);
             }
 
-            // 重新获取画廊数据
-            galleryImages = await getGalleryImages();
+            // 重新获取画廊数据（DB + localStorage合并）
+            galleryImages = await getGalleryImagesWithDB();
 
             if (galleryImages.length === 0) {
                 list.value = [];

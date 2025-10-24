@@ -342,3 +342,101 @@ export const migrateToNewGallery = async (ChatState: Chat.ChatState): Promise<vo
         mlog('Error during gallery migration:', error);
     }
 }
+
+// ==================== 阶段2: 数据库集成 ====================
+
+/**
+ * 从数据库获取画廊图片（扩展版）
+ * 支持从数据库和localStorage两个数据源加载
+ */
+export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
+    try {
+        console.log('🌐 开始加载画廊（DB + localStorage）...');
+
+        // 并行加载两个数据源
+        const [dbAssets, localImages] = await Promise.all([
+            loadFromDatabase(),
+            getGalleryImages() // 原有localStorage加载
+        ]);
+
+        // 合并并去重（DB优先）
+        const merged = mergeGalleryImages(dbAssets, localImages);
+
+        console.log(`📊 画廊统计:
+  - 数据库: ${dbAssets.length} 张
+  - 本地: ${localImages.length} 张
+  - 合并后: ${merged.length} 张 (去重)`);
+
+        return merged;
+    } catch (error) {
+        console.error('❌ 画廊加载错误:', error);
+        // 降级到仅本地数据
+        return await getGalleryImages();
+    }
+}
+
+/**
+ * 从数据库加载MJ资产，转换为GalleryImage格式
+ */
+async function loadFromDatabase(): Promise<GalleryImage[]> {
+    try {
+        // 动态导入以避免循环依赖
+        const { getMJAssetsFromDatabase } = await import('./mjapi');
+
+        const dbAssets = await getMJAssetsFromDatabase({ limit: 200 });
+
+        return dbAssets.map(asset => convertAssetToGalleryImage(asset));
+    } catch (error) {
+        console.warn('[DB Gallery] 数据库加载失败，使用本地数据:', error);
+        return [];
+    }
+}
+
+/**
+ * 将数据库资产转换为GalleryImage格式
+ */
+function convertAssetToGalleryImage(asset: any): GalleryImage {
+    const assetData = asset.asset_data || {};
+
+    return {
+        id: asset.id,
+        type: 'mj-upscale',
+        url: asset.main_url || assetData.imageUrl || '',
+        action: assetData.action || 'UPSCALE',
+        model: assetData.model || 'midjourney',
+        timestamp: new Date(asset.created_at).getTime(),
+        mjID: asset.task_id || assetData.mjID,
+        prompt: asset.prompt || assetData.promptEn || ''
+    };
+}
+
+/**
+ * 合并两个数据源的图片，去重（DB优先）
+ */
+function mergeGalleryImages(dbImages: GalleryImage[], localImages: GalleryImage[]): GalleryImage[] {
+    // 使用Map去重，key为mjID或id
+    const imageMap = new Map<string, GalleryImage>();
+
+    // 1. 先添加数据库图片（优先级高）
+    dbImages.forEach(img => {
+        const key = img.mjID || img.id;
+        if (key) {
+            imageMap.set(key, { ...img, source: 'db' as any });
+        }
+    });
+
+    // 2. 添加本地图片（如果不存在）
+    localImages.forEach(img => {
+        const key = img.mjID || img.id;
+        if (key && !imageMap.has(key)) {
+            imageMap.set(key, { ...img, source: 'local' as any });
+        }
+    });
+
+    // 3. 转换为数组并按时间排序
+    const merged = Array.from(imageMap.values());
+    merged.sort((a, b) => b.timestamp - a.timestamp);
+
+    // 4. 限制总数
+    return merged.slice(0, 200);
+}
