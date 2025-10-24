@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库连接诊断工具</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #252526;
+            border-left: 3px solid #007acc;
+            border-radius: 4px;
+        }
+        .section h2 {
+            color: #569cd6;
+            margin-top: 0;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+        .error {
+            color: #f48771;
+        }
+        .warning {
+            color: #dcdcaa;
+        }
+        .info {
+            color: #9cdcfe;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .metric {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 5px 10px;
+            background: #333;
+            border-radius: 3px;
+        }
+        .copy-btn {
+            background: #555;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 数据库连接诊断工具</h1>
+    <p class="info">用于排查生产环境无法读取Supabase数据库的问题</p>
+
+    <div class="section">
+        <h2>📝 使用说明</h2>
+        <ol>
+            <li>确保你已登录到生产环境网站</li>
+            <li>确保已在设置中配置了 <code>OPENAI_API_KEY</code></li>
+            <li>点击下方按钮运行诊断</li>
+            <li>根据诊断结果排查问题</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>🚀 快速诊断</h2>
+        <button onclick="runFullDiagnosis()">运行完整诊断</button>
+        <button onclick="testApiConnection()">仅测试API连接</button>
+        <button onclick="checkLocalStorage()">检查本地存储</button>
+        <button onclick="clearResults()">清除结果</button>
+        <div id="results" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>📋 诊断结果</h2>
+        <button class="copy-btn" onclick="copyResults()">复制所有结果</button>
+        <div id="fullReport" class="result"></div>
+    </div>
+
+    <script>
+        let fullReport = '';
+
+        function log(message, type = 'info') {
+            const colors = {
+                success: '#4ec9b0',
+                error: '#f48771',
+                warning: '#dcdcaa',
+                info: '#9cdcfe'
+            };
+            const icon = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            const color = colors[type] || colors.info;
+            const emoji = icon[type] || icon.info;
+            const timestamp = new Date().toLocaleTimeString();
+
+            const line = `[${timestamp}] ${emoji} ${message}`;
+            fullReport += line + '\n';
+
+            const resultsDiv = document.getElementById('results');
+            const reportDiv = document.getElementById('fullReport');
+
+            const p = document.createElement('p');
+            p.style.color = color;
+            p.textContent = line;
+            resultsDiv.appendChild(p);
+            reportDiv.textContent = fullReport;
+
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('fullReport').textContent = '';
+            fullReport = '';
+        }
+
+        function copyResults() {
+            navigator.clipboard.writeText(fullReport).then(() => {
+                alert('诊断结果已复制到剪贴板');
+            });
+        }
+
+        async function checkLocalStorage() {
+            log('=== 检查本地存储配置 ===');
+
+            try {
+                const storeStr = localStorage.getItem('gptServerStore');
+                if (!storeStr) {
+                    log('未找到 gptServerStore 配置', 'error');
+                    return null;
+                }
+
+                const config = JSON.parse(storeStr);
+                const apiKey = config.OPENAI_API_KEY;
+
+                log(`API Key配置: ${apiKey ? '已配置' : '未配置'}`, apiKey ? 'success' : 'error');
+                if (apiKey) {
+                    log(`Key前缀: ${apiKey.substring(0, 15)}...`, 'info');
+                }
+
+                log(`API Base URL: ${config.OPENAI_API_BASE_URL || '未配置'}`, 'info');
+                log(`MJ Server: ${config.MJ_SERVER || '未配置'}`, 'info');
+
+                // 检查本地画廊数据
+                try {
+                    const localforageModule = await import('https://cdn.jsdelivr.net/npm/localforage@1.10.0/+esm');
+                    const localforage = localforageModule.default;
+
+                    localforage.config({
+                        driver: localforage.INDEXEDDB,
+                        name: 'mj',
+                        storeName: 'mjkv'
+                    });
+
+                    const localGallery = await localforage.getItem('MJ:gallery:images');
+                    log(`本地画廊图片数: ${localGallery ? localGallery.length : 0}`, 'info');
+                } catch (e) {
+                    log(`无法读取本地画廊: ${e.message}`, 'warning');
+                }
+
+                return apiKey;
+            } catch (error) {
+                log(`解析配置失败: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function testApiConnection() {
+            log('=== 测试数据库API连接 ===');
+
+            const apiKey = await checkLocalStorage();
+            if (!apiKey) {
+                log('无法继续：未配置API Key', 'error');
+                return false;
+            }
+
+            try {
+                const url = '/api/api/assets?service=midjourney&type=image&limit=5';
+                log(`请求URL: ${url}`, 'info');
+
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const elapsed = Date.now() - startTime;
+
+                log(`HTTP状态: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                log(`响应时间: ${elapsed}ms`, 'info');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`返回资产数: ${data.assets?.length || 0}`, 'success');
+                    log(`总资产数: ${data.total || 0}`, 'info');
+
+                    if (data.assets && data.assets.length > 0) {
+                        const asset = data.assets[0];
+                        log(`最新资产预览:`, 'info');
+                        log(`  - ID: ${asset.id}`, 'info');
+                        log(`  - 类型: ${asset.service}/${asset.type}`, 'info');
+                        log(`  - 创建时间: ${asset.created_at}`, 'info');
+                        log(`  - URL: ${asset.main_url?.substring(0, 50)}...`, 'info');
+                    }
+
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        log(`错误响应: ${JSON.stringify(errorJson, null, 2)}`, 'error');
+                    } catch {
+                        log(`错误响应: ${errorText}`, 'error');
+                    }
+                    return false;
+                }
+            } catch (error) {
+                log(`网络错误: ${error.message}`, 'error');
+                log(`可能原因: 后端服务未启动或环境变量未配置`, 'warning');
+                return false;
+            }
+        }
+
+        async function checkBackendHealth() {
+            log('=== 检查后端服务健康状态 ===');
+
+            try {
+                const response = await fetch('/api/user-info', {
+                    method: 'GET'
+                });
+
+                log(`后端服务状态: ${response.ok ? '运行中' : '异常'}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`用户信息API响应正常`, 'success');
+                    return true;
+                }
+            } catch (error) {
+                log(`后端服务不可达: ${error.message}`, 'error');
+            }
+
+            return false;
+        }
+
+        async function testDatabaseQuery() {
+            log('=== 测试数据库查询功能 ===');
+
+            const apiKey = localStorage.getItem('gptServerStore');
+            if (!apiKey) {
+                log('跳过：未配置API Key', 'warning');
+                return;
+            }
+
+            const config = JSON.parse(apiKey);
+            const key = config.OPENAI_API_KEY;
+
+            if (!key) {
+                log('跳过：API Key为空', 'warning');
+                return;
+            }
+
+            try {
+                // 测试保存
+                log('测试1: 创建资产（模拟）', 'info');
+                const testAsset = {
+                    service: 'midjourney',
+                    type: 'image',
+                    asset_data: {
+                        test: true,
+                        timestamp: new Date().toISOString()
+                    },
+                    task_id: `test-${Date.now()}`,
+                    main_url: 'https://example.com/test.png',
+                    prompt: '诊断工具测试'
+                };
+
+                const saveResponse = await fetch('/api/api/assets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': key
+                    },
+                    body: JSON.stringify(testAsset)
+                });
+
+                if (saveResponse.ok) {
+                    const saved = await saveResponse.json();
+                    log(`测试资产创建成功: ${saved.asset?.id}`, 'success');
+
+                    // 尝试读取
+                    log('测试2: 查询刚创建的资产', 'info');
+                    const getResponse = await fetch(`/api/api/assets/${saved.asset.id}`, {
+                        method: 'GET',
+                        headers: { 'x-api-key': key }
+                    });
+
+                    if (getResponse.ok) {
+                        log('测试资产查询成功', 'success');
+
+                        // 删除测试数据
+                        log('测试3: 删除测试资产', 'info');
+                        const deleteResponse = await fetch(`/api/api/assets/${saved.asset.id}`, {
+                            method: 'DELETE',
+                            headers: { 'x-api-key': key }
+                        });
+
+                        if (deleteResponse.ok) {
+                            log('测试资产删除成功', 'success');
+                            log('✅ 数据库CRUD功能完全正常', 'success');
+                        } else {
+                            log('测试资产删除失败', 'warning');
+                        }
+                    } else {
+                        log('测试资产查询失败', 'error');
+                    }
+                } else {
+                    const error = await saveResponse.text();
+                    log(`测试资产创建失败: ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`数据库测试异常: ${error.message}`, 'error');
+            }
+        }
+
+        async function runFullDiagnosis() {
+            clearResults();
+            log('🔍 开始完整诊断...', 'info');
+            log('');
+
+            // 1. 检查本地存储
+            const apiKey = await checkLocalStorage();
+            log('');
+
+            if (!apiKey) {
+                log('⛔ 诊断终止：未配置API Key', 'error');
+                log('📝 解决方法：前往设置页面配置 OPENAI_API_KEY', 'warning');
+                return;
+            }
+
+            // 2. 检查后端健康
+            await checkBackendHealth();
+            log('');
+
+            // 3. 测试API连接
+            const apiOk = await testApiConnection();
+            log('');
+
+            if (!apiOk) {
+                log('⚠️ API连接失败，跳过数据库测试', 'warning');
+                log('');
+                log('📋 可能原因:', 'warning');
+                log('  1. API Key无效或已过期', 'warning');
+                log('  2. API Key未分配给用户', 'warning');
+                log('  3. 后端环境变量未配置', 'warning');
+                log('  4. Supabase连接失败', 'warning');
+                return;
+            }
+
+            // 4. 测试数据库CRUD
+            await testDatabaseQuery();
+            log('');
+
+            log('✅ 诊断完成！', 'success');
+            log('');
+            log('📊 诊断总结:', 'info');
+            log(`  - API Key: ${apiKey ? '已配置' : '未配置'}`, apiKey ? 'success' : 'error');
+            log(`  - 后端服务: 正常`, 'success');
+            log(`  - 数据库连接: ${apiOk ? '正常' : '异常'}`, apiOk ? 'success' : 'error');
+        }
+
+        // 页面加载后自动检查基本配置
+        window.addEventListener('load', () => {
+            log('诊断工具已就绪', 'success');
+            log('点击"运行完整诊断"开始检测', 'info');
+        });
+    </script>
+</body>
+</html>

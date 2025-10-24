@@ -25,7 +25,10 @@
     "setup:supabase": "esno ./src/scripts/setup-supabase.ts",
     "test:supabase": "esno ./src/scripts/test-supabase-connection.ts",
     "query:supabase": "esno ./src/scripts/query-supabase-data.ts",
-    "test:assets": "esno ./src/scripts/test-assets-api.ts"
+    "test:assets": "esno ./src/scripts/test-assets-api.ts",
+    "add-indexes": "esno ./src/scripts/add-performance-indexes.ts",
+    "benchmark:query": "esno ./src/scripts/benchmark-query-performance.ts",
+    "check:apikey": "esno ./src/scripts/check-api-key.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
