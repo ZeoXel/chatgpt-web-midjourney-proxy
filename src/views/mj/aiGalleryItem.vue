@@ -50,25 +50,24 @@ const breakpoints= {
 }
 
 const loadImg= ()=>{
-    // 快速统计图片数量
-    let imageCount = 0;
+    console.log('🚀 [Gallery] 初始化画廊加载...');
+
+    // 快速统计本地图片数量（仅用于日志）
+    let localImageCount = 0;
     for (const conversation of chatStore.$state.chat) {
         for (const message of conversation.data) {
             if (message.mjID || (message.opt && message.opt.imageUrl)) {
-                imageCount++;
-                if (imageCount > 0) break;
+                localImageCount++;
+                if (localImageCount > 0) break;
             }
         }
-        if (imageCount > 0) break;
+        if (localImageCount > 0) break;
     }
 
-    // 如果没有找到图片，显示空状态
-    if (imageCount === 0) {
-        list.value = [];
-        return;
-    }
+    console.log(`📊 [Gallery] 本地聊天记录中发现 ${localImageCount} 张图片`);
 
-    // 使用新的智能画廊系统
+    // 始终尝试从数据库+本地加载（即使本地为空）
+    // 这样可以在新设备/新浏览器中加载云端数据
     loadImagFormLocal();
 }
 
