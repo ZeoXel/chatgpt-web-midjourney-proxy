@@ -523,6 +523,17 @@ export   function getFileFromClipboard(event:any ){
 // ==================== 阶段1: 数据库集成 ====================
 
 /**
+ * 获取API基础路径
+ * 开发环境: /api/api (经过Vite代理重写)
+ * 生产环境: /api (Vercel Serverless Functions)
+ */
+function getAssetsApiPath(): string {
+    // 检测是否为开发环境
+    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isDev ? '/api/api/assets' : '/api/assets';
+}
+
+/**
  * 从数据库获取Midjourney资产列表
  * 返回用户的历史生成记录
  */
@@ -544,7 +555,8 @@ export async function getMJAssetsFromDatabase(options?: {
             offset: (options?.offset || 0).toString()
         });
 
-        const response = await fetch(`/api/api/assets?${params}`, {
+        const apiPath = getAssetsApiPath();
+        const response = await fetch(`${apiPath}?${params}`, {
             method: 'GET',
             headers: {
                 'x-api-key': apiKey
@@ -595,9 +607,10 @@ async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
         };
 
         // 调用后端API
-        // Vite会将 /api/assets 代理并重写为 /assets，后端监听 /api/assets
-        // 所以前端需要请求 /api/api/assets 才能到达后端的 /api/assets
-        const response = await fetch('/api/api/assets', {
+        // 开发环境: /api/api/assets (经过Vite代理重写)
+        // 生产环境: /api/assets (Vercel Serverless Functions)
+        const apiPath = getAssetsApiPath();
+        const response = await fetch(apiPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
