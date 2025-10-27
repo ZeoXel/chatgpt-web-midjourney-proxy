@@ -351,7 +351,7 @@ export default {
     "tStyles": "Mức độ nghệ thuật",
     "tVersion": "Phiên bản mô hình",
     "dalleInfo": "Chú ý: <li>1 Dall-e là mô hình vẽ hình do OpenAI cung cấp</li>  <li>2 Hình ảnh của OpenAI có thời gian sử dụng, hãy sao lưu đúng cách</li>   <li>3 Lưu ý: Giá của hình ảnh 1790px là gấp đôi</li>",
-    "version": "Phiên bản",
+    "version": "Mô hình",
     "size": "Kích thước",
     "blendInfo": "Chú ý: <li>1 Kết hợp ít nhất 2 hình ảnh</li> <li>2 Tối đa có thể tải lên 6 hình ảnh</li>",
     "blendStart": "Bắt đầu kết hợp",

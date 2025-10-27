@@ -345,7 +345,7 @@ export default {
     "tLight": "燈光",
     "tQuality": "畫質",
     "tStyles": "藝術程度",
-    "version": "版本",
+    "version": "模型",
     "size": "尺寸",
     "blendInfo": "說明： <li>1 合成至少2張圖片</li> <li>2 最多可傳6張圖</li> ",
     "blendStart": "開始合成",

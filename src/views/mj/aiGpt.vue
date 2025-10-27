@@ -214,7 +214,7 @@ watch(()=>homeStore.myData.act, async (n)=>{
         let nobj = dataSources.value[ dd.index ];
         //mlog('gpt.resubmit model', nobj.model  );
         let model = nobj.model
-        if(!model) model= 'gpt-5-nano';
+        if(!model) model= 'gpt-5';
         if(checkDisableGpt4(  model )){
             ms.error( t('mj.disableGpt4') );
             return false;

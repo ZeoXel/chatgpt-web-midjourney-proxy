@@ -351,7 +351,7 @@ export default {
         "tStyles": "Niveau Artistique",
         "tVersion": "Version du Modèle",
         "dalleInfo": "Note:<li>1. DALL-E est un modèle de génération d'images fourni par OpenAI</li><li>2. Les images OpenAI ont une date d'expiration, alors faites des sauvegardes</li><li>3. Remarque: Le prix des images de 1790 px est doublé</li>",
-        "version": "Version",
+        "version": "Modèle",
         "size": "Taille",
         "blendInfo": "Note:<li>1. Mélanger au moins 2 images</li><li>2. Jusqu'à 6 images peuvent être utilisées pour le mélange</li>",
         "blendStart": "Commencer à Mélanger",

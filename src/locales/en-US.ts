@@ -354,7 +354,7 @@ export default {
     "tStyles": "Artistic Level",
     "tVersion": "Model Version",
     "dalleInfo": "Note:<li>1. DALL-E is an image generation model provided by OpenAI</li><li>2. OpenAI images have an expiration date, so make backups</li><li>3. Note: The price of 1790px images is double</li>",
-    "version": "Version",
+    "version": "Model",
     "size": "Size",
     "blendInfo": "Note:<li>1. Blend at least 2 images</li><li>2. Up to 6 images can be used for blending</li>",
     "blendStart": "Start Blending",

@@ -350,7 +350,7 @@ export default {
         "tStyles": "Sanatsal Seviye",
         "tVersion": "Model Sürümü",
         "dalleInfo": "Not:<li>1. DALL-E, OpenAI tarafından sağlanan bir resim oluşturma modelidir</li><li>2. OpenAI resimlerinin bir son kullanma tarihi vardır, bu nedenle yedekleme yapın</li><li>3. Not: 1790px resimlerin fiyatı iki katıdır</li>",
-        "version": "Sürüm",
+        "version": "Model",
         "size": "Boyut",
         "blendInfo": "Not:<li>1. En az 2 resmi karıştırın</li><li>2. Karıştırmak için en fazla 6 resim kullanılabilir</li>",
         "blendStart": "Karışımı Başlat",

@@ -175,7 +175,7 @@ export default {
     tStyles: '艺术程度',
     tVersion: '模型版本',
     dalleInfo: ' 说明：   <li>1 nano-banana 是Google提供的画图模型</li>  <li>2 OpenAi的图片有时效性，请做好备份</li>   <li>3 注意：1790px的图片价格是双倍</li> <li>4 注意：nano-banana、flux、gpt-image-1 支持多图参考</li> ',
-    version: '版本',
+    version: '模型',
     size: '尺寸',
     blendInfo: '说明： <li>1 合成至少2张图片</li> <li>2 最多可传6张图</li> ',
     blendStart: '开始合成',

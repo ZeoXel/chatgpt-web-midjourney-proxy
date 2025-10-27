@@ -351,7 +351,7 @@ export default {
     ,"tStyles": "아트 정도"
     ,"tVersion": "모델 버전"
     ,"dalleInfo": "설명：<li>1. DALL-E는 OpenAI에서 제공하는 그림 모델입니다.</li>  <li>2. OpenAI의 이미지는 일시적입니다. 백업을 잘 해 두세요.</li>   <li>3. 주의: 1790px 이미지의 가격은 두 배입니다.</li> "
-    ,"version": "버전"
+    ,"version": "모델"
     ,"size": "크기"
     ,"blendInfo": "설명：<li>1. 최소 2 장의 이미지를 합성하십시오.</li> <li>2. 최대 6 장의 이미지를 업로드할 수 있습니다.</li> "
     ,"blendStart": "합성 시작"

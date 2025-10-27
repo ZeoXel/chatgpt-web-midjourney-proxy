@@ -1,6 +1,7 @@
 import { gptServerStore, homeStore } from "@/store";
 import localforage from "localforage"
 import { mlog } from "./mjapi";
+import { isDallImageModel } from "./openapi";
 
 localforage.config({
     driver      : localforage.INDEXEDDB, // Force WebSQL; same as using setDriver()
@@ -223,8 +224,8 @@ export const addToGallery = async (chat: Chat.Chat): Promise<void> => {
 
 // 判断是否应该添加到画廊
 function shouldAddToGallery(chat: Chat.Chat): boolean {
-    // DALL-E 系列：全部保存
-    if (chat.model && chat.model.includes('dall-e')) {
+    // DALL-E 系列（包括 nano-banana, seedream, flux 等图片生成模型）：全部保存
+    if (chat.model && isDallImageModel(chat.model)) {
         return !!(chat.opt?.imageUrl);
     }
 
@@ -250,7 +251,7 @@ function createGalleryImage(chat: Chat.Chat): GalleryImage | null {
         let type: GalleryImage['type'] = 'other';
 
         // 确定图片类型和URL
-        if (chat.model && chat.model.includes('dall-e')) {
+        if (chat.model && isDallImageModel(chat.model)) {
             type = 'dalle';
             imageUrl = chat.opt?.imageUrl || '';
         } else if (chat.mjID && chat.opt?.action === 'UPSCALE') {
@@ -351,20 +352,22 @@ export const migrateToNewGallery = async (ChatState: Chat.ChatState): Promise<vo
  */
 export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
     try {
-        console.log('🎨 [Gallery DB] 开始加载画廊（DB + localStorage）...');
+        console.log('🎨 [Gallery DB] 开始加载画廊（MJ DB + DALL-E DB + localStorage）...');
 
-        // 并行加载两个数据源
-        const [dbAssets, localImages] = await Promise.all([
-            loadFromDatabase(),
+        // 并行加载三个数据源：MJ数据库 + DALL-E数据库 + localStorage
+        const [mjDbAssets, dallDbAssets, localImages] = await Promise.all([
+            loadMJFromDatabase(),
+            loadDallFromDatabase(),
             getGalleryImages() // 原有localStorage加载
         ]);
 
         console.log(`📊 [Gallery DB] 数据源统计:
-  - 数据库: ${dbAssets.length} 张
+  - MJ数据库: ${mjDbAssets.length} 张
+  - DALL-E数据库: ${dallDbAssets.length} 张
   - 本地: ${localImages.length} 张`);
 
-        // 合并并去重（DB优先）
-        const merged = mergeGalleryImages(dbAssets, localImages);
+        // 合并三个数据源并去重（DB优先）
+        const merged = mergeGalleryImages(mjDbAssets, dallDbAssets, localImages);
 
         console.log(`✅ [Gallery DB] 合并完成: ${merged.length} 张图片 (已去重)`);
 
@@ -380,20 +383,20 @@ export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
 /**
  * 从数据库加载MJ资产，转换为GalleryImage格式
  */
-async function loadFromDatabase(): Promise<GalleryImage[]> {
+async function loadMJFromDatabase(): Promise<GalleryImage[]> {
     try {
-        console.log('📡 [DB Gallery] 正在从数据库加载...');
+        console.log('📡 [MJ DB Gallery] 正在从数据库加载MJ资产...');
 
         // 动态导入以避免循环依赖
         const { getMJAssetsFromDatabase } = await import('./mjapi');
 
         const dbAssets = await getMJAssetsFromDatabase({ limit: 200 });
 
-        console.log(`🔄 [DB Gallery] 转换 ${dbAssets.length} 个数据库资产为画廊格式`);
+        console.log(`🔄 [MJ DB Gallery] 转换 ${dbAssets.length} 个MJ资产为画廊格式`);
 
-        const converted = dbAssets.map(asset => convertAssetToGalleryImage(asset));
+        const converted = dbAssets.map(asset => convertMJAssetToGalleryImage(asset));
 
-        console.log(`✅ [DB Gallery] 数据库加载完成:`, {
+        console.log(`✅ [MJ DB Gallery] MJ数据加载完成:`, {
             总数: converted.length,
             示例: converted[0] ? {
                 id: converted[0].id,
@@ -403,15 +406,47 @@ async function loadFromDatabase(): Promise<GalleryImage[]> {
 
         return converted;
     } catch (error) {
-        console.warn('⚠️ [DB Gallery] 数据库加载失败，使用本地数据:', error);
+        console.warn('⚠️ [MJ DB Gallery] MJ数据加载失败:', error);
         return [];
     }
 }
 
 /**
- * 将数据库资产转换为GalleryImage格式
+ * 从数据库加载DALL-E资产，转换为GalleryImage格式
  */
-function convertAssetToGalleryImage(asset: any): GalleryImage {
+async function loadDallFromDatabase(): Promise<GalleryImage[]> {
+    try {
+        console.log('📡 [DALL-E DB Gallery] 正在从数据库加载DALL-E资产...');
+
+        // 动态导入以避免循环依赖
+        const { getDallAssetsFromDatabase } = await import('./openapi');
+
+        const dbAssets = await getDallAssetsFromDatabase({ limit: 200 });
+
+        console.log(`🔄 [DALL-E DB Gallery] 转换 ${dbAssets.length} 个DALL-E资产为画廊格式`);
+
+        const converted = dbAssets.map(asset => convertDallAssetToGalleryImage(asset));
+
+        console.log(`✅ [DALL-E DB Gallery] DALL-E数据加载完成:`, {
+            总数: converted.length,
+            示例: converted[0] ? {
+                id: converted[0].id,
+                model: converted[0].model,
+                prompt: converted[0].prompt?.substring(0, 20) + '...'
+            } : '无'
+        });
+
+        return converted;
+    } catch (error) {
+        console.warn('⚠️ [DALL-E DB Gallery] DALL-E数据加载失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 将MJ数据库资产转换为GalleryImage格式
+ */
+function convertMJAssetToGalleryImage(asset: any): GalleryImage {
     const assetData = asset.asset_data || {};
 
     return {
@@ -427,21 +462,51 @@ function convertAssetToGalleryImage(asset: any): GalleryImage {
 }
 
 /**
- * 合并两个数据源的图片，去重（DB优先）
+ * 将DALL-E数据库资产转换为GalleryImage格式
  */
-function mergeGalleryImages(dbImages: GalleryImage[], localImages: GalleryImage[]): GalleryImage[] {
+function convertDallAssetToGalleryImage(asset: any): GalleryImage {
+    const assetData = asset.asset_data || {};
+
+    return {
+        id: asset.task_id || asset.id,  // DALL-E使用task_id (myid)
+        type: 'dalle',
+        url: asset.main_url || '',
+        action: 'DALL-E',
+        model: assetData.model || 'dall-e',
+        timestamp: new Date(asset.created_at).getTime(),
+        mjID: undefined,  // DALL-E没有mjID
+        prompt: asset.prompt || ''
+    };
+}
+
+/**
+ * 合并三个数据源的图片，去重（DB优先）
+ */
+function mergeGalleryImages(
+    mjDbImages: GalleryImage[],
+    dallDbImages: GalleryImage[],
+    localImages: GalleryImage[]
+): GalleryImage[] {
     // 使用Map去重，key为mjID或id
     const imageMap = new Map<string, GalleryImage>();
 
-    // 1. 先添加数据库图片（优先级高）
-    dbImages.forEach(img => {
+    // 1. 先添加MJ数据库图片（优先级最高）
+    mjDbImages.forEach(img => {
         const key = img.mjID || img.id;
         if (key) {
-            imageMap.set(key, { ...img, source: 'db' as any });
+            imageMap.set(key, { ...img, source: 'mj-db' as any });
         }
     });
 
-    // 2. 添加本地图片（如果不存在）
+    // 2. 添加DALL-E数据库图片（优先级第二）
+    dallDbImages.forEach(img => {
+        const key = img.id;  // DALL-E使用id作为唯一标识
+        if (key && !imageMap.has(key)) {
+            imageMap.set(key, { ...img, source: 'dall-db' as any });
+        }
+    });
+
+    // 3. 添加本地图片（如果不存在）
     localImages.forEach(img => {
         const key = img.mjID || img.id;
         if (key && !imageMap.has(key)) {
@@ -449,10 +514,10 @@ function mergeGalleryImages(dbImages: GalleryImage[], localImages: GalleryImage[
         }
     });
 
-    // 3. 转换为数组并按时间排序
+    // 4. 转换为数组并按时间排序
     const merged = Array.from(imageMap.values());
     merged.sort((a, b) => b.timestamp - a.timestamp);
 
-    // 4. 限制总数
+    // 5. 限制总数
     return merged.slice(0, 200);
 }

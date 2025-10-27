@@ -12,16 +12,7 @@ const config = ref( {
 model:[
 {  "label": "nano-banana", "value": "nano-banana" }
  ,{  "label": "nano-banana-hd", "value": "nano-banana-hd" }
- ,{  "label": "DALL·E 3", "value": "dall-e-3" }
- ,{  "label": "GPT-Image-1", "value": "gpt-image-1" }
- ,{  "label": "flux-kontext-pro", "value": "flux-kontext-pro" }
- ,{  "label": "flux-kontext-max", "value": "flux-kontext-max" }
- ,{  "label": "DALL·E 2", "value": "dall-e-2" }
- ,{  "label": "Flux", "value": "flux" }
- ,{  "label": "Flux-Dev", "value": "flux-dev" }
- ,{  "label": "Flux-Pro", "value": "flux-pro" }
- ,{  "label": "Flux-Pro-1.1", "value": "flux-pro-1.1" }
- ,{  "label": "Flux-Pro-1.1-Ultra", "value": "flux-pro-1.1-ultra" }
+ ,{  "label": "seedream", "value": "doubao-seedream-4-0-250828" }
 ]
 });
 interface myFile{
@@ -178,7 +169,7 @@ const dimensionsList= computed(()=>{
             }
     ];
     }
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd'){
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828'){
     return [{
                 "label": "1024px*1024px",
                 "value": "1024x1024"
@@ -211,7 +202,7 @@ const isCanImageEdit= computed(()=>{
     if(f.value.model=='dall-e-2') return true;
     if(f.value.model=='gpt-image-1') return true;
     if(f.value.model.indexOf('kontext')>-1) return true;
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd') return true;
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828') return true;
     return false;
 })
 

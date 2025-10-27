@@ -117,7 +117,7 @@ router.post('/', async (req: any, res: any) => {
     }
 
     // 验证service和type值
-    const validServices = ['midjourney', 'suno', 'luma', 'vidu', 'runway', 'kling', 'pika', 'udio', 'ideogram', 'flux'];
+    const validServices = ['midjourney', 'dall-e', 'suno', 'luma', 'vidu', 'runway', 'kling', 'pika', 'udio', 'ideogram', 'flux'];
     const validTypes = ['image', 'audio', 'video'];
 
     if (!validServices.includes(service)) {

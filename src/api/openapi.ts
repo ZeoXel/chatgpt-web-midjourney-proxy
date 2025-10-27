@@ -235,13 +235,158 @@ export const gptUploadFile=   (url :string, FormData:FormData)=>{
 
 }
 
+/**
+ * 获取 Assets API 路径
+ * 开发环境: /api/api/assets (经过Vite代理重写)
+ * 生产环境: /api/assets (Vercel Serverless Functions)
+ */
+function getAssetsApiPath(): string {
+    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isDev ? '/api/api/assets' : '/api/assets';
+}
+
+/**
+ * 保存DALL-E（智能绘画）资产到数据库
+ * 支持模型: nano-banana, nano-banana-hd, doubao-seedream-4-0-250828
+ */
+async function saveDallAssetToDatabase(chat: Chat.Chat, requestData: any): Promise<void> {
+    try {
+        // 获取用户的API Key
+        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
+        console.log('[DALL-E Asset Save] 调试信息:', {
+            hasApiKey: !!apiKey,
+            apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'null',
+            gptServerStoreKeys: Object.keys(gptServerStore.myData)
+        });
+
+        if (!apiKey) {
+            console.warn('[DALL-E Asset Save] 未配置API Key，跳过保存');
+            return;
+        }
+
+        // 只保存允许的模型
+        const allowedModels = ['nano-banana', 'nano-banana-hd', 'doubao-seedream-4-0-250828'];
+        if (!chat.model || !allowedModels.includes(chat.model)) {
+            console.log('[DALL-E Asset Save] ⏭️ 跳过不支持的模型:', chat.model);
+            return;
+        }
+
+        // 构建资产数据
+        const assetData = {
+            service: 'dall-e',  // 统一使用 dall-e 作为服务标识
+            type: 'image',
+            asset_data: {
+                model: chat.model,
+                size: requestData.size,
+                quality: requestData.quality,
+                revised_prompt: chat.text,  // API返回的修订后的prompt
+                timestamp: new Date().toISOString()
+            },
+            task_id: chat.myid,
+            main_url: chat.opt?.imageUrl,
+            prompt: requestData.prompt  // 用户原始输入的prompt
+        };
+
+        console.log('[DALL-E Asset Save] 保存数据:', {
+            myid: chat.myid,
+            model: chat.model,
+            prompt: assetData.prompt?.substring(0, 50) + '...',
+            main_url: assetData.main_url ? '有' : '无'
+        });
+
+        // 调用后端API
+        const apiPath = getAssetsApiPath();
+        const response = await fetch(apiPath, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+            },
+            body: JSON.stringify(assetData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(`API error: ${response.status} - ${JSON.stringify(error)}`);
+        }
+
+        const result = await response.json();
+        console.log('[DALL-E Asset Save] ✅ 保存成功:', result.asset?.id);
+    } catch (error) {
+        console.error('[DALL-E Asset Save] ❌ 保存失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 从数据库获取DALL-E（智能绘画）资产列表
+ * 返回用户的历史生成记录
+ */
+export async function getDallAssetsFromDatabase(options?: {
+    limit?: number;
+    offset?: number;
+}): Promise<any[]> {
+    console.log('[DALL-E Asset Load] 🌐 开始从数据库加载资产...');
+
+    try {
+        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.warn('[DALL-E Asset Load] ⚠️ 未配置API Key，跳过数据库读取');
+            return [];
+        }
+
+        const params = new URLSearchParams({
+            service: 'dall-e',
+            type: 'image',
+            limit: (options?.limit || 100).toString(),
+            offset: (options?.offset || 0).toString()
+        });
+
+        const apiPath = getAssetsApiPath();
+        console.log('[DALL-E Asset Load] 请求路径:', `${apiPath}?${params}`);
+
+        const response = await fetch(`${apiPath}?${params}`, {
+            method: 'GET',
+            headers: {
+                'x-api-key': apiKey
+            }
+        });
+
+        console.log('[DALL-E Asset Load] 响应状态:', response.status, response.statusText);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[DALL-E Asset Load] API错误响应:', errorText);
+            throw new Error(`API error: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`[DALL-E Asset Load] ✅ 从数据库加载 ${result.assets?.length || 0} 个资产`);
+
+        if (result.assets && result.assets.length > 0) {
+            console.log('[DALL-E Asset Load] 第一个资产示例:', {
+                id: result.assets[0].id,
+                model: result.assets[0].asset_data?.model,
+                prompt: result.assets[0].prompt?.substring(0, 30) + '...',
+                created_at: result.assets[0].created_at
+            });
+        }
+
+        return result.assets || [];
+
+    } catch (error) {
+        console.error('[DALL-E Asset Load] ❌ 加载失败:', error);
+        return [];
+    }
+}
+
 export const subGPT= async (data:any, chat:Chat.Chat )=>{
    let d:any;
    let action= data.action;
    // mlog("gp-image-1 base64Array ",   data.base64Array   )
    //chat.myid=  `${Date.now()}`;
-   if( action=='gpt.dall-e-3' && data.data && data.data.model && (data.data.model === 'nano-banana' || data.data.model === 'nano-banana-hd') ){ // nano-banana 系列
-       mlog("nano-banana 请求数据 ", data.data)
+   if( action=='gpt.dall-e-3' && data.data && data.data.model && (data.data.model === 'nano-banana' || data.data.model === 'nano-banana-hd' || data.data.model === 'doubao-seedream-4-0-250828') ){ // 智能绘画系列
+       mlog("智能绘画请求数据 ", data.data)
 
        // 判断是使用 generations 还是 edits 端点
        let endpoint = '/v1/images/generations';
@@ -349,6 +494,11 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
             chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
             chat.loading = false;
             homeStore.setMyData({act:'updateChat', actData:chat });
+
+            // 阶段1: 生成完成后保存到数据库
+            saveDallAssetToDatabase(chat, data.data).catch(err => {
+                console.warn('[DALL-E Asset Save] 保存失败（不影响用户体验）:', err);
+            });
        }catch(e){
             mlog('nano-banana 请求失败', e);
 
@@ -475,12 +625,13 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
 
 export const isDallImageModel =(model:string|undefined)=>{
     if(!model) return false;
-    if( model.indexOf('flux')>-1 ) return true; 
+    if( model.indexOf('flux')>-1 ) return true;
     if( model.indexOf('ideogram')>-1 ) return true;
     if( model.indexOf('gpt-image')>-1 ) return true;
     if( model === 'nano-banana' || model === 'nano-banana-hd' ) return true;
+    if( model.indexOf('seedream')>-1 ) return true;
     return ['dall-e-2' ,'dall-e-3','ideogram' ].indexOf(model)>-1
-      
+
 }
 
 interface subModelType{
@@ -521,7 +672,7 @@ export const getSystemMessage = (uuid?:number )=>{
         sysTem= chatS.getGptConfig().systemMessage ;
     }
     if(  sysTem ) return sysTem;
-    let model= gptConfigStore.myData.model?gptConfigStore.myData.model: "gpt-5-nano";
+    let model= gptConfigStore.myData.model?gptConfigStore.myData.model: "gpt-5";
     let producer= 'You are ChatGPT, a large language model trained by OpenAI.'
     if(model.includes('claude')) producer=  'You are Claude, a large language model trained by Anthropic.';
     if(model.includes('gemini')) producer=  'You are Gemini, a large language model trained by Google.';
@@ -549,7 +700,7 @@ export const isNewModel=(model:string)=>{
 }
 export const subModel= async (opt: subModelType)=>{
     //
-    let model= opt.model?? ( gptConfigStore.myData.model?gptConfigStore.myData.model: "gpt-5-nano");
+    let model= opt.model?? ( gptConfigStore.myData.model?gptConfigStore.myData.model: "gpt-5");
     let max_tokens= gptConfigStore.myData.max_tokens;
     let temperature= 0.5;
     let top_p= 1;
