@@ -16,9 +16,10 @@ const csuno= new sunoStore()
 const st= ref({playid:''});
 
 const ms = useMessage();
-const initLoad=()=>{
-    let arr = csuno.getObjs();
-    list.value= arr.reverse()
+const initLoad= async ()=>{
+    // Phase 2: 使用数据库合并方法加载数据
+    let arr = await csuno.getObjsWithDB();
+    list.value= arr; // getObjsWithDB 已经按时间倒序排列，无需再 reverse
 }
 
 const getNowCls=(v:any)=>{

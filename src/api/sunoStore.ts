@@ -48,8 +48,8 @@ export class sunoStore{
     else arr.push(obj);
      ss.set(this.localKey, arr );
     return this;
-  } 
-  public findIndex(id:string){ 
+  }
+  public findIndex(id:string){
     return this.getObjs().findIndex( v=>v.id== id )
   }
 
@@ -58,6 +58,62 @@ export class sunoStore{
      if(!obj) return [];
      return obj;
   }
+
+  /**
+   * 获取合并后的音乐列表（数据库 + localStorage）
+   * 数据库数据优先，使用 id 去重
+   */
+  public async getObjsWithDB(): Promise<SunoMedia[]> {
+    try {
+      console.log('[Suno Store] 🔄 开始合并数据库和本地数据...');
+
+      // 动态导入 getSunoAssetsFromDatabase 避免循环依赖
+      const { getSunoAssetsFromDatabase } = await import('./suno');
+
+      // 并行加载数据库和本地数据
+      const [dbAssets, localAssets] = await Promise.all([
+        getSunoAssetsFromDatabase({ limit: 200 }),
+        Promise.resolve(this.getObjs())
+      ]);
+
+      console.log(`[Suno Store] 数据源统计:
+  - 数据库: ${dbAssets.length} 个
+  - 本地: ${localAssets.length} 个`);
+
+      // 使用 Map 进行去重合并，数据库数据优先
+      const mediaMap = new Map<string, SunoMedia>();
+
+      // 1. 先加载数据库数据（高优先级）
+      dbAssets.forEach(media => {
+        if (media.id) {
+          mediaMap.set(media.id, { ...media, source: 'database' as any });
+        }
+      });
+
+      // 2. 加载本地数据（如果 id 不存在才添加）
+      localAssets.forEach(media => {
+        if (media.id && !mediaMap.has(media.id)) {
+          mediaMap.set(media.id, { ...media, source: 'local' as any });
+        }
+      });
+
+      // 3. 转换为数组并按创建时间排序
+      const merged = Array.from(mediaMap.values());
+      merged.sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeB - timeA; // 降序排列（最新的在前）
+      });
+
+      console.log(`[Suno Store] ✅ 合并完成: ${merged.length} 个音乐 (已去重)`);
+
+      return merged;
+    } catch (error) {
+      console.error('[Suno Store] ❌ 合并失败，降级到仅使用本地数据:', error);
+      return this.getObjs();
+    }
+  }
+
   public delete( obj:SunoMedia ){
     if(!obj.id ) throw "id must";
     let arr=  this.getObjs();
