@@ -7,7 +7,6 @@ import { sunoFetch ,lyricsFetch, randStyle, FeedTask} from '@/api/suno';
 import { t } from '@/locales';
 import { homeStore } from '@/store';
 import { SunoMedia } from '@/api/sunoStore';
-import mcUploaderMp3 from './mcUploadMp3.vue'
 
 const st = ref({type:'custom',isLoading:false})
 const exSuno= ref<SunoMedia>()
@@ -29,11 +28,12 @@ const cs= ref({
 });
 
 const mvOption= [
-{label: 'verion: v3.5',value: 'chirp-v3-5'}
-,{label:'verion: v3',value: 'chirp-v3-0'}
-,{label:'verion: v4',value: 'chirp-v4'}
-,{label:'verion: v4.5',value: 'chirp-auk'}
-,{label:'verion: v4.5+',value: 'chirp-bluejay'}
+{label: 'version: v3.0',value: 'chirp-v3-0'}
+,{label: 'version: v3.5',value: 'chirp-v3-5'}
+,{label: 'version: v4.0',value: 'chirp-v4'}
+,{label: 'version: v4.5',value: 'chirp-auk'}
+,{label: 'version: v4.5+',value: 'chirp-bluejay'}
+,{label: 'version: v5.0',value: 'chirp-crow'}
  ]
 
 const canPost = computed(() => {
@@ -279,16 +279,9 @@ watch(()=>homeStore.myData.act, (n)=>{
     </n-tabs>
 
     <div class="pt-4">
-        <div class="flex justify-between items-start">
-            <div class=" space-x-1">
-                  <NTag v-if="st.type=='custom'" type="primary" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >{{ $t('suno.generately') }}</span></NTag>
-                  <!-- <NTag v-if="st.type=='custom'" type="success" size="small" round  ><span class="cursor-pointer" @click="generateLyrics()" >上传音频</span></NTag> -->
-                  <mcUploaderMp3 v-if="st.type=='custom'"/>
-            </div>
-            <NButton type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton> 
+        <div class="flex justify-end items-start">
+            <NButton type="primary" :disabled="!canPost" @click="generate()" style="background-color: #445ff6;"><SvgIcon icon="ri:music-fill"  /> {{$t('suno.generate')}}</NButton>
         </div>
-        
-       
     </div>
     <div v-if="st.type=='custom'" class="pt-4 text-[12px]" v-html="t('suno.info')"> </div>
 

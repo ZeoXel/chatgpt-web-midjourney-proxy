@@ -247,7 +247,7 @@ function getAssetsApiPath(): string {
 
 /**
  * 保存DALL-E（智能绘画）资产到数据库
- * 支持模型: nano-banana, nano-banana-hd, doubao-seedream-4-0-250828
+ * 支持模型: nano-banana, nano-banana-hd, doubao-seedream-4-0-250828, seedream-3.0
  */
 async function saveDallAssetToDatabase(chat: Chat.Chat, requestData: any): Promise<void> {
     try {
@@ -265,7 +265,7 @@ async function saveDallAssetToDatabase(chat: Chat.Chat, requestData: any): Promi
         }
 
         // 只保存允许的模型
-        const allowedModels = ['nano-banana', 'nano-banana-hd', 'doubao-seedream-4-0-250828'];
+        const allowedModels = ['nano-banana', 'nano-banana-hd', 'doubao-seedream-4-0-250828', 'seedream-3.0'];
         if (!chat.model || !allowedModels.includes(chat.model)) {
             console.log('[DALL-E Asset Save] ⏭️ 跳过不支持的模型:', chat.model);
             return;
@@ -385,7 +385,7 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
    let action= data.action;
    // mlog("gp-image-1 base64Array ",   data.base64Array   )
    //chat.myid=  `${Date.now()}`;
-   if( action=='gpt.dall-e-3' && data.data && data.data.model && (data.data.model === 'nano-banana' || data.data.model === 'nano-banana-hd' || data.data.model === 'doubao-seedream-4-0-250828') ){ // 智能绘画系列
+   if( action=='gpt.dall-e-3' && data.data && data.data.model && (data.data.model === 'nano-banana' || data.data.model === 'nano-banana-hd' || data.data.model === 'doubao-seedream-4-0-250828' || data.data.model === 'seedream-3.0') ){ // 智能绘画系列
        mlog("智能绘画请求数据 ", data.data)
 
        // 判断是使用 generations 还是 edits 端点

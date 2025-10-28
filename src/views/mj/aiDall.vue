@@ -12,7 +12,8 @@ const config = ref( {
 model:[
 {  "label": "nano-banana", "value": "nano-banana" }
  ,{  "label": "nano-banana-hd", "value": "nano-banana-hd" }
- ,{  "label": "seedream", "value": "doubao-seedream-4-0-250828" }
+ ,{  "label": "seedream 4.0", "value": "doubao-seedream-4-0-250828" }
+ ,{  "label": "seedream 3.0", "value": "seedream-3.0" }
 ]
 });
 interface myFile{
@@ -169,7 +170,7 @@ const dimensionsList= computed(()=>{
             }
     ];
     }
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828'){
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
     return [{
                 "label": "1024px*1024px",
                 "value": "1024x1024"
@@ -202,7 +203,7 @@ const isCanImageEdit= computed(()=>{
     if(f.value.model=='dall-e-2') return true;
     if(f.value.model=='gpt-image-1') return true;
     if(f.value.model.indexOf('kontext')>-1) return true;
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828') return true;
+    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0') return true;
     return false;
 })
 

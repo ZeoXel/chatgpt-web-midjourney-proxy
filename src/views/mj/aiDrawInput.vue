@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { NTabs,NTabPane } from 'naive-ui';
 import aiDrawInputItem from './aiDrawInputItem.vue'
-import aiFace from './aiFace.vue'
-import aiBlend from './aiBlend.vue'
 import aiDall from './aiDall.vue'
 import aiIdeoInput from './aiIdeoInput.vue'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
@@ -56,21 +54,7 @@ initLoad();
 
     </n-tab-pane>
     <n-tab-pane name="midjourney" tab="MJ工坊" >
-      <!--  -->
-    <n-tabs type="segment" animated   default-value="draw23" size="small" style="--n-tab-text-color-active: #445ff6;--n-bar-color: #445ff6;--n-tab-border-color:#445ff6">
-        <n-tab-pane name="draw23" :tab="$t('mjchat.draw')">
-          <aiDrawInputItem @draw-sent="drawSent" @close="$emit('close')"></aiDrawInputItem>
-        </n-tab-pane>
-        <!-- <n-tab-pane name="chap2" tab="第二章">2</n-tab-pane>
-        <n-tab-pane name="chap3" tab="第三章">3</n-tab-pane> -->
-        <n-tab-pane name="face" :tab="$t('mjchat.face')">
-          <div class="p-4"><aiFace  /></div>
-        </n-tab-pane>
-        <n-tab-pane name="blend" :tab="$t('mjchat.blend')">
-          <div class="p-4"><aiBlend  /></div>
-        </n-tab-pane>
-    </n-tabs>
-
+      <aiDrawInputItem @draw-sent="drawSent" @close="$emit('close')"></aiDrawInputItem>
     </n-tab-pane>
 
     <n-tab-pane name="dall.e" tab="智能绘画">

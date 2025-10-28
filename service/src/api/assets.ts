@@ -117,8 +117,8 @@ router.post('/', async (req: any, res: any) => {
     }
 
     // 验证service和type值
-    const validServices = ['midjourney', 'dall-e', 'suno', 'luma', 'vidu', 'runway', 'kling', 'pika', 'udio', 'ideogram', 'flux'];
-    const validTypes = ['image', 'audio', 'video'];
+    const validServices = ['midjourney', 'dall-e', 'suno', 'luma', 'vidu', 'runway', 'kling', 'pika', 'udio', 'ideogram', 'flux', 'chat'];
+    const validTypes = ['image', 'audio', 'video', 'conversation'];
 
     if (!validServices.includes(service)) {
       return res.status(400).json({
@@ -134,33 +134,83 @@ router.post('/', async (req: any, res: any) => {
       });
     }
 
-    // 插入资产
-    const { data, error } = await supabase
-      .from('ai_assets')
-      .insert({
-        user_id: userId,
-        service,
-        type,
-        asset_data,
-        task_id,
-        main_url,
-        prompt
-      })
-      .select()
-      .single();
+    // UPSERT 资产（对话数据使用 UPSERT 避免重复）
+    // 使用传统的查询+更新/插入方式（兼容无唯一约束的数据库）
 
-    if (error) {
-      console.error('[Assets API] Insert error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to create asset',
-        details: error.message
-      });
+    let operation = 'created';
+    let result = null;
+
+    // 如果有 task_id，先查询是否已存在
+    if (task_id) {
+      const { data: existing } = await supabase
+        .from('ai_assets')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('service', service)
+        .eq('task_id', task_id)
+        .maybeSingle();
+
+      if (existing) {
+        // 已存在，执行更新
+        const { data: updated, error: updateError } = await supabase
+          .from('ai_assets')
+          .update({
+            type,
+            asset_data,
+            main_url,
+            prompt
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('[Assets API] Update error:', updateError);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to update asset',
+            details: updateError.message
+          });
+        }
+
+        result = updated;
+        operation = 'updated';
+      }
+    }
+
+    // 如果不存在或没有 task_id，执行插入
+    if (!result) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('ai_assets')
+        .insert({
+          user_id: userId,
+          service,
+          type,
+          asset_data,
+          task_id,
+          main_url,
+          prompt
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('[Assets API] Insert error:', insertError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create asset',
+          details: insertError.message
+        });
+      }
+
+      result = inserted;
+      operation = 'created';
     }
 
     res.json({
       success: true,
-      asset: data
+      asset: result,
+      operation
     });
   } catch (error) {
     console.error('[Assets API] Create error:', error);

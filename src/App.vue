@@ -1,12 +1,23 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { NConfigProvider } from 'naive-ui'
 import { NaiveProvider } from '@/components/common'
 import { useTheme } from '@/hooks/useTheme'
 import { useLanguage } from '@/hooks/useLanguage'
-import aiOther from "@/views/mj/aiOther.vue" 
+import aiOther from "@/views/mj/aiOther.vue"
+import { useChatStore } from '@/store'
 import '@/styles/color-override.css'
+
 const { theme, themeOverrides } = useTheme()
 const { language } = useLanguage()
+const chatStore = useChatStore()
+
+// Phase 2: 应用启动时从数据库加载对话历史
+onMounted(async () => {
+  console.log('[App] 🚀 应用启动，开始加载对话历史...')
+  await chatStore.loadFromDatabase()
+  console.log('[App] ✅ 对话历史加载完成')
+})
 </script>
 
 <template>

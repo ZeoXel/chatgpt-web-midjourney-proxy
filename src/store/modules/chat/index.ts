@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { defaultState, getLocalState, setLocalState, setLastChatUuid, getLastChatUuid } from './helper'
+import { defaultState, getLocalState, setLocalState, setLocalStateWithDB, setLastChatUuid, getLastChatUuid, getLocalStateWithDB, deleteChatFromDatabase } from './helper'
 import { router } from '@/router'
 import { homeStore } from '@/store/homeStore'
 import { sleep } from '@/api/suno'
@@ -26,6 +26,28 @@ export const useChatStore = defineStore('chat-store', {
   },
 
   actions: {
+    /**
+     * 从数据库加载对话历史并合并到当前状态
+     * 在应用启动时调用
+     */
+    async loadFromDatabase() {
+      try {
+        console.log('[Chat Store] 🌐 开始从数据库加载对话历史...')
+        const mergedState = await getLocalStateWithDB()
+
+        // 更新状态（保留当前的 active 和 usingContext）
+        this.history = mergedState.history
+        this.chat = mergedState.chat
+
+        // 仅保存到本地，避免循环
+        setLocalState(this.$state)
+
+        console.log('[Chat Store] ✅ 数据库加载完成')
+      } catch (error) {
+        console.error('[Chat Store] ❌ 数据库加载失败:', error)
+      }
+    },
+
     setUsingContext(context: boolean) {
       this.usingContext = context
       this.recordState()
@@ -47,8 +69,22 @@ export const useChatStore = defineStore('chat-store', {
     },
 
     async deleteHistory(index: number) {
+      // 先获取要删除的对话 UUID（在删除前获取）
+      const deletedUuid = this.history[index]?.uuid
+
+      // 删除本地数据
       this.history.splice(index, 1)
       this.chat.splice(index, 1)
+
+      // 异步删除数据库数据（不阻塞）
+      if (deletedUuid) {
+        deleteChatFromDatabase(deletedUuid).catch(err => {
+          console.warn('[Chat Store] 数据库删除失败（不影响用户体验）:', err)
+        })
+      }
+
+      // 立即保存更新后的状态到本地和数据库
+      this.recordState()
 
       if (this.history.length === 0) {
         this.active = null
@@ -229,7 +265,8 @@ export const useChatStore = defineStore('chat-store', {
     },
 
     recordState() {
-      setLocalState(this.$state)
+      // Phase 1: 保存到本地 + 数据库
+      setLocalStateWithDB(this.$state)
     },
   },
 })
