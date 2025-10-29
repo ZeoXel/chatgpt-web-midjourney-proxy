@@ -18,6 +18,7 @@ import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
 import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 import assetsRouter from './api/assets'
+import supabaseUploadRouter from './api/supabase-upload'
 
 const app = express()
 const router = express.Router()
@@ -761,6 +762,7 @@ app.use('/api', router)
 
 // AI资产存储API
 app.use('/api/assets', assetsRouter)
+app.use('/api/supabase', supabaseUploadRouter)
 
 app.set('trust proxy', 1)
 

@@ -5,6 +5,7 @@ import { clearImageBase64, mlog, upImg } from '@/api';
 import { homeStore } from '@/store';
 import { klingFeed, klingFetch } from '@/api/kling';
 import { t } from '@/locales';
+import { smartUploadImage } from '@/api/imageUpload';
 
 const f= ref({prompt:'',negative_prompt:'',image:'',image_tail:'',aspect_ratio:'1:1',mode:'std', duration:'5',model:'kling-v1-6'});
 const st= ref({bili:0,isLoading:false,camera_type:''});
@@ -34,22 +35,45 @@ const mvOption= [
 ,{label:'kling-video-v2-1-master',value: 'kling-video-v2-1-master'}
  ]
 
-function selectFile(input:any){
-   // fsFile.value= input.target.files[0];
-    upImg(input.target.files[0]).then(d=>{
-        f.value.image= d;
-        fsRef.value=''
-    }).catch(e=>ms.error(e));
-}
-function selectFile2(input:any){ 
-    
-    upImg(input.target.files[0]).then(d=>{
-        f.value.image_tail= d;
-        fsRef2.value=''
-        if(f.value.image==''){
-            ms.info( t('mj.needImg'))
+async function selectFile(input:any){
+    const file = input.target.files[0];
+    try {
+        // 使用智能上传：优先 Supabase Storage，降级到压缩 Base64
+        const result = await smartUploadImage(file);
+        f.value.image = result.url;
+        fsRef.value = '';
+
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        if (result.type === 'url') {
+            ms.success(`首帧图片上传成功 (${sizeMB}MB) - 使用云存储`);
+        } else {
+            ms.success(`首帧图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
         }
-    }).catch(e=>ms.error(e));
+    } catch(e: any) {
+        ms.error(`首帧图片上传失败: ${e.message || e}`);
+    }
+}
+async function selectFile2(input:any){
+    const file = input.target.files[0];
+    try {
+        // 使用智能上传：优先 Supabase Storage，降级到压缩 Base64
+        const result = await smartUploadImage(file);
+        f.value.image_tail = result.url;
+        fsRef2.value = '';
+
+        if(f.value.image == ''){
+            ms.info(t('mj.needImg'));
+        }
+
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        if (result.type === 'url') {
+            ms.success(`尾帧图片上传成功 (${sizeMB}MB) - 使用云存储`);
+        } else {
+            ms.success(`尾帧图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
+        }
+    } catch(e: any) {
+        ms.error(`尾帧图片上传失败: ${e.message || e}`);
+    }
 }
 
 
@@ -65,18 +89,25 @@ const createImg = async ()=>{
     st.value.isLoading= true
     f.value.aspect_ratio= vf[st.value.bili].value
     try {
-        let cat= 'text2video'; 
+        let cat= 'text2video';
         let abc:any  = {...f.value};
         //if(abc.image) abc.image= clearImageBase64( abc.image )
         if(f.value.image!=''){
             cat='image2video'
-            abc.image= clearImageBase64( abc.image )
-            if( f.value.image_tail) abc.image_tail= clearImageBase64( f.value.image_tail )
+            // 智能处理：如果是 Base64 格式则清理前缀，如果是 URL 则直接使用
+            if (abc.image && abc.image.startsWith('data:')) {
+                abc.image = clearImageBase64(abc.image);
+            }
+            if (f.value.image_tail) {
+                if (abc.image_tail && abc.image_tail.startsWith('data:')) {
+                    abc.image_tail = clearImageBase64(abc.image_tail);
+                }
+            }
         }else if( st.value.camera_type ){
             abc.camera_control={ type:st.value.camera_type }
         }
         //  mlog('abc>> ',  abc  );
-        // return 
+        // return
         if (abc.model=='kling-v2-master' || abc.model=='kling-video-v2-1' || abc.model=='kling-video-v2-1-master') {
             delete abc.mode;
         }
@@ -85,7 +116,7 @@ const createImg = async ()=>{
         mlog('img', d );
         klingFeed( d.data.task_id , cat ,  f.value.prompt )
     } catch (error) {
-    }  
+    }
     st.value.isLoading= false
 }
 

@@ -5,8 +5,9 @@ import { gptServerStore, homeStore } from '@/store';
 import { useMessage,NInput,NButton, NTag,NSelect,NPopover,NSwitch } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import { SvgIcon } from '@/components/common';
-import { t } from '@/locales'; 
+import { t } from '@/locales';
 import { RunwayTask } from '@/api/runwayStore';
+import { smartUploadImage } from '@/api/imageUpload';
 
 const fsRef= ref() ;
 const runway= ref<{image_prompt?:string,seed:number,text_prompt:string}>({image_prompt:'',seed:1675247627,text_prompt:''});
@@ -15,18 +16,25 @@ const ms = useMessage();
 const exRunway= ref<RunwayTask>()
 async function  selectFile(input:any){
     mlog("selectFile", input.target.files[0])
-    const file = input.target.files[0]  
+    const file = input.target.files[0]
 
     st.value.uploading= true
     try{
-    let d= await runwayUpload( file,'DATASET_PREVIEW')
-    mlog("runwayFetch",d)
-    runway.value.image_prompt= d.url
+        // 使用智能上传：优先 Supabase Storage，降级到压缩 Base64
+        const result = await smartUploadImage(file);
+        runway.value.image_prompt = result.url;
+
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        if (result.type === 'url') {
+            ms.success(`图片上传成功 (${sizeMB}MB) - 使用云存储`);
+        } else {
+            ms.success(`图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
+        }
     }catch(e :any){
-       ms.error(e )
+       ms.error(`图片上传失败: ${e.message || e}`)
     }
      st.value.uploading= false
-    
+
 }
 function getRandomInt(min: number, max: number): number {
     min = Math.ceil(min);

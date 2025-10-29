@@ -4,6 +4,7 @@ import {useMessage, NButton,NInput,NTag} from 'naive-ui';
 import { clearImageBase64, mlog, upImg } from '@/api';
 import { homeStore } from '@/store';
 import { klingFeed, klingFetch } from '@/api/kling';
+import { smartUploadImage } from '@/api/imageUpload';
 
 const f= ref({prompt:'',negative_prompt:'',image:'',image_fidelity:0.5,n:1,aspect_ratio:'1:1'});
 const st= ref({bili:0,isLoading:false});
@@ -20,13 +21,23 @@ const vf=[{s:'width: 100%; height: 100%;',label:'1:1',value:'1:1'}
  ];
 
 
- function selectFile(input:any){
-   // fsFile.value= input.target.files[0];
-    upImg(input.target.files[0]).then(d=>{
-        f.value.image= d;
-        fsRef.value=''
-    }).catch(e=>ms.error(e));
-    
+async function selectFile(input:any){
+    const file = input.target.files[0];
+    try {
+        // 使用智能上传：优先 Supabase Storage，降级到压缩 Base64
+        const result = await smartUploadImage(file);
+        f.value.image = result.url;
+        fsRef.value = '';
+
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        if (result.type === 'url') {
+            ms.success(`图片上传成功 (${sizeMB}MB) - 使用云存储`);
+        } else {
+            ms.success(`图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
+        }
+    } catch(e: any) {
+        ms.error(`图片上传失败: ${e.message || e}`);
+    }
 }
 
 const clearInput = ()=>{
@@ -39,14 +50,17 @@ const createImg = async ()=>{
     st.value.isLoading= true
     f.value.aspect_ratio= vf[st.value.bili].value
     let abc= {...f.value};
-    if(abc.image) abc.image= clearImageBase64( abc.image )
+    // 智能处理：如果是 Base64 格式则清理前缀，如果是 URL 则直接使用
+    if(abc.image && abc.image.startsWith('data:')) {
+        abc.image = clearImageBase64(abc.image);
+    }
     try {
         const d:any= await klingFetch('/v1/images/generations ' , abc  )
         mlog('img', d );
         klingFeed( d.data.task_id ,'image',  f.value.prompt )
         //f.value.image= ''
     } catch (error) {
-    }  
+    }
     st.value.isLoading= false
 }
 

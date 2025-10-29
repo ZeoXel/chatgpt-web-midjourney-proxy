@@ -2,7 +2,7 @@
 import { viduFeed } from '@/api/vidu';
 import { ViduTask, ViduStore } from '@/api/viduStore';
 import { onMounted, ref, watch } from 'vue';
-import { NEmpty, NButton, NPopover, NButtonGroup, useMessage, NPopconfirm } from "naive-ui";
+import { NEmpty, NButton, NButtonGroup, useMessage, NPopconfirm } from "naive-ui";
 import { mlog } from '@/api';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
@@ -26,27 +26,6 @@ const deleteGo = (item: ViduTask) => {
   initLoad();
 };
 
-// 刷新任务状态
-const refreshTask = (taskId: string) => {
-  mlog('refreshTask', taskId);
-  viduFeed(taskId);
-  ms.info('正在刷新任务状态...');
-};
-
-// 下载视频
-const downloadVideo = (url: string) => {
-  mlog('downloadVideo', url);
-  if (url) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `vidu_video_${Date.now()}.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } else {
-    ms.error('视频链接无效');
-  }
-};
 
 // 监听Vidu任务更新
 watch(() => homeStore.myData.act, (n) => {
@@ -61,7 +40,7 @@ onMounted(() => {
 
 <template>
   <div v-if="list.length > 0" class="p-4">
-    <div class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
       <div
         v-for="(item, index) in list"
         :key="index"
@@ -76,12 +55,14 @@ onMounted(() => {
               loop
               playsinline
               :controls="st.pIndex === index"
-              class="w-full h-full object-contain"
+              referrerpolicy="no-referrer"
               :poster="item.creations[0].cover_url"
               controlsList="nodownload"
+              class="w-full h-full object-cover"
             >
               <source
                 :src="item.creations[0].url"
+                referrerpolicy="no-referrer"
                 type="video/mp4"
                 v-if="st.pIndex === index"
               >
@@ -96,14 +77,11 @@ onMounted(() => {
           </div>
 
           <!-- 处理中状态 -->
-          <div v-else-if="item.state === 'processing' || item.state === 'queueing'" class="w-full h-[200px] justify-center items-center flex flex-col">
-            <div class="text-center mb-2">
-              <SvgIcon icon="eos-icons:loading" size="2xl" class="animate-spin" />
+          <div v-else-if="item.state === 'processing' || item.state === 'queueing'" class="pt-2">
+            <div>
+              {{ $t('video.process') }}{{ new Date(item.last_feed || Date.now()).toLocaleString() }}
             </div>
-            <div>{{ item.state === 'processing' ? t('video.process') : t('video.pending') }}</div>
-            <div class="text-xs text-gray-500 mt-1">
-              {{ new Date(item.last_feed || Date.now()).toLocaleString() }}
-            </div>
+            <div v-if="item.state === 'queueing'" class="text-center">{{ t('video.pending') }}</div>
           </div>
 
           <!-- 超时或需要重新查询 -->
@@ -116,48 +94,32 @@ onMounted(() => {
           </template>
 
           <!-- 默认状态 -->
-          <div v-else class="w-full h-[200px] justify-center items-center flex">
-            <div class="text-center">
-              <div>状态: {{ item.state }}</div>
-              <div class="text-xs mt-1">{{ new Date(item.created_at || Date.now()).toLocaleString() }}</div>
+          <div v-else class="pt-2">
+            <div>
+              {{ $t('video.process') }}{{ new Date(item.created_at || Date.now()).toLocaleString() }}
             </div>
+            <div class="text-center">{{ item.state }}</div>
           </div>
         </div>
 
         <!-- 视频信息和操作按钮 -->
-        <div class="flex justify-between items-center mt-2">
-          <section class="flex-1 mr-2">
-            <div class="line-clamp-1 text-sm" :title="item.prompt">{{ item.prompt }}</div>
-            <div class="text-xs text-gray-500 mt-1">
-              {{ item.duration }}秒 · {{ item.aspect_ratio }} · {{ item.model }}
-            </div>
+        <div class="flex justify-between items-center">
+          <section>
+            <div class="line-clamp-1">{{ item.prompt }}</div>
           </section>
-
-          <section class="flex justify-end items-center">
+          <section class="flex justify-end items-center pt-1">
             <n-button-group size="tiny">
-              <!-- 刷新按钮 -->
-              <n-button @click="refreshTask(item.task_id)" :title="'刷新状态'">
-                <SvgIcon icon="material-symbols:refresh" />
+              <n-button size="tiny" round ghost v-if="item.state === 'success' && item.creations && item.creations[0]?.url">
+                <a :href="item.creations[0].url" download target="_blank" class="flex justify-center items-center">
+                  <SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}
+                </a>
               </n-button>
-
-              <!-- 下载按钮 -->
-              <n-button
-                v-if="item.state === 'success' && item.creations && item.creations[0]?.url"
-                @click="downloadVideo(item.creations[0].url)"
-                :title="'下载视频'"
-              >
-                <SvgIcon icon="material-symbols:download" />
+              <n-button size="tiny" round ghost>
+                <n-popconfirm @positive-click="() => deleteGo(item)" placement="bottom">
+                  <template #trigger> <SvgIcon icon="mdi:delete" /></template>
+                  {{ $t('mj.confirmDelete') }}
+                </n-popconfirm>
               </n-button>
-
-              <!-- 删除按钮 -->
-              <n-popconfirm @positive-click="deleteGo(item)">
-                <template #trigger>
-                  <n-button type="error" :title="'删除'">
-                    <SvgIcon icon="material-symbols:delete" />
-                  </n-button>
-                </template>
-                {{ t('common.deleteConfirm') }}
-              </n-popconfirm>
             </n-button-group>
           </section>
         </div>
@@ -166,7 +128,7 @@ onMounted(() => {
   </div>
 
   <!-- 空状态 -->
-  <div v-else class="flex justify-center items-center h-[400px]">
-    <NEmpty :description="t('video.noData')" />
+  <div class="w-full h-full flex justify-center items-center" v-else>
+    <NEmpty :description="$t('video.nodata')"></NEmpty>
   </div>
 </template>

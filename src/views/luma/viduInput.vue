@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { NInput, NButton, useMessage, NTag, NSelect, NSwitch } from 'naive-ui';
-import { SvgIcon } from '@/components/common';
+import { NInput, NButton, useMessage, NTag, NSelect } from 'naive-ui';
 import { viduGenerate, viduFeed, mlog, upImg } from '@/api';
 import { homeStore } from '@/store';
 import { t } from '@/locales';
@@ -53,20 +52,6 @@ const canPost = computed(() => {
   // 至少需要有提示词或图片其中之一
   const hasContent = vidu.value.prompt !== '' || vidu.value.images.length > 0;
   return hasContent && !st.value.isDo && homeStore.myData.hasBalance;
-});
-
-// 根据模式自动调整图片要求提示
-const imageRequirementText = computed(() => {
-  const mode = vidu.value.mode;
-  const imageCount = vidu.value.images.length;
-
-  switch (mode) {
-    case 'img2video': return '单图生视频：上传1张图片';
-    case 'firstTail': return '首尾生视频：上传2张图片';
-    case 'reference': return '参考生视频：上传1-7张图片';
-    case 'auto':
-    default: return `自动模式 (已上传${imageCount}张)`;
-  }
 });
 
 const generate = async () => {
@@ -149,47 +134,23 @@ const removeImage = (index: number) => {
 
 <template>
   <div class="p-2">
-    <!-- 宽高比选择 - 参考Luma样式 -->
-    <div class="mb-3">
-      <div class="flex items-center justify-between space-x-1">
-        <template v-for="(item, index) in vf" :key="index">
-          <section
-            class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"
-            :class="{
-              'border-primary': vidu.aspect_ratio === item.value,
-              'opacity-50 cursor-not-allowed': vidu.images.length === 1 || vidu.images.length === 2
-            }"
-            @click="(vidu.images.length === 0 || vidu.images.length >= 3) && (vidu.aspect_ratio = item.value)"
-          >
-            <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
-              <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
-            </div>
-            <p class="mb-1 text-center text-sm">{{ item.label }}</p>
-          </section>
-        </template>
-      </div>
-      <div v-if="vidu.images.length === 1" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-        ⚠️ 单图生视频：视频比例将自动跟随参考图片比例
-      </div>
-      <div v-else-if="vidu.images.length === 2" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-        ⚠️ 首尾生视频：视频比例将自动跟随参考图片比例
-      </div>
-      <div v-else-if="vidu.images.length >= 3" class="text-xs text-blue-600 dark:text-blue-400 mt-2">
-        ✅ 多图参考模式：可自定义视频比例（不受图片比例限制）
-      </div>
-      <div v-else class="text-xs text-gray-500 mt-2">
-        💡 文生视频模式：可自由选择视频比例
-      </div>
-    </div>
-
-    <!-- 模型选择 -->
-    <div class="pt-2 pb-2">
-      <n-select
-        v-model:value="vidu.model"
-        :options="modelOptions"
-        size="small"
-        placeholder="选择模型"
-      />
+    <!-- 宽高比选择 -->
+    <div class="flex items-center justify-between space-x-1">
+      <template v-for="item in vf" :key="item.value">
+        <section
+          class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer"
+          :class="{
+            'border-primary': vidu.aspect_ratio === item.value,
+            'opacity-50 cursor-not-allowed': vidu.images.length === 1 || vidu.images.length === 2
+          }"
+          @click="(vidu.images.length === 0 || vidu.images.length >= 3) && (vidu.aspect_ratio = item.value)"
+        >
+          <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
+            <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.s"></div>
+          </div>
+          <p class="mb-1 text-center text-sm">{{ item.label }}</p>
+        </section>
+      </template>
     </div>
 
     <!-- 提示词输入 -->
@@ -199,21 +160,44 @@ const removeImage = (index: number) => {
         :placeholder="$t('video.descpls')"
         type="textarea"
         size="small"
-        :autosize="{ minRows: 3, maxRows: 8 }"
+        :autosize="{ minRows: 3, maxRows: 12 }"
       />
     </div>
 
-    <!-- 生成模式选择 -->
-    <div class="pt-2">
-      <div class="flex justify-between items-center mb-2">
-        <div class="flex-1 mr-2">
-          <n-select v-model:value="vidu.mode" :options="modeOptions" size="small" />
-        </div>
-        <div class="flex-1">
-          <n-select v-model:value="vidu.duration" :options="durationOptions" size="small" />
-        </div>
+    <!-- 模型选择 -->
+    <div class="pt-1">
+      <n-select
+        v-model:value="vidu.model"
+        :options="modelOptions"
+        size="small"
+        placeholder="选择模型"
+      />
+    </div>
+
+    <!-- 生成模式和时长 -->
+    <section class="pt-1 flex justify-between items-center">
+      <div class="flex-1 mr-2">
+        <n-select v-model:value="vidu.mode" :options="modeOptions" size="small" />
       </div>
-      <div class="text-xs text-gray-500">{{ imageRequirementText }}</div>
+      <div class="flex-1">
+        <n-select v-model:value="vidu.duration" :options="durationOptions" size="small" />
+      </div>
+    </section>
+
+    <!-- 提示信息 -->
+    <div class="pt-1">
+      <div v-if="vidu.images.length === 1" class="text-xs text-amber-600 dark:text-amber-400">
+        ⚠️ 单图生视频：视频比例将自动跟随参考图片比例
+      </div>
+      <div v-else-if="vidu.images.length === 2" class="text-xs text-amber-600 dark:text-amber-400">
+        ⚠️ 首尾生视频：视频比例将自动跟随参考图片比例
+      </div>
+      <div v-else-if="vidu.images.length >= 3" class="text-xs text-blue-600 dark:text-blue-400">
+        ✅ 多图参考模式：可自定义视频比例（不受图片比例限制）
+      </div>
+      <div v-else class="text-xs text-gray-500">
+        💡 文生视频模式：可自由选择视频比例
+      </div>
     </div>
 
     <!-- 图片上传区域 -->
@@ -227,12 +211,12 @@ const removeImage = (index: number) => {
         multiple
       />
 
-      <div class="grid grid-cols-4 gap-2">
+      <div class="flex justify-start items-center flex-wrap gap-2">
         <!-- 已上传的图片 -->
         <div
           v-for="(image, index) in vidu.images"
           :key="index"
-          class="relative h-[60px] w-[60px] overflow-hidden rounded border border-gray-400/20"
+          class="relative h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20"
         >
           <img :src="image" class="w-full h-full object-cover" />
           <div
@@ -246,39 +230,33 @@ const removeImage = (index: number) => {
         <!-- 上传按钮 -->
         <div
           v-if="vidu.images.length < 7"
-          class="h-[60px] w-[60px] overflow-hidden rounded border border-gray-400/20 flex justify-center items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+          class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer"
           @click="fsRef.click()"
         >
-          <SvgIcon icon="material-symbols:add" size="lg" />
+          <div class="text-center">{{ $t('video.selectimg') }}</div>
         </div>
       </div>
     </div>
 
     <!-- 操作按钮 -->
-    <div class="pt-3">
-      <div class="flex justify-between items-center">
-        <div class="pb-1">
-          <NTag
-            v-if="vidu.prompt !== '' || vidu.images.length > 0"
-            type="primary"
-            size="small"
-            round
-          >
-            <span class="cursor-pointer" @click="clearInput()">{{ $t('video.clear') }}</span>
-          </NTag>
-        </div>
-        <div>
-          <NButton
-            :loading="st.isDo"
-            type="primary"
-            :disabled="!canPost"
-            @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : generate()"
-            style="background-color: #445ff6;"
-          >
-            <SvgIcon icon="ri:video-add-line" size="sm" /> {{ $t('video.generate') }}
-          </NButton>
-        </div>
+    <section class="pt-2 flex justify-end items-end">
+      <div class="cursor-pointer pr-2" @click="clearInput" v-if="vidu.images.length > 0 || vidu.prompt">
+        <NTag type="primary" size="small" :bordered="false" round>
+          <span class="cursor-pointer">{{ $t('video.clear') }}</span>
+        </NTag>
       </div>
-    </div>
+
+      <div class="text-right">
+        <NButton
+          :loading="st.isDo"
+          type="primary"
+          :disabled="!canPost"
+          @click="!homeStore.myData.hasBalance ? ms.info('账户余额不足，无法使用视频生成功能') : generate()"
+          style="background-color: #445ff6;"
+        >
+          {{ $t('video.generate') }}
+        </NButton>
+      </div>
+    </section>
   </div>
 </template>

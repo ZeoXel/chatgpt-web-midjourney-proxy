@@ -45,6 +45,18 @@ export default defineConfig((env) => {
       port: 3001,
       open: false,
       proxy: {
+        // 新增：Supabase 上传 API（不 rewrite）
+        '/api/supabase': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+          // 不进行 rewrite，保留完整路径
+        },
+        // 新增：资产存储 API（不 rewrite）
+        '/api/assets': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+          // 不进行 rewrite，保留完整路径
+        },
         '/api': {
           target: viteEnv.VITE_APP_API_BASE_URL,
           changeOrigin: true, // 允许跨域

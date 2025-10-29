@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { mlog, upImg } from '@/api';
+import { mlog } from '@/api';
+import { smartUploadImage } from '@/api/imageUpload';
 import { useMessage,NButton,NInput,NTag,NSelect,NPopover,NSwitch } from 'naive-ui';
 import { homeStore } from '@/store';
- 
-import { t } from "@/locales"; 
+
+import { t } from "@/locales";
 import { pikaFeed, pikaFetch } from '@/api/pika';
 
 let txt2v={
@@ -113,12 +114,33 @@ const fsRef= ref() ;
 const ms = useMessage();
 const st= ref({ isLoading:false});
 
-function selectFile(input:any){
-   // fsFile.value= input.target.files[0];
-    upImg(input.target.files[0]).then(d=>{
-        pika.value.image= d;
-        fsRef.value=''
-    }).catch(e=>ms.error(e));
+async function selectFile(input: any) {
+    const file = input.target.files[0];
+    if (!file) return;
+
+    try {
+        st.value.isLoading = true;
+        ms.info('正在上传图片...');
+
+        // 使用智能上传（自动选择最佳方式）
+        const result = await smartUploadImage(file);
+
+        pika.value.image = result.url;
+        fsRef.value = '';
+
+        // 显示上传结果
+        const sizeMB = ((result.size || 0) / (1024 * 1024)).toFixed(2);
+        if (result.type === 'url') {
+            ms.success(`图片上传成功 (${sizeMB}MB) - 使用云存储`);
+        } else {
+            ms.success(`图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
+        }
+    } catch (error: any) {
+        ms.error(`图片上传失败: ${error.message || error}`);
+        mlog('selectFile error:', error);
+    } finally {
+        st.value.isLoading = false;
+    }
 }
 const clearInput = ()=>{
     pika.value.prompt='';
