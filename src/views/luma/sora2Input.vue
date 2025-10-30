@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { mlog } from '@/api';
 import { smartUploadImage } from '@/api/imageUpload';
 import { useMessage, NButton, NInput, NTag, NSelect, NSwitch } from 'naive-ui';
@@ -10,23 +10,14 @@ import { UnifiedVideoStore, UnifiedVideoTask } from '@/api/videoStore';
 
 // Sora2 尺寸选项
 const sizeOptions = [
-    { label: '720P横屏 (1280x720)', value: '1280x720', aspect: 16/9, style: 'width: 100%; height: 56.25%;', proOnly: false },
-    { label: '720P竖屏 (720x1280)', value: '720x1280', aspect: 9/16, style: 'width: 56.25%; height: 100%;', proOnly: false },
-    { label: '1080P横屏 (1792x1024)', value: '1792x1024', aspect: 16/9, style: 'width: 100%; height: 57.14%;', proOnly: true },
-    { label: '1080P竖屏 (1024x1792)', value: '1024x1792', aspect: 9/16, style: 'width: 57.14%; height: 100%;', proOnly: true }
-];
-
-// Sora2 模型选项
-const modelOptions = [
-    { label: 'Sora 2', value: 'sora-2' },
-    { label: 'Sora 2 Pro', value: 'sora-2-pro' }
+    { label: '720P横屏 (1280x720)', value: '1280x720', aspect: 16/9, style: 'width: 100%; height: 56.25%;' },
+    { label: '720P竖屏 (720x1280)', value: '720x1280', aspect: 9/16, style: 'width: 56.25%; height: 100%;' }
 ];
 
 // 时长选项
 const secondsOptions = [
-    { label: '10秒', value: '10', proOnly: false },
-    { label: '15秒', value: '15', proOnly: false },
-    { label: '25秒', value: '25', proOnly: true }
+    { label: '10秒', value: '10' },
+    { label: '15秒', value: '15' }
 ];
 
 const sora2 = ref({
@@ -41,38 +32,6 @@ const sora2 = ref({
 const fsRef = ref();
 const ms = useMessage();
 const st = ref({ isLoading: false });
-
-// 计算可用的尺寸选项
-const availableSizeOptions = computed(() => {
-    if (sora2.value.model === 'sora-2-pro') {
-        return sizeOptions;
-    }
-    return sizeOptions.filter(opt => !opt.proOnly);
-});
-
-// 计算可用的时长选项
-const availableSecondsOptions = computed(() => {
-    if (sora2.value.model === 'sora-2-pro') {
-        return secondsOptions;
-    }
-    return secondsOptions.filter(opt => !opt.proOnly);
-});
-
-// 当模型改变时，确保选中的选项是可用的
-const onModelChange = () => {
-    // 检查当前选择的尺寸是否可用
-    if (sora2.value.model === 'sora-2') {
-        const currentSize = sizeOptions.find(opt => opt.value === sora2.value.size);
-        if (currentSize?.proOnly) {
-            sora2.value.size = '720x1280'; // 重置为默认值
-        }
-
-        const currentSeconds = secondsOptions.find(opt => opt.value === sora2.value.seconds);
-        if (currentSeconds?.proOnly) {
-            sora2.value.seconds = '10'; // 重置为默认值
-        }
-    }
-};
 
 async function selectFile(input: any) {
     const file = input.target.files[0];
@@ -182,7 +141,7 @@ onMounted(() => {
     <div class="p-2">
         <!-- 尺寸选择 -->
         <div class="flex items-center justify-between space-x-1">
-            <template v-for="item in availableSizeOptions" :key="item.value">
+            <template v-for="item in sizeOptions" :key="item.value">
                 <section
                     class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer relative"
                     :class="{'border-primary': sora2.size === item.value}"
@@ -192,7 +151,6 @@ onMounted(() => {
                         <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.style"></div>
                     </div>
                     <p class="mb-1 text-center text-[11px]">{{ item.label.split(' ')[0] }}</p>
-                    <span v-if="item.proOnly" class="absolute top-0 right-0 text-[8px] bg-primary text-white px-1 rounded-bl">Pro</span>
                 </section>
             </template>
         </div>
@@ -208,23 +166,13 @@ onMounted(() => {
             />
         </div>
 
-        <!-- 模型选择 -->
-        <div class="pt-2">
-            <n-select
-                v-model:value="sora2.model"
-                :options="modelOptions"
-                size="small"
-                @update:value="onModelChange"
-            />
-        </div>
-
         <!-- 时长选择 -->
         <div class="pt-2">
             <div class="flex items-center justify-between">
                 <span class="text-sm">时长</span>
                 <n-select
                     v-model:value="sora2.seconds"
-                    :options="availableSecondsOptions"
+                    :options="secondsOptions"
                     size="small"
                     class="!w-[70%]"
                 />
