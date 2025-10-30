@@ -142,13 +142,75 @@ interface GalleryImage {
 // 专用画廊存储键
 const GALLERY_STORAGE_KEY = 'MJ:gallery:images';
 
-// 获取所有画廊图片 (新逻辑：只返回最终结果)
+// 获取所有画廊图片 (新逻辑：只返回最终结果，自动清理过期资源)
 export const getGalleryImages = async (): Promise<GalleryImage[]> => {
     try {
-        console.log('🗂️ 从存储加载画廊图片...');
+        console.log('🗂️ 从localStorage加载画廊图片...');
         const images = await localGet(GALLERY_STORAGE_KEY) as GalleryImage[] || [];
-        console.log(`📊 画廊存储中有 ${images.length} 张图片`);
+        console.log(`📊 [localStorage] 原始数据: ${images.length} 张图片`);
+
+        // 如果有数据，输出前3个样本
+        if (images.length > 0) {
+            console.log('📝 [localStorage] 样本数据:', images.slice(0, 3).map(img => ({
+                id: img.id,
+                type: img.type,
+                age_days: Math.floor((Date.now() - img.timestamp) / (24 * 60 * 60 * 1000)),
+                url: img.url?.substring(0, 50) + '...'
+            })));
+        }
+
+        // 自动清理过期的本地资源
+        if (images.length > 0) {
+            const now = Date.now();
+            const sevenDaysAgo = 7 * 24 * 60 * 60 * 1000;
+
+            // 信任的域名列表（长期稳定的CDN）
+            const trustedDomains = [
+                'cdn.discordapp.com',
+                'oaidalleapiprodscus.blob.core.windows.net',
+                'images.unsplash.com'
+            ];
+
+            // 已知会失效的临时域名黑名单
+            const blockedDomains = [
+                'webstatic.aiproxy.vip',
+                'files.closeai.fans',
+                'mj-oss.oss-cn-shanghai.aliyuncs.com',
+                'tos-cn-beijing.volces.com'  // 字节火山引擎临时签名URL（24小时过期）
+            ];
+
+            const validImages = images.filter(img => {
+                const age = now - img.timestamp;
+                const isTrusted = trustedDomains.some(domain => img.url?.includes(domain));
+                const isBlocked = blockedDomains.some(domain => img.url?.includes(domain));
+
+                // 黑名单域名直接过滤
+                if (isBlocked) {
+                    return false;
+                }
+
+                // 保留条件
+                return (
+                    img.type === 'dalle' ||           // DALL-E图片
+                    isTrusted ||                       // 信任域名
+                    age < sevenDaysAgo ||             // 7天内
+                    img.url?.startsWith('data:image') // Base64缓存
+                );
+            });
+
+            // 如果清理了图片，更新存储
+            if (validImages.length < images.length) {
+                const removedCount = images.length - validImages.length;
+                console.log(`🧹 [localStorage清理] 清理了 ${removedCount} 张失效图片 (${images.length} -> ${validImages.length})`);
+                await localSave(GALLERY_STORAGE_KEY, validImages);
+                console.log('✅ [localStorage清理] 已保存清理后的数据');
+                // 按时间降序排序
+                return validImages.sort((a, b) => b.timestamp - a.timestamp);
+            }
+        }
+
         // 按时间降序排序，确保最新图片在前
+        console.log(`✅ [localStorage] 返回 ${images.length} 张有效图片`);
         return images.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
         mlog('Error loading gallery images:', error);

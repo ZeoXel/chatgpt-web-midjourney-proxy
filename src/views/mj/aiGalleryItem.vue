@@ -220,26 +220,60 @@ const loadImagFormLocal = async () => {
         // 从新画廊系统获取图片（DB + localStorage合并）
         let galleryImages = await getGalleryImagesWithDB();
 
-        // 检查画廊中的图片是否过期，清理失效数据
+        // 过滤过期资源（包括数据库和本地）
         if (galleryImages.length > 0) {
-            const validImages = [];
+            const now = Date.now();
+            const sevenDaysAgo = 7 * 24 * 60 * 60 * 1000;
 
-            for (const img of galleryImages) {
-                // 简单的启发式检查
-                const isLikelyValid = (
-                    (Date.now() - img.timestamp) < 7 * 24 * 60 * 60 * 1000 ||
-                    img.url.includes('cdn.discordapp.com') ||
-                    img.type === 'dalle'
-                );
+            // 信任的域名列表（长期稳定的CDN）
+            const trustedDomains = [
+                'cdn.discordapp.com',
+                'oaidalleapiprodscus.blob.core.windows.net',
+                'images.unsplash.com'
+            ];
 
-                if (isLikelyValid) {
-                    validImages.push(img);
+            // 已知会失效的临时域名黑名单
+            const blockedDomains = [
+                'webstatic.aiproxy.vip',
+                'files.closeai.fans',
+                'mj-oss.oss-cn-shanghai.aliyuncs.com',
+                'tos-cn-beijing.volces.com'  // 字节火山引擎临时签名URL（24小时过期）
+            ];
+
+            const beforeCount = galleryImages.length;
+            const removedReasons: Record<string, number> = {};
+
+            // 过滤掉过期图片
+            galleryImages = galleryImages.filter(img => {
+                const age = now - img.timestamp;
+                const isTrusted = trustedDomains.some(domain => img.url?.includes(domain));
+                const isBlocked = blockedDomains.some(domain => img.url?.includes(domain));
+
+                // 黑名单域名直接过滤
+                if (isBlocked) {
+                    const reason = '临时域名已失效';
+                    removedReasons[reason] = (removedReasons[reason] || 0) + 1;
+                    return false;
                 }
-            }
 
-            if (validImages.length !== galleryImages.length) {
-                await localSave('MJ:gallery:images', validImages);
-                galleryImages = validImages;
+                // 保留条件
+                if (img.type === 'dalle' ||
+                    isTrusted ||
+                    age < sevenDaysAgo ||
+                    img.url?.startsWith('data:image')) {
+                    return true;
+                }
+
+                // 过滤原因统计
+                const reason = `过期资源(${Math.floor(age / (24 * 60 * 60 * 1000))}天)`;
+                removedReasons[reason] = (removedReasons[reason] || 0) + 1;
+                return false;
+            });
+
+            const removedCount = beforeCount - galleryImages.length;
+            if (removedCount > 0) {
+                console.log(`🧹 [自动过滤] 已过滤 ${removedCount} 张失效图片，剩余 ${galleryImages.length} 张`);
+                console.log('📊 [过滤统计]:', removedReasons);
             }
         }
 
