@@ -534,7 +534,9 @@ export default {
     menuinfo:'Vidu video generation',
     title:'Vidu Video Generation',
     models:{
-      viduq1:'Vidu Q1 - High Quality (5s)',
+      viduq2turbo:'Vidu Q2 Turbo - Img2Video/FirstTail Turbo (5/8s)',
+      viduq2pro:'Vidu Q2 Pro - Img2Video/FirstTail Pro (5/8s)',
+      viduq2:'Vidu Q2 - Reference Video (5/8s)',
       vidu20:'Vidu 2.0 - Fast Generation (4s)',
       vidu15:'Vidu 1.5 - Dynamic Enhanced (4/8s)'
     },

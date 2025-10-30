@@ -2,6 +2,8 @@ import { gptServerStore, homeStore, useAuthStore } from "@/store";
 import { mlog } from "./mjapi";
 import { ViduTask, viduStore } from "./viduStore";
 import { sleep } from "./suno";
+import { UnifiedVideoStore } from "./videoStore";
+import { convertViduToUnified } from "./videoAdapter";
 
 // 获取认证头部 - NewAPI网关版本
 function getHeaderAuthorization() {
@@ -73,6 +75,9 @@ export const viduFetch = (url: string, data?: any, opt2?: any) => {
       }
       return response.json();
     })
+    .then(data => {
+      return data;
+    })
     .catch(error => {
       mlog('viduFetch error', error);
       throw error;
@@ -81,7 +86,7 @@ export const viduFetch = (url: string, data?: any, opt2?: any) => {
 
 // 生成视频 - 适配NewAPI网关
 export const viduGenerate = async (params: {
-  model: 'viduq1' | 'vidu2.0' | 'vidu1.5';
+  model: 'viduq2-turbo' | 'viduq2-pro' | 'viduq2' | 'vidu2.0' | 'vidu1.5';
   images: string[];
   prompt: string;
   duration?: number;
@@ -104,12 +109,19 @@ export const viduGenerate = async (params: {
       aspect_ratio: params.aspect_ratio || '16:9',
       duration: params.duration || 5,
       seed: params.seed || 0,
-      resolution: params.resolution || '1080p',
+      resolution: params.resolution || '1080p', // ✅ 清晰度参数：720p/1080p
       movement_amplitude: params.movement_amplitude || 'auto',
       bgm: params.bgm || false,
       off_peak: params.off_peak || false,
       payload: params.payload || ''
     };
+
+    // 调试：确认resolution参数被正确包含
+    mlog('🎯 [Vidu] Resolution parameter:', {
+      from_ui: params.resolution,
+      in_request: requestData.resolution,
+      model: params.model
+    });
 
     // 根据模式处理图片参数和模式选择
     if (params.mode === 'img2video' && params.images.length === 1) {
@@ -124,19 +136,6 @@ export const viduGenerate = async (params: {
       // 参考生视频：使用images数组，支持1-7张图片
       requestData.images = params.images;
       requestData.mode = 'reference';
-    } else if (params.mode === 'auto') {
-      // 自动模式：根据图片数量自动判断
-      if (params.images.length === 1) {
-        requestData.image = params.images[0];
-        requestData.mode = 'img2video';
-      } else if (params.images.length === 2) {
-        requestData.images = params.images;
-        requestData.mode = 'firstTail';
-      } else if (params.images.length >= 3) {
-        requestData.images = params.images;
-        requestData.mode = 'reference';
-      }
-      // 无图片的情况下进行文生视频（不设置mode）
     } else if (params.images.length > 0) {
       // 其他情况：有图片但模式不明确
       requestData.images = params.images;
@@ -166,8 +165,20 @@ export const viduGenerate = async (params: {
         created_at: response.created_at || new Date().toISOString(),
         payload: response.payload || params.payload
       };
-      
+
+      // 保存到旧Store (保留兼容性)
       viduStore.save(task);
+
+      // ✅ 新增: 同时保存到统一Store
+      const unifiedStore = new UnifiedVideoStore();
+      const unifiedTask = convertViduToUnified(task);
+      mlog('💾 [Vidu] Saving to unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+      unifiedStore.save(unifiedTask);
+      mlog('✅ [Vidu] Saved to unified store, total tasks:', unifiedStore.getAll().length);
+
+      // ✅ 立即触发UI刷新事件
+      homeStore.setMyData({ act: 'ViduFeed' });
+
       return task;
     }
     
@@ -184,59 +195,108 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
     mlog('viduGetTask', task_id);
     const response = await viduFetch(`/${task_id}`);
 
+    mlog('🔍 [Vidu] Raw response:', response);
+
     if (response && response.data) {
       const task = viduStore.getObj(task_id);
-      const responseData = response.data; // 实际数据在response.data中
-      const taskData = responseData.data; // 任务详情在response.data.data中
+      const taskData = response.data; // API返回的任务数据就在 response.data 中
+
+      mlog('📥 [Vidu] API Response:', {
+        hasTask: !!task,
+        status: taskData.status,
+        task_id: taskData.task_id,
+        url: taskData.url,
+        error: taskData.error
+      });
 
       if (task) {
-        // 更新任务状态 - 适配NewAPI网关响应格式
-        let state = 'processing';
-        if (responseData.status === 'SUCCESS' && taskData.state === 'success') {
+        // 更新任务状态 - 修复状态映射逻辑
+        let state: ViduTask['state'] = 'processing';
+
+        // API 返回的状态是大写的 "SUCCESS"
+        if (taskData.status === 'SUCCESS') {
           state = 'success';
-        } else if (responseData.status === 'FAILED' || taskData.state === 'failed') {
+          mlog('✅ [Vidu] Task succeeded:', task_id);
+        } else if (taskData.status === 'succeeded') {
+          state = 'success';
+          mlog('✅ [Vidu] Task succeeded (lowercase):', task_id);
+        } else if (taskData.status === 'FAILED' || taskData.status === 'failed' || taskData.error) {
           state = 'failed';
+          mlog('❌ [Vidu] Task failed:', task_id, taskData.error);
+        } else if (taskData.status === 'PROCESSING' || taskData.status === 'processing' || taskData.status === 'QUEUEING' || taskData.status === 'queueing') {
+          state = 'processing';
+          mlog('⏳ [Vidu] Task still processing:', task_id, taskData.status);
         }
 
-        // 处理creations数组，修复S3链接
-        const fixedCreations = (taskData.creations || []).map((creation: any) => ({
-          ...creation,
-          url: fixS3Url(creation.url),
-          cover_url: fixS3Url(creation.cover_url)
-        }));
+        // 获取视频URL：优先从 fail_reason（实际是成功时的URL），其次从 data.creations
+        let videoUrl = '';
+        if (taskData.fail_reason && taskData.fail_reason.startsWith('http')) {
+          videoUrl = fixS3Url(taskData.fail_reason);
+        } else if (taskData.data?.creations?.[0]?.url) {
+          videoUrl = fixS3Url(taskData.data.creations[0].url);
+        } else if (taskData.url) {
+          videoUrl = fixS3Url(taskData.url);
+        }
 
-        const updatedTask = {
+        const updatedTask: ViduTask = {
           ...task,
           state,
-          err_code: taskData.err_code,
+          err_code: taskData.error,
           credits: taskData.credits,
-          creations: fixedCreations,
+          creations: videoUrl ? [{ id: task_id, url: videoUrl, cover_url: '' }] : [],
           last_feed: Date.now(),
-          url: fixedCreations[0]?.url // 保存第一个视频URL
+          url: videoUrl // 保存视频URL
         };
 
+        mlog('💾 [Vidu] About to save updatedTask:', {
+          task_id: updatedTask.task_id,
+          state: updatedTask.state,
+          url: updatedTask.url
+        });
+
+        // 保存到旧Store (保留兼容性)
         viduStore.save(updatedTask);
+
+        // ✅ 新增: 同时保存到统一Store
+        const unifiedStore = new UnifiedVideoStore();
+        const unifiedTask = convertViduToUnified(updatedTask);
+        mlog('🔄 [Vidu] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+        unifiedStore.save(unifiedTask);
+        mlog('✅ [Vidu] Updated in unified store, total tasks:', unifiedStore.getAll().length);
+
+        mlog('🎯 [Vidu] Returning updatedTask with state:', updatedTask.state);
         return updatedTask;
       } else {
         // 如果本地没有任务记录，从API响应创建一个基本的任务对象
-        let state = 'processing';
-        if (responseData.status === 'SUCCESS' && taskData.state === 'success') {
+        mlog('⚠️ [Vidu] No local task found, creating new record for:', task_id);
+
+        let state: ViduTask['state'] = 'processing';
+
+        // API 返回的状态是大写的 "SUCCESS"
+        if (taskData.status === 'SUCCESS') {
           state = 'success';
-        } else if (responseData.status === 'FAILED' || taskData.state === 'failed') {
+        } else if (taskData.status === 'succeeded') {
+          state = 'success';
+        } else if (taskData.status === 'FAILED' || taskData.status === 'failed' || taskData.error) {
           state = 'failed';
+        } else if (taskData.status === 'PROCESSING' || taskData.status === 'processing' || taskData.status === 'QUEUEING' || taskData.status === 'queueing') {
+          state = 'processing';
         }
 
-        // 处理creations数组，修复S3链接
-        const fixedCreations = (taskData.creations || []).map((creation: any) => ({
-          ...creation,
-          url: fixS3Url(creation.url),
-          cover_url: fixS3Url(creation.cover_url)
-        }));
+        // 获取视频URL：优先从 fail_reason（实际是成功时的URL），其次从 data.creations
+        let videoUrl = '';
+        if (taskData.fail_reason && taskData.fail_reason.startsWith('http')) {
+          videoUrl = fixS3Url(taskData.fail_reason);
+        } else if (taskData.data?.creations?.[0]?.url) {
+          videoUrl = fixS3Url(taskData.data.creations[0].url);
+        } else if (taskData.url) {
+          videoUrl = fixS3Url(taskData.url);
+        }
 
         const newTask: ViduTask = {
-          task_id: taskData.id || task_id,
+          task_id: taskData.task_id || task_id,
           state,
-          model: 'viduq1', // 默认模型，因为查询API不返回这些信息
+          model: 'viduq2', // 默认模型，因为查询API不返回这些信息
           prompt: '未知提示词',
           images: [],
           duration: 5,
@@ -247,20 +307,30 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           off_peak: false,
           credits: taskData.credits,
           created_at: new Date().toISOString(),
-          err_code: taskData.err_code,
-          creations: fixedCreations,
+          err_code: taskData.error,
+          creations: videoUrl ? [{ id: task_id, url: videoUrl, cover_url: '' }] : [],
           last_feed: Date.now(),
-          url: fixedCreations[0]?.url // 保存第一个视频URL
+          url: videoUrl // 保存视频URL
         };
 
+        // 保存到旧Store (保留兼容性)
         viduStore.save(newTask);
+
+        // ✅ 新增: 同时保存到统一Store
+        const unifiedStore = new UnifiedVideoStore();
+        const unifiedTask = convertViduToUnified(newTask);
+        mlog('📝 [Vidu] Creating new task in unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+        unifiedStore.save(unifiedTask);
+        mlog('✅ [Vidu] Created in unified store, total tasks:', unifiedStore.getAll().length);
+
         return newTask;
       }
     }
-    
+
+    mlog('❌ [Vidu] Invalid response format:', response);
     return null;
   } catch (error) {
-    mlog('viduGetTask error', error);
+    mlog('❌ [Vidu] viduGetTask error:', error);
     return null;
   }
 };
@@ -330,22 +400,18 @@ export const VIDU_ERROR_MESSAGES = {
 // 修复S3链接访问问题 - 简单直接的方案
 const fixS3Url = (url: string): string => {
   if (!url) return url;
-  
+
   // 检查是否是vidu的S3链接，存在访问问题
   if (url.includes('prod-ss-vidu.s3.cn-northwest-1.amazonaws.com.cn')) {
-    // 记录原始链接以便调试
-    console.log('🔗 检测到S3链接:', url);
-    
     // 最简单的方案：确保使用HTTPS协议
     let fixedUrl = url;
     if (!fixedUrl.startsWith('https://')) {
       fixedUrl = 'https://' + fixedUrl.replace(/^https?:\/\//, '');
     }
-    
-    console.log('🔧 修复后链接:', fixedUrl);
+
     return fixedUrl;
   }
-  
+
   return url;
 };
 
@@ -355,29 +421,75 @@ export const getViduErrorMessage = (err_code?: string): string => {
   return VIDU_ERROR_MESSAGES[err_code as keyof typeof VIDU_ERROR_MESSAGES] || err_code;
 };
 
+// 防止重复轮询的标记
+const activePolls = new Set<string>();
+
 // 长轮询单个任务状态 - 类似FeedLumaTask
 export const viduFeed = async (task_id: string): Promise<void> => {
   if (!task_id) return;
-  
-  mlog('viduFeed started for task:', task_id);
+
+  // 防止重复轮询
+  if (activePolls.has(task_id)) {
+    mlog('⚠️ [viduFeed] Already polling task:', task_id, '- Skipping duplicate call');
+    return;
+  }
+
+  activePolls.add(task_id);
+  mlog('🚀 [viduFeed] Started polling for task:', task_id, '(Active polls:', activePolls.size, ')');
   
   for (let i = 0; i < 120; i++) { // 最多轮询120次 (10分钟)
     try {
       const updatedTask = await viduGetTask(task_id);
-      
+
       if (updatedTask) {
+        mlog(`📊 [viduFeed] Iteration ${i + 1}/120 - Received task:`, {
+          task_id: updatedTask.task_id,
+          state: updatedTask.state,
+          hasUrl: !!updatedTask.url
+        });
+
         // 更新最后获取时间
         updatedTask.last_feed = Date.now();
         viduStore.save(updatedTask);
-        
+
+        // ✅ 同时更新统一Store
+        const unifiedStore = new UnifiedVideoStore();
+        const unifiedTask = convertViduToUnified(updatedTask);
+        mlog('🔄 [viduFeed] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+        unifiedStore.save(unifiedTask);
+
         // 通知UI更新
         homeStore.setMyData({ act: 'ViduFeed' });
-        
+
         // 如果任务已完成（成功或失败），停止轮询
-        if (updatedTask.state === 'success' || updatedTask.state === 'failed') {
-          mlog('viduFeed completed for task:', task_id, 'final state:', updatedTask.state);
-          break;
+        const isSuccess = updatedTask.state === 'success' || updatedTask.state === 'succeeded';
+        const isFailed = updatedTask.state === 'failed';
+        const shouldStop = isSuccess || isFailed;
+
+        mlog(`🔍 [viduFeed] Check stop condition:`, {
+          state: updatedTask.state,
+          isSuccess,
+          isFailed,
+          shouldStop
+        });
+
+        if (shouldStop) {
+          mlog('🎉 [viduFeed] Task completed!', {
+            task_id,
+            state: updatedTask.state,
+            url: updatedTask.url,
+            iteration: i + 1
+          });
+
+          // 清理轮询标记
+          activePolls.delete(task_id);
+          mlog('✅ [viduFeed] Polling stopped, active polls:', activePolls.size);
+          return; // 使用 return 而不是 break 来确保清理
+        } else {
+          mlog(`⏳ [viduFeed] Continuing... State: ${updatedTask.state}`);
         }
+      } else {
+        mlog(`⚠️ [viduFeed] Iteration ${i + 1}/120 - viduGetTask returned null!`);
       }
       
       // 等待5秒后再次查询
@@ -389,6 +501,8 @@ export const viduFeed = async (task_id: string): Promise<void> => {
       await sleep(5000);
     }
   }
-  
-  mlog('viduFeed ended for task:', task_id);
+
+  // 清理轮询标记
+  activePolls.delete(task_id);
+  mlog('🏁 [viduFeed] Ended polling for task:', task_id, '(Active polls:', activePolls.size, ')');
 };

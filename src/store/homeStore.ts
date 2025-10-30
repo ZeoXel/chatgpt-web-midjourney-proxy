@@ -116,6 +116,8 @@ export interface gptServerType{
     KLING_KEY:string
     PIKA_SERVER:string
     PIKA_KEY:string
+    SORA2_SERVER:string
+    SORA2_KEY:string
     UDIO_SERVER:string
     UDIO_KEY:string
     PIXVERSE_SERVER:string
@@ -163,6 +165,8 @@ let v:gptServerType={
         KLING_KEY:'',
         PIKA_SERVER:'',
         PIKA_KEY:'',
+        SORA2_SERVER:'',
+        SORA2_KEY:'',
         TTS_VOICE:'alloy',
         UDIO_SERVER:'',
         UDIO_KEY:'',

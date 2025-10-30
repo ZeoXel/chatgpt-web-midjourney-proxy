@@ -258,3 +258,29 @@ export const sunoProxy = proxy(process.env.SUNO_SERVER ?? API_BASE_URL, {
   },
 
 })
+
+// Sora2 代理 - 使用 NewAPI 网关格式，支持 FormData
+export const sora2Proxy = proxy(process.env.SORA2_SERVER ?? API_BASE_URL, {
+  https: false,
+  limit: '15mb',
+  proxyReqPathResolver(req) {
+    return req.originalUrl // 保持完整路径 /v1/videos 或 /v1/videos/:id
+  },
+  proxyReqOptDecorator(proxyReqOpts, srcReq) {
+    if (process.env.SORA2_KEY)
+      proxyReqOpts.headers.Authorization = `Bearer ${process.env.SORA2_KEY}`
+    else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
+
+    // ✅ 不强制覆盖 Content-Type，保持原始请求的类型
+    // GET 请求和非 multipart 请求才设置为 json
+    const contentType = srcReq.headers['content-type'] || ''
+    if (srcReq.method === 'GET' || !contentType.includes('multipart')) {
+      proxyReqOpts.headers['Content-Type'] = 'application/json'
+    }
+    // 如果是 multipart/form-data，让它保持原样传递
+
+    proxyReqOpts.headers['Mj-Version'] = pkg.version
+    return proxyReqOpts
+  },
+
+})

@@ -3,6 +3,8 @@ import { mlog } from "./mjapi";
 import { sleep } from "./suno";
 import { RunwayTask, runwayStore } from "./runwayStore";
 import { PikaTask, pikaStore } from "./pikaStore";
+import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
+import { convertPikaToUnified } from "./videoAdapter";
 
 function getHeaderAuthorization(){
     let headers={}
@@ -94,6 +96,22 @@ export const pikaFetch=(url:string,data?:any,opt2?:any )=>{
 
 export const pikaFeed= async(id:string)=>{
     const sunoS = new pikaStore();
+
+    // ✅ 立即创建pending任务,让UI能马上显示"加载中"
+    const unifiedStore = new UnifiedVideoStore();
+    const pendingTask: UnifiedVideoTask = {
+        id: id,
+        service: 'pika',
+        url: '',
+        status: 'pending',
+        prompt: 'Loading...',
+        model: 'pika',
+        created_at: Date.now(),
+        updated_at: Date.now()
+    };
+    unifiedStore.save(pendingTask);
+    homeStore.setMyData({act:'PikaFeed'}); // 立即触发UI刷新
+
     for(let i=0; i<200;i++){
         try{
             let a= await pikaFetch('/feed/' +id )
@@ -101,9 +119,17 @@ export const pikaFeed= async(id:string)=>{
             mlog("task",a )
             if(!task.videos || task.videos.length==0) continue;
             task.last_feed=new Date().getTime()
-            
-            
+
+            // 保存到旧Store (保留兼容性)
             sunoS.save( task )
+
+            // ✅ 新增: 同时保存到统一Store
+            const unifiedStore = new UnifiedVideoStore();
+            const unifiedTask = convertPikaToUnified(task);
+            mlog('🔄 [Pika] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+            unifiedStore.save(unifiedTask);
+            mlog('✅ [Pika] Updated, total tasks:', unifiedStore.getAll().length);
+
             homeStore.setMyData({act:'PikaFeed'});
             if( task.videos[0].status=='error' || 'finished'== task.videos[0].status ){
                 break;

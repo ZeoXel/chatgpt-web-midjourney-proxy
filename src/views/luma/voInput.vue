@@ -3,7 +3,7 @@ import { NTabs, NTabPane } from 'naive-ui';
 import LumaInput from './lumaInput.vue'
 import RunwayInput from './runInput.vue'
 import KlingInput from '../kling/kgInput.vue'
-import PikaInput from './pikaInput.vue'
+import Sora2Input from './sora2Input.vue'
 import ViduInput from './viduInput.vue'
 import { mlog } from '@/api';
 import { gptServerStore } from '@/store';
@@ -23,7 +23,7 @@ const initLoad=()=>{
         //st.value.tab=route.query.tab as string;
         st.value.tab= 'runway'
         let tt= (route.query.tab as string).toLocaleLowerCase();
-        if( ['runway','pika','kling','runwayml','vidu'].indexOf(tt)>-1 ){
+        if( ['runway','sora2','kling','runwayml','vidu'].indexOf(tt)>-1 ){
            st.value.tab=tt;
         }
         handleUpdateValue(  st.value.tab )
@@ -50,8 +50,8 @@ initLoad();
         <n-tab-pane name="runway" tab="Runway">
             <RunwayInput />
         </n-tab-pane>
-        <n-tab-pane name="pika" tab="Pika">
-            <PikaInput />
+        <n-tab-pane name="sora2" tab="Sora2">
+            <Sora2Input />
         </n-tab-pane>
         <n-tab-pane name="kling" :tab="$t('mj.kling')">
             <KlingInput />

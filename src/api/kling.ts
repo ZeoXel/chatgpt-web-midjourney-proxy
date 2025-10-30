@@ -2,6 +2,8 @@ import { gptServerStore, homeStore, useAuthStore } from "@/store";
 import { mlog } from "./mjapi";
 import { KlingTask, klingStore } from "./klingStore";
 import { sleep } from "./suno";
+import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
+import { convertKlingToUnified } from "./videoAdapter";
 
 
 
@@ -93,6 +95,22 @@ export const klingFetch=(url:string,data?:any,opt2?:any )=>{
 
 export const klingFeed= async(id:string,cat:string,prompt:string)=>{
     const sunoS = new klingStore();
+
+    // ✅ 立即创建pending任务,让UI能马上显示"加载中"
+    const unifiedStore = new UnifiedVideoStore();
+    const pendingTask: UnifiedVideoTask = {
+        id: id,
+        service: 'kling',
+        url: '',
+        status: 'pending',
+        prompt: prompt || 'Loading...',
+        model: 'kling',
+        created_at: Date.now(),
+        updated_at: Date.now()
+    };
+    unifiedStore.save(pendingTask);
+    homeStore.setMyData({act:'KlingFeed'}); // 立即触发UI刷新
+
     let url= '/v1/images/generations/' //images或videos
     if (cat=='text2video'){
         url='/v1/videos/text2video/';
@@ -103,7 +121,7 @@ export const klingFeed= async(id:string,cat:string,prompt:string)=>{
     url= url+id;
     for(let i=0; i<200;i++){
         try{
-            
+
             let a= await klingFetch( url )
             let task= a  as KlingTask;
             task.last_feed=new Date().getTime()
@@ -113,7 +131,17 @@ export const klingFeed= async(id:string,cat:string,prompt:string)=>{
             }
             //ss.save( task )
             //mlog("a",a  )
+
+            // 保存到旧Store (保留兼容性)
             sunoS.save( task )
+
+            // ✅ 新增: 同时保存到统一Store
+            const unifiedStore = new UnifiedVideoStore();
+            const unifiedTask = convertKlingToUnified(task);
+            mlog('🔄 [Kling] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+            unifiedStore.save(unifiedTask);
+            mlog('✅ [Kling] Updated, total tasks:', unifiedStore.getAll().length);
+
             homeStore.setMyData({act:'KlingFeed'});
             if(  task.data.task_status =='failed' || 'succeed'== task.data.task_status ){
                 break;

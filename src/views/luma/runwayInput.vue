@@ -192,10 +192,16 @@ const generate= async ()=>{
             }
             sobj= v_gen3
         }
-       // const d=  await runwayFetch('/tasks', st.value.version=='gen2'?obj: gen3 ) 
-        const d=  await runwayFetch('/tasks',  sobj ) 
-        mlog("runwayGen2",d) 
-        d.task && d.task.id&& runwayFeed(d.task.id)
+       // const d=  await runwayFetch('/tasks', st.value.version=='gen2'?obj: gen3 )
+        const d=  await runwayFetch('/tasks',  sobj )
+        mlog("runwayGen2",d)
+        mlog("🔍 [runwayInput] Response structure:", { hasTask: !!d.task, taskId: d.task?.id })
+        if (d.task && d.task.id) {
+            mlog("✅ [runwayInput] Calling runwayFeed with id:", d.task.id)
+            runwayFeed(d.task.id)
+        } else {
+            mlog("❌ [runwayInput] No task.id found in response, cannot start feed")
+        }
     }catch(e:any){
         ms.error(e)
     }

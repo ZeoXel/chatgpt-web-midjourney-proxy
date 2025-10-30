@@ -16,7 +16,7 @@ import { auth, authV2, regCookie, turnstileCheck, verify } from './middleware/au
 import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
-import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 import assetsRouter from './api/assets'
 import supabaseUploadRouter from './api/supabase-upload'
 
@@ -370,6 +370,9 @@ app.use('/udio', authV2, udioProxy)
 
 app.use('/pixverse', authV2, pixverseProxy)
 
+// 代理 Sora2 接口 - NewAPI 网关格式
+app.use('/v1/videos', authV2, sora2Proxy)
+app.use('/pro/v1/videos', authV2, sora2Proxy)
 
 // 图片代理端点，解决CORS问题
 router.get('/proxy-image', async (req, res) => {

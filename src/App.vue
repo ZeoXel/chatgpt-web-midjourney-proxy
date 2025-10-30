@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { useLanguage } from '@/hooks/useLanguage'
 import aiOther from "@/views/mj/aiOther.vue"
 import { useChatStore } from '@/store'
+import { checkAndMigrate } from '@/utils/videoMigration'
 import '@/styles/color-override.css'
 
 const { theme, themeOverrides } = useTheme()
@@ -17,6 +18,9 @@ onMounted(async () => {
   console.log('[App] 🚀 应用启动，开始加载对话历史...')
   await chatStore.loadFromDatabase()
   console.log('[App] ✅ 对话历史加载完成')
+
+  // ✅ 新增: 视频数据迁移 (一次性执行)
+  checkAndMigrate()
 })
 </script>
 

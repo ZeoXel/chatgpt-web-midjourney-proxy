@@ -2,6 +2,8 @@ import { gptServerStore, homeStore, useAuthStore } from "@/store";
 import { mlog } from "./mjapi";
 import { sleep } from "./suno";
 import { RunwayTask, runwayStore } from "./runwayStore";
+import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
+import { convertRunwayToUnified } from "./videoAdapter";
 
 function getHeaderAuthorization(){
     let headers={}
@@ -92,7 +94,27 @@ export const runwayFetch=(url:string,data?:any,opt2?:any )=>{
 }
 
 export const runwayFeed= async(id:string)=>{
+    mlog('🎬 [runwayFeed] Starting feed for task:', id);
     const sunoS = new runwayStore();
+
+    // ✅ 立即创建pending任务,让UI能马上显示"加载中"
+    const unifiedStore = new UnifiedVideoStore();
+    const pendingTask: UnifiedVideoTask = {
+        id: id,
+        service: 'runway',
+        url: '',
+        status: 'pending',
+        prompt: 'Loading...',
+        model: 'runway',
+        created_at: Date.now(),
+        updated_at: Date.now()
+    };
+    mlog('💾 [Runway] Creating pending task:', pendingTask);
+    unifiedStore.save(pendingTask);
+    mlog('✅ [Runway] Pending task saved, total tasks:', unifiedStore.getAll().length);
+    homeStore.setMyData({act:'RunwayFeed'}); // 立即触发UI刷新
+    mlog('📢 [Runway] Triggered RunwayFeed event');
+
     for(let i=0; i<200;i++){
         try{
             let a= await runwayFetch('/tasks/' +id )
@@ -100,7 +122,17 @@ export const runwayFeed= async(id:string)=>{
             task.last_feed=new Date().getTime()
             //ss.save( task )
             mlog("a",a.task  )
+
+            // 保存到旧Store (保留兼容性)
             sunoS.save( task )
+
+            // ✅ 新增: 同时保存到统一Store
+            const unifiedStore = new UnifiedVideoStore();
+            const unifiedTask = convertRunwayToUnified(task);
+            mlog('🔄 [Runway] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+            unifiedStore.save(unifiedTask);
+            mlog('✅ [Runway] Updated, total tasks:', unifiedStore.getAll().length);
+
             homeStore.setMyData({act:'RunwayFeed'});
             if( a.task.status=='FAILED' || 'SUCCEEDED'== a.task.status ){
                 break;

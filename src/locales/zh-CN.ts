@@ -552,7 +552,9 @@ export default {
     menuinfo: 'Vidu 视频生成',
     title: 'Vidu 视频生成',
     models: {
-      viduq1: 'Vidu Q1 - 高质量 (5秒)',
+      viduq2turbo: 'Vidu Q2 Turbo - 图生/首尾 快速模式 (5/8秒)',
+      viduq2pro: 'Vidu Q2 Pro - 图生/首尾 专业模式 (5/8秒)',
+      viduq2: 'Vidu Q2 - 参考生视频 (5/8秒)',
       vidu20: 'Vidu 2.0 - 快速生成 (4秒)',
       vidu15: 'Vidu 1.5 - 动态增强 (4/8秒)',
     },

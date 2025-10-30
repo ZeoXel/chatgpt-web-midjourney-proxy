@@ -11,7 +11,7 @@ export type ViduVideo = {
 export type ViduTask = {
   task_id: string;
   state: 'created' | 'queueing' | 'processing' | 'success' | 'succeeded' | 'failed'; // 添加succeeded状态
-  model: 'viduq1' | 'vidu2.0' | 'vidu1.5';
+  model: 'viduq2-turbo' | 'viduq2-pro' | 'viduq2' | 'vidu2.0' | 'vidu1.5';
   prompt: string;
   images: string[];
   duration: number;
@@ -33,10 +33,23 @@ export type ViduTask = {
 
 // 模型配置映射
 export const MODEL_CONFIGS = {
-  'viduq1': {
-    duration: 5,
+  'viduq2-turbo': {
+    durations: [5, 8],
     resolutions: ['1080p'],
-    description: '高质量，画面清晰，平滑转场，运镜稳定'
+    description: '图生/首尾生视频 - 快速模式，默认1080p',
+    modes: ['img2video', 'firstTail']
+  },
+  'viduq2-pro': {
+    durations: [5, 8],
+    resolutions: ['1080p'],
+    description: '图生/首尾生视频 - 专业模式，默认1080p',
+    modes: ['img2video', 'firstTail']
+  },
+  'viduq2': {
+    durations: [5, 8],
+    resolutions: ['1080p'],
+    description: '参考生视频，默认1080p',
+    modes: ['reference']
   },
   'vidu2.0': {
     duration: 4,
