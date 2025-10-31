@@ -264,12 +264,19 @@ export const sora2Proxy = proxy(process.env.SORA2_SERVER ?? API_BASE_URL, {
   https: false,
   limit: '15mb',
   proxyReqPathResolver(req) {
+    const targetServer = process.env.SORA2_SERVER ?? API_BASE_URL
+    console.log(`[Sora2] 代理请求到: ${targetServer}${req.originalUrl}`)
     return req.originalUrl // 保持完整路径 /v1/videos 或 /v1/videos/:id
   },
   proxyReqOptDecorator(proxyReqOpts, srcReq) {
-    if (process.env.SORA2_KEY)
+    if (process.env.SORA2_KEY) {
       proxyReqOpts.headers.Authorization = `Bearer ${process.env.SORA2_KEY}`
-    else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
+      console.log('[Sora2] 使用 SORA2_KEY 认证')
+    }
+    else {
+      proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
+      console.log('[Sora2] 使用 OPENAI_API_KEY 认证')
+    }
 
     // ✅ 不强制覆盖 Content-Type，保持原始请求的类型
     // GET 请求和非 multipart 请求才设置为 json
@@ -281,6 +288,27 @@ export const sora2Proxy = proxy(process.env.SORA2_SERVER ?? API_BASE_URL, {
 
     proxyReqOpts.headers['Mj-Version'] = pkg.version
     return proxyReqOpts
+  },
+  userResDecorator(proxyRes, proxyResData, userReq, userRes) {
+    try {
+      const data = JSON.parse(proxyResData.toString('utf8'))
+      console.log('[Sora2] 响应状态:', proxyRes.statusCode)
+      console.log('[Sora2] 响应数据:', JSON.stringify(data, null, 2))
+
+      // 如果返回错误，记录详细信息
+      if (data.code === 'fail_submit_task' || proxyRes.statusCode >= 400) {
+        console.error('[Sora2] ❌ 请求失败:')
+        console.error('  - URL:', userReq.originalUrl)
+        console.error('  - 状态码:', proxyRes.statusCode)
+        console.error('  - 错误码:', data.code)
+        console.error('  - 错误信息:', data.message || '无')
+        console.error('  - 目标服务器:', process.env.SORA2_SERVER ?? API_BASE_URL)
+      }
+    }
+    catch (e) {
+      // 如果不是JSON，忽略
+    }
+    return proxyResData
   },
 
 })

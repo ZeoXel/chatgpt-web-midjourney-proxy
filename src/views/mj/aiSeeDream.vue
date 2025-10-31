@@ -63,6 +63,14 @@ const create= async ()=>{
         response_format: 'url'
     };
 
+    mlog('🎨 [即梦绘图] 发送请求数据：', {
+        model: obj.data.model,
+        n: obj.data.n,
+        size: obj.data.size,
+        watermark: obj.data.watermark,
+        hasImages: base64Array.value.length > 0
+    });
+
     if(isCanImageEdit.value){
         obj.data= {...obj.data ,quality:st.value.quality};
     }
@@ -270,13 +278,15 @@ const selectFile=(input:any)=>{
 </div>
 
 <div class="pt-4 text-sm text-gray-500 dark:text-gray-400">
-    <p class="mb-2">即梦绘图说明：</p>
-    <ul class="list-disc list-inside space-y-1">
+    <p class="mb-2 font-medium">即梦绘图说明：</p>
+    <ul class="list-disc list-inside space-y-1.5">
         <li>支持即梦 4.0 和即梦 3.0 模型</li>
         <li>可上传最多 3 张参考图片进行图生图</li>
         <li>支持 2K 高质量输出</li>
-        <li>支持批量生成（最多 4 张）</li>
         <li>可选择是否添加水印</li>
+        <li class="text-orange-600 dark:text-orange-400 font-medium">
+            <span class="font-bold">多图生成提示：</span>如需生成多张图片，请设置生成数量，<span class="underline">并在提示词中明确说明</span>（例如："生成3张xxx"、"连环画"、"多角度"等），否则可能只返回1张图片
+        </li>
     </ul>
 </div>
 

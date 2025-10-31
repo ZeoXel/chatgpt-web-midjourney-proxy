@@ -408,6 +408,17 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
            formData.append('prompt', data.data.prompt);
            formData.append('response_format', 'url');
 
+           // 添加可选参数
+           if(data.data.n) {
+               formData.append('n', data.data.n.toString());
+           }
+           if(data.data.size) {
+               formData.append('size', data.data.size);
+           }
+           if(data.data.watermark !== undefined) {
+               formData.append('watermark', data.data.watermark.toString());
+           }
+
            // 处理所有图片数据（支持多图参考）
            for(let i = 0; i < data.data.base64Array.length; i++) {
                const imageItem = data.data.base64Array[i];
@@ -439,7 +450,8 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
            requestData = {
                model: data.data.model,
                prompt: data.data.prompt,
-               response_format: 'url'
+               response_format: 'url',
+               stream: false  // 强制禁用stream模式以确保一次性返回所有结果
            };
 
            if(data.data.size) {
@@ -450,6 +462,9 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
            }
            if(data.data.n) {
                requestData.n = data.data.n;
+           }
+           if(data.data.watermark !== undefined) {
+               requestData.watermark = data.data.watermark;
            }
        }
 
@@ -468,37 +483,45 @@ export const subGPT= async (data:any, chat:Chat.Chat )=>{
 
             // 验证响应数据结构
             if (!d || !d.data || !Array.isArray(d.data) || d.data.length === 0) {
-                mlog("nano-banana 响应数据格式错误:", d);
+                mlog("即梦绘图 响应数据格式错误:", d);
                 throw new Error(`响应数据格式错误: ${JSON.stringify(d)}`);
             }
 
-            const rz : any= d.data[0];
-            if (!rz) {
-                throw new Error("响应数据为空");
-            }
+            mlog(`✅ 即梦绘图收到响应，图片数量: ${d.data.length}`, d.data);
 
-            let key= 'dall:'+chat.myid;
+            // 无论单图还是多图，统一处理为 imageUrls 数组
+            const imageUrls = d.data.map((item: any) => ({
+                url: item.url || 'https://www.openai-hk.com/res/img/open.png'
+            }));
 
-            if(rz.b64_json){
-                const base64='data:image/png;base64,'+rz.b64_json;
-                await localSaveAny(base64,key)
-            }
+            mlog(`✅ 生成 imageUrls 数组:`, imageUrls);
 
-            // 确保有URL
-            if (!rz.url && !rz.b64_json) {
-                mlog("nano-banana 响应缺少图片URL:", rz);
-                throw new Error("响应中没有图片URL或base64数据");
-            }
-
-            chat.text= rz.revised_prompt ?? `${data.data.model} 图片已完成`;
-            chat.opt={imageUrl:rz.url?rz.url: 'https://www.openai-hk.com/res/img/open.png' } ;
+            // 设置聊天对象
+            chat.text = d.data[0].revised_prompt ?? `${data.data.model} 成功生成 ${d.data.length} 张图片`;
+            chat.opt = {
+                imageUrls: imageUrls,
+                imageUrl: imageUrls[0]?.url  // 同时保留单图字段兼容性
+            };
             chat.loading = false;
-            homeStore.setMyData({act:'updateChat', actData:chat });
 
-            // 阶段1: 生成完成后保存到数据库
-            saveDallAssetToDatabase(chat, data.data).catch(err => {
-                console.warn('[DALL-E Asset Save] 保存失败（不影响用户体验）:', err);
-            });
+            mlog(`✅ 最终 chat.opt:`, JSON.stringify(chat.opt, null, 2));
+
+            // 更新到前端
+            homeStore.setMyData({act:'updateChat', actData:chat });
+            mlog(`✅ 已触发 updateChat 事件`);
+
+            // 保存所有图片到数据库
+            for(let i = 0; i < d.data.length; i++) {
+                const imgData = d.data[i];
+                const imgChat = {
+                    ...chat,
+                    myid: i === 0 ? chat.myid : `${chat.myid}_${i}`,
+                    opt: { imageUrl: imgData.url }
+                };
+                saveDallAssetToDatabase(imgChat, data.data).catch(err => {
+                    console.warn(`[DALL-E Asset Save] 保存第${i+1}张图片失败:`, err);
+                });
+            }
        }catch(e){
             mlog('nano-banana 请求失败', e);
 
