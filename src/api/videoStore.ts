@@ -67,12 +67,14 @@ export class UnifiedVideoStore {
   }
 
   /**
-   * 获取所有任务
+   * 获取所有任务 - 按创建时间降序排序（最新的在前）
    */
   getAll(): UnifiedVideoTask[] {
     try {
       const obj = ss.get(this.localKey) as UnifiedVideoTask[] | undefined;
-      return obj ?? [];
+      const tasks = obj ?? [];
+      // 确保总是按创建时间降序返回
+      return tasks.sort((a, b) => b.created_at - a.created_at);
     } catch (error) {
       console.error('Failed to load unified video tasks:', error);
       return [];

@@ -66,6 +66,9 @@ export const sora2Fetch=(url:string, data?:any, opt2?:any)=>{
     }
     mlog('sora2Fetch headers:', headers);
 
+    // 是否静默模式（轮询时不显示错误弹窗）
+    const silent = opt2?.silent ?? false;
+
     return new Promise<any>((resolve, reject) => {
         let opt:RequestInit = {method:'GET'};
 
@@ -87,21 +90,29 @@ export const sora2Fetch=(url:string, data?:any, opt2?:any)=>{
                   msg = '('+ d.status+')发生错误: '+(bjson?.error?.message??'')
                 }catch(e){
                 }
-                homeStore.myData.ms && homeStore.myData.ms.error(msg)
+                // 只在非静默模式下显示错误
+                if (!silent) {
+                    homeStore.myData.ms && homeStore.myData.ms.error(msg)
+                }
                 throw new Error(msg);
             }
 
             d.json().then(d=> resolve(d)).catch(e=>{
-
-                homeStore.myData.ms && homeStore.myData.ms.error('发生错误'+ e)
+                // 只在非静默模式下显示错误
+                if (!silent) {
+                    homeStore.myData.ms && homeStore.myData.ms.error('发生错误'+ e)
+                }
                 reject(e)
             }
         )})
         .catch(e=>{
-            if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
-                homeStore.myData.ms && homeStore.myData.ms.error('跨域|CORS error')
+            // 只在非静默模式下显示错误
+            if (!silent) {
+                if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
+                    homeStore.myData.ms && homeStore.myData.ms.error('跨域|CORS error')
+                }
+                else homeStore.myData.ms && homeStore.myData.ms.error('发生错误:'+e)
             }
-            else homeStore.myData.ms && homeStore.myData.ms.error('发生错误:'+e)
             mlog('e', e.stat)
             reject(e)
         })
@@ -132,7 +143,8 @@ export const sora2Feed = async(id:string)=>{
 
     for(let i=0; i<200; i++){
         try{
-            let a = await sora2Fetch('/v1/videos/' + id)
+            // 轮询时使用静默模式，不显示错误弹窗
+            let a = await sora2Fetch('/v1/videos/' + id, undefined, { silent: true })
             let task = a as Sora2Task;
             mlog("sora2 task", a)
 

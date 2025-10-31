@@ -10,20 +10,18 @@ import { checkBalance } from '@/utils/balanceGuard';
 const ms = useMessage();
 const config = ref( {
 model:[
-{  "label": "nano-banana", "value": "nano-banana" }
- ,{  "label": "nano-banana-hd", "value": "nano-banana-hd" }
- ,{  "label": "seedream 4.0", "value": "doubao-seedream-4-0-250828" }
- ,{  "label": "seedream 3.0", "value": "seedream-3.0" }
+ {  "label": "即梦 4.0", "value": "doubao-seedream-4-0-250828" }
+ ,{  "label": "即梦 3.0", "value": "seedream-3.0" }
 ]
 });
 interface myFile{
     file:any
     base64:string
 }
-const st =ref({isGo:false,quality:'medium' }); 
-const fsRef= ref() ; 
-const base64Array= ref<myFile[]>([]);    
-const f = ref({size:'1024x1024', prompt:'',"model": "nano-banana","n": 1});
+const st =ref({isGo:false,quality:'medium', watermark: true });
+const fsRef= ref() ;
+const base64Array= ref<myFile[]>([]);
+const f = ref({size:'1024x1024', prompt:'',"model": "doubao-seedream-4-0-250828","n": 1});
 const isDisabled= computed(()=>{
     if(st.value.isGo) {
         //console.log('st.value.isGo',st.value.isGo);
@@ -51,19 +49,26 @@ const create= async ()=>{
     // mlog('test',d );
     //return ;
 
-    // 统一的处理逻辑，nano-banana 也使用标准 DALL-E 流程
+    // 即梦4/即梦3 使用标准流程
     let obj= {
         action:'gpt.dall-e-3',
         data:{} //f.value
     }
     obj.data= { ...f.value}
+
+    // 添加即梦4特有参数
+    obj.data= {
+        ...obj.data,
+        watermark: st.value.watermark,  // 水印参数
+        response_format: 'url'
+    };
+
     if(isCanImageEdit.value){
         obj.data= {...obj.data ,quality:st.value.quality};
     }
     if (isCanImageEdit.value && base64Array.value.length>0){
-
         obj.data= {...obj.data, 'base64Array':base64Array.value,quality:st.value.quality};
-        mlog("data", '我加东西了：',  base64Array.value  )
+        mlog("data", '添加参考图片：',  base64Array.value  )
     }
 
     // 保存原始配置用于重新编辑和再次生成
@@ -82,6 +87,7 @@ const create= async ()=>{
         prompt: f.value.prompt,
         n: f.value.n,
         quality: st.value.quality,
+        watermark: st.value.watermark,
         base64ArrayKey: base64ArrayKey || undefined // 只存储key引用，不存储实际数据
     };
 
@@ -99,11 +105,12 @@ watch(()=>homeStore.myData.act,(n)=>{
         const data = homeStore.myData.actData;
         if(data && data.config) {
             const config = data.config;
-            f.value.model = config.model || 'nano-banana';
+            f.value.model = config.model || 'doubao-seedream-4-0-250828';
             f.value.size = config.size || '1024x1024';
             f.value.prompt = config.prompt || '';
             f.value.n = config.n || 1;
             st.value.quality = config.quality || 'medium';
+            st.value.watermark = config.watermark !== undefined ? config.watermark : true;
 
             // 重新填入参考图片 - 从 IndexedDB 恢复
             if (config.base64ArrayKey) {
@@ -144,67 +151,53 @@ const qualityOption=  computed(()=>{
 ]
 });
 const dimensionsList= computed(()=>{
-    if(f.value.model=='dall-e-2'){
-        return [{ 
-                "label": "1024px*1024px",
+    // 即梦4和即梦3支持的尺寸
+    if(f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
+        return [{
+                "label": "2K (高质量)",
+                "value": "2K"
+            }, {
+                "label": "1024x1024",
                 "value": "1024x1024"
             }, {
-                "label": "512px*512px",
-                "value": "512x512"
+                "label": "1792x1024",
+                "value": "1792x1024"
             }, {
-                "label": "256px*256px",
-                "value": "256x256"
+                "label": "1024x1792",
+                "value": "1024x1792"
             }
-    ];
-    } 
-    if(f.value.model=='gpt-image-1'){
-    return [{ 
-                "label": "1024px*1024px",
-                "value": "1024x1024"
-            }, {
-                "label": "1536px*1024px",
-                "value": "1536x1024"
-            }, {
-                "label": "1024px*1536px",
-                "value": "1024x1536"
-            }
-    ];
+        ];
     }
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
+    // 默认尺寸
     return [{
-                "label": "1024px*1024px",
+                "label": "1024x1024",
                 "value": "1024x1024"
             }, {
-                "label": "1792px*1024px",
+                "label": "1792x1024",
                 "value": "1792x1024"
             }, {
-                "label": "1024px*1792px",
+                "label": "1024x1792",
                 "value": "1024x1792"
             }
-    ];
-    }
-    return [{ 
-                "label": "1024px*1024px",
-                "value": "1024x1024"
-            }, {
-                "label": "1792px*1024px",
-                "value": "1792x1024"
-            }, {
-                "label": "1024px*1792px",
-                "value": "1024x1792"
-            }
-     ]
-     
+    ]
 })
 watch(()=>f.value.model,(n)=>{
     f.value.size='1024x1024';
 })
 const isCanImageEdit= computed(()=>{
-    if(f.value.model=='dall-e-2') return true;
-    if(f.value.model=='gpt-image-1') return true;
-    if(f.value.model.indexOf('kontext')>-1) return true;
-    if(f.value.model=='nano-banana' || f.value.model=='nano-banana-hd' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0') return true;
+    // 即梦4和即梦3都支持图片参考
+    if(f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0') return true;
     return false;
+})
+
+// 组图数量选项
+const batchCountOptions = computed(()=>{
+    return [
+        {label:'1张', value: 1},
+        {label:'2张', value: 2},
+        {label:'3张', value: 3},
+        {label:'4张', value: 4}
+    ];
 })
 
 const selectFile=(input:any)=>{
@@ -225,16 +218,24 @@ const selectFile=(input:any)=>{
 </script>
 <template>
 <section class="mb-4 flex justify-between items-center"  >
-     <div>{{ $t('mjchat.version') }} </div>
+     <div>模型版本</div>
     <n-select v-model:value="f.model" :options="config.model" filterable tag size="small"  class="!w-[70%]" :clearable="false" />
 </section>
 <section class="mb-4 flex justify-between items-center"  >
      <div>{{ $t('mjchat.size') }}</div>
     <n-select v-model:value="f.size" :options="dimensionsList"  filterable tag size="small"  class="!w-[70%]" :clearable="false" />
 </section>
+<section class="mb-4 flex justify-between items-center">
+     <div>生成数量</div>
+    <n-select v-model:value="f.n" :options="batchCountOptions"  filterable tag size="small"  class="!w-[70%]" :clearable="false" />
+</section>
 <section class="mb-4 flex justify-between items-center" v-if="isCanImageEdit" >
      <div>Quality</div>
     <n-select v-model:value="st.quality" :options="qualityOption"  filterable tag size="small"  class="!w-[70%]" :clearable="false" />
+</section>
+<section class="mb-4 flex justify-between items-center">
+     <div>水印</div>
+    <n-select v-model:value="st.watermark" :options="[{label:'开启',value:true},{label:'关闭',value:false}]" size="small"  class="!w-[70%]" :clearable="false" />
 </section>
 
 <div class="mb-1">
@@ -268,9 +269,16 @@ const selectFile=(input:any)=>{
     </div>
 </div>
 
-<ul class="pt-4" v-html="$t('mjchat.dalleInfo')">
-   
-</ul>
+<div class="pt-4 text-sm text-gray-500 dark:text-gray-400">
+    <p class="mb-2">即梦绘图说明：</p>
+    <ul class="list-disc list-inside space-y-1">
+        <li>支持即梦 4.0 和即梦 3.0 模型</li>
+        <li>可上传最多 3 张参考图片进行图生图</li>
+        <li>支持 2K 高质量输出</li>
+        <li>支持批量生成（最多 4 张）</li>
+        <li>可选择是否添加水印</li>
+    </ul>
+</div>
 
 <input type="file"  @change="selectFile"  ref="fsRef" style="display: none" accept="image/jpeg, image/jpg, image/png, image/gif"/>
 
