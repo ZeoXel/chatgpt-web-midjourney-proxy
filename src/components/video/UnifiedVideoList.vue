@@ -21,12 +21,13 @@ const refresh = () => {
 
   mlog('📦 [UnifiedVideoList] Total tasks:', allTasks.length);
 
-  // 输出每个任务的简要信息
+  // 输出每个任务的简要信息和时间戳
   if (list.value.length > 0) {
     const serviceCount: Record<string, number> = {};
-    list.value.forEach(task => {
+    list.value.forEach((task, index) => {
       serviceCount[task.service] = (serviceCount[task.service] || 0) + 1;
-      mlog(`  - [${task.service}] ${task.id.substring(0, 8)}... status=${task.status}`);
+      const date = new Date(task.created_at);
+      mlog(`  ${index+1}. [${task.service}] ${task.id.substring(0, 8)}... status=${task.status} created=${date.toLocaleString()} (${task.created_at})`);
     });
 
     // 输出各服务统计

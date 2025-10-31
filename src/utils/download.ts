@@ -165,9 +165,37 @@ function getFilenameFromResponse(response: Response): string | null {
 }
 
 /**
+ * 下载视频文件
+ * @param src 视频源地址（支持 http URL、blob URL）
+ * @param filename 下载文件名（可选）
+ */
+export function downloadVideo(src: string, filename?: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      // 如果是 http/https URL，使用 fetch 下载
+      if (src.startsWith('http')) {
+        downloadHttpURL(src, filename || `video_${Date.now()}.mp4`).then(resolve).catch(() => resolve(false));
+        return;
+      }
+
+      // 如果是 blob URL，直接下载
+      if (src.startsWith('blob:')) {
+        downloadBlobURL(src, filename || `video_${Date.now()}.mp4`).then(resolve).catch(() => resolve(false));
+        return;
+      }
+
+      resolve(false);
+    } catch (error) {
+      console.error('视频下载失败:', error);
+      resolve(false);
+    }
+  });
+}
+
+/**
  * 检查浏览器是否支持下载功能
  */
 export function isBrowserDownloadSupported(): boolean {
-  return !!(document.createElement('a').download !== undefined && 
+  return !!(document.createElement('a').download !== undefined &&
            window.URL && window.URL.createObjectURL);
 }

@@ -42,18 +42,34 @@ export class UnifiedVideoStore {
   save(task: UnifiedVideoTask) {
     if (!task.id) throw new Error('Task id is required');
 
+    // 验证created_at的合理性（不能是未来时间，不能太旧）
+    const now = Date.now();
+    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
+    const oneHourFuture = now + 60 * 60 * 1000;
+
+    let validatedCreatedAt = task.created_at || now;
+    if (validatedCreatedAt > oneHourFuture || validatedCreatedAt < oneYearAgo) {
+      console.warn(`⚠️ [VideoStore] Invalid created_at for ${task.service}:${task.id}: ${validatedCreatedAt}, using current time`);
+      validatedCreatedAt = now;
+    }
+
     let arr = this.getAll();
     const index = arr.findIndex(v => v.id === task.id);
 
     if (index > -1) {
-      // 更新现有任务
-      arr[index] = { ...task, updated_at: Date.now() };
+      // 更新现有任务 - 保留原始created_at，但验证合理性
+      const existingCreatedAt = arr[index].created_at;
+      arr[index] = {
+        ...task,
+        created_at: existingCreatedAt, // 保留原始创建时间
+        updated_at: now
+      };
     } else {
       // 添加新任务
       arr.push({
         ...task,
-        created_at: task.created_at || Date.now(),
-        updated_at: Date.now()
+        created_at: validatedCreatedAt,
+        updated_at: now
       });
     }
 

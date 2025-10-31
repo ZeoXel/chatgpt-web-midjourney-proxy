@@ -135,6 +135,13 @@ export function convertKlingToUnified(task: KlingTask): UnifiedVideoTask {
   const isVideo = !!video;
   const url = video?.url || image?.url || '';
 
+  // 智能转换时间戳：如果是秒级（<10000000000）则转为毫秒，否则保持原样
+  const normalizeTimestamp = (ts: number) => {
+    if (!ts) return Date.now();
+    // 如果时间戳小于2001年（秒级时间戳），则转为毫秒
+    return ts < 10000000000 ? ts * 1000 : ts;
+  };
+
   return {
     id: task.data.task_id,
     service: 'kling',
@@ -144,8 +151,8 @@ export function convertKlingToUnified(task: KlingTask): UnifiedVideoTask {
     prompt: task.prompt || '',
     model: 'kling',
     duration: video?.duration ? parseFloat(video.duration) : undefined,
-    created_at: task.data.created_at * 1000, // Kling使用秒级时间戳,转为毫秒
-    updated_at: task.last_feed || (task.data.updated_at * 1000),
+    created_at: normalizeTimestamp(task.data.created_at),
+    updated_at: task.last_feed || normalizeTimestamp(task.data.updated_at),
     error: task.data.task_status_msg,
     extra: {
       originalTask: task,

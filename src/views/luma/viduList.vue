@@ -7,6 +7,7 @@ import { mlog } from '@/api';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
 import { homeStore } from '@/store';
+import { downloadVideo } from '@/utils/download';
 
 const st = ref({ pIndex: -1 });
 const list = ref<ViduTask[]>([]);
@@ -26,6 +27,20 @@ const deleteGo = (item: ViduTask) => {
   initLoad();
 };
 
+const handleDownload = async (url: string, prompt: string) => {
+  try {
+    const filename = `vidu_${prompt.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.mp4`;
+    const success = await downloadVideo(url, filename);
+    if (success) {
+      ms.success(t('video.downloadSuccess') || '下载成功');
+    } else {
+      ms.error(t('video.downloadFailed') || '下载失败');
+    }
+  } catch (error) {
+    mlog('download error', error);
+    ms.error(t('video.downloadFailed') || '下载失败');
+  }
+};
 
 // 监听Vidu任务更新
 watch(() => homeStore.myData.act, (n) => {
@@ -109,10 +124,14 @@ onMounted(() => {
           </section>
           <section class="flex justify-end items-center pt-1">
             <n-button-group size="tiny">
-              <n-button size="tiny" round ghost v-if="item.state === 'success' && item.creations && item.creations[0]?.url">
-                <a :href="item.creations[0].url" download target="_blank" class="flex justify-center items-center">
-                  <SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}
-                </a>
+              <n-button
+                size="tiny"
+                round
+                ghost
+                v-if="item.state === 'success' && item.creations && item.creations[0]?.url"
+                @click="handleDownload(item.creations[0].url, item.prompt)"
+              >
+                <SvgIcon icon="mdi:download" size="sm" /> {{ $t('video.download') }}
               </n-button>
               <n-button size="tiny" round ghost>
                 <n-popconfirm @positive-click="() => deleteGo(item)" placement="bottom">
