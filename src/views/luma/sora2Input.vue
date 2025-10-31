@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { mlog } from '@/api';
-import { smartUploadImage } from '@/api/imageUpload';
 import { useMessage, NButton, NInput, NTag, NSelect, NSwitch } from 'naive-ui';
 import { homeStore } from '@/store';
 import { t } from "@/locales";
@@ -33,35 +32,60 @@ const fsRef = ref();
 const ms = useMessage();
 const st = ref({ isLoading: false });
 
+// ✅ 保存原始 File 对象和预览 URL
+const referenceFile = ref<File | null>(null);
+const previewUrl = ref<string>('');
+
 async function selectFile(input: any) {
     const file = input.target.files[0];
     if (!file) return;
 
     try {
-        st.value.isLoading = true;
-        ms.info('正在上传图片...');
+        // ✅ 验证文件类型和大小
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            ms.error('仅支持 JPG、PNG、GIF 格式的图片');
+            return;
+        }
 
-        const result = await smartUploadImage(file);
-        sora2.value.input_reference = result.url;
+        const maxSize = 15 * 1024 * 1024; // 15MB
+        if (file.size > maxSize) {
+            ms.error('图片大小不能超过 15MB');
+            return;
+        }
+
+        // ✅ 保存原始文件对象
+        referenceFile.value = file;
+
+        // ✅ 创建预览 URL
+        if (previewUrl.value) {
+            URL.revokeObjectURL(previewUrl.value); // 释放旧的 URL
+        }
+        previewUrl.value = URL.createObjectURL(file);
+
         fsRef.value = '';
 
-        const sizeMB = ((result.size || 0) / (1024 * 1024)).toFixed(2);
-        if (result.type === 'url') {
-            ms.success(`图片上传成功 (${sizeMB}MB) - 使用云存储`);
-        } else {
-            ms.success(`图片压缩成功 (${sizeMB}MB) - 使用压缩Base64`);
-        }
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        ms.success(`图片已选择 (${sizeMB}MB)`);
+
+        mlog('✅ Reference file selected:', file.name, file.type, `${sizeMB}MB`);
     } catch (error: any) {
-        ms.error(`图片上传失败: ${error.message || error}`);
+        ms.error(`图片选择失败: ${error.message || error}`);
         mlog('selectFile error:', error);
-    } finally {
-        st.value.isLoading = false;
     }
 }
 
 const clearInput = () => {
     sora2.value.prompt = '';
     sora2.value.input_reference = '';
+
+    // ✅ 清除文件引用和预览 URL
+    referenceFile.value = null;
+    if (previewUrl.value) {
+        URL.revokeObjectURL(previewUrl.value);
+        previewUrl.value = '';
+    }
+
     fsRef.value = '';
 };
 
@@ -81,8 +105,9 @@ const createVideo = async () => {
         formData.append('seconds', sora2.value.seconds);
         formData.append('watermark', sora2.value.watermark.toString());
 
-        if (sora2.value.input_reference) {
-            formData.append('input_reference', sora2.value.input_reference);
+        // ✅ 直接传递 File 对象（而非 URL）
+        if (referenceFile.value) {
+            formData.append('input_reference', referenceFile.value, referenceFile.value.name);
         }
 
         mlog('Creating Sora2 video:', {
@@ -91,7 +116,8 @@ const createVideo = async () => {
             size: sora2.value.size,
             seconds: sora2.value.seconds,
             watermark: sora2.value.watermark,
-            has_reference: !!sora2.value.input_reference
+            has_reference: !!referenceFile.value,
+            reference_file: referenceFile.value?.name
         });
 
         const result: any = await sora2Fetch('/v1/videos', formData, { upFile: true });
@@ -134,6 +160,13 @@ const createVideo = async () => {
 
 onMounted(() => {
     homeStore.setMyData({ ms: ms });
+});
+
+// ✅ 组件卸载时清理预览 URL
+onUnmounted(() => {
+    if (previewUrl.value) {
+        URL.revokeObjectURL(previewUrl.value);
+    }
 });
 </script>
 
@@ -201,7 +234,7 @@ onMounted(() => {
                         class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer"
                         @click="fsRef.click()"
                     >
-                        <img :src="sora2.input_reference" v-if="sora2.input_reference" />
+                        <img :src="previewUrl" v-if="previewUrl" class="w-full h-full object-cover" />
                         <div class="text-center text-xs" v-else>点击上传</div>
                     </div>
                 </div>
@@ -213,7 +246,7 @@ onMounted(() => {
             <div
                 class="cursor-pointer pr-2"
                 @click="clearInput"
-                v-if="sora2.input_reference || sora2.prompt"
+                v-if="previewUrl || sora2.prompt"
             >
                 <NTag type="primary" size="small" :bordered="false" round>
                     <span class="cursor-pointer">{{ $t('video.clear') }}</span>
