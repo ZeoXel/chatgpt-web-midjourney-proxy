@@ -2,7 +2,7 @@
 import { NTabs,NTabPane } from 'naive-ui';
 import aiDrawInputItem from './aiDrawInputItem.vue'
 import aiDall from './aiDall.vue'
-import aiIdeoInput from './aiIdeoInput.vue'
+import aiSeeDream from './aiSeeDream.vue'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { SvgIcon } from '@/components/common'
 import { onMounted, ref, watch } from 'vue';
@@ -36,7 +36,7 @@ const initLoad=()=>{
     if(route.query.tab){
         st.value.tab= 'midjourney'//route.query.tab as string;
         let tt= (route.query.tab as string).toLocaleLowerCase();
-        if( ['dall.e','ideogram'].indexOf(tt)>-1 ){
+        if( ['dall.e','seedream'].indexOf(tt)>-1 ){
            st.value.tab=tt;
         }
         handleUpdateValue(   st.value.tab )
@@ -61,8 +61,8 @@ initLoad();
      <div class="p-4"><aiDall  /></div>
     </n-tab-pane>
 
-    <n-tab-pane name="ideogram" tab="商用绘图">
-     <div class="p-2"> <aiIdeoInput/> </div>
+    <n-tab-pane name="seedream" tab="即梦绘图">
+     <div class="p-4"><aiSeeDream /></div>
     </n-tab-pane>  
     
 
