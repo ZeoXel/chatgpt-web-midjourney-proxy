@@ -1,10 +1,11 @@
-<script setup lang="ts"> 
+<script setup lang="ts">
 import { NTabs, NTabPane } from 'naive-ui';
 import LumaInput from './lumaInput.vue'
-import RunwayInput from './runInput.vue'
+import RunwayInput from './runwayInput.vue'
 import KlingInput from '../kling/kgInput.vue'
 import Sora2Input from './sora2Input.vue'
 import ViduInput from './viduInput.vue'
+import MinimaxInput from './minimaxInput.vue'
 import { mlog } from '@/api';
 import { gptServerStore } from '@/store';
 import {  ref } from 'vue';
@@ -23,7 +24,7 @@ const initLoad=()=>{
         //st.value.tab=route.query.tab as string;
         st.value.tab= 'runway'
         let tt= (route.query.tab as string).toLocaleLowerCase();
-        if( ['runway','sora2','kling','runwayml','vidu'].indexOf(tt)>-1 ){
+        if( ['runway','sora2','kling','runwayml','vidu','minimax'].indexOf(tt)>-1 ){
            st.value.tab=tt;
         }
         handleUpdateValue(  st.value.tab )
@@ -56,29 +57,35 @@ initLoad();
         <n-tab-pane name="kling" :tab="$t('mj.kling')">
             <KlingInput />
         </n-tab-pane>
+        <n-tab-pane name="minimax" tab="MiniMax">
+            <MinimaxInput />
+        </n-tab-pane>
     </n-tabs>
 </div>
 </template>
 
 <style lang="css"  scoped>
 .abc1234  {
-    --n-tab-gap:20px  !important;
+    --n-tab-gap:10px  !important;
 }
 .abc1234 :deep(.n-tabs-nav) {
-    justify-content: center !important;
     display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    padding: 4px 0 !important;
 }
 .abc1234 :deep(.n-tabs-nav-scroll-wrapper) {
-    justify-content: center !important;
-    display: flex !important;
-    width: 100% !important;
+    overflow: visible !important;
 }
 .abc1234 :deep(.n-tabs-nav-scroll-content) {
-    justify-content: center !important;
     display: flex !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    width: 100% !important;
 }
 .abc1234 :deep(.n-tabs-tab) {
-    margin: 0 10px !important;
+    flex: 1 1 calc(50% - 12px) !important;
+    margin: 4px 6px !important;
+    justify-content: center !important;
 }
 </style>

@@ -81,4 +81,4 @@ export * from "./luma"
 export * from "./ideo"
 export * from "./realtime"
 export * from "./vidu"
-
+export * from "./minimax"

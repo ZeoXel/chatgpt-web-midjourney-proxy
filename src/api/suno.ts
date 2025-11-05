@@ -15,6 +15,9 @@ function getAssetsApiPath(): string {
  * @param sunoMedia - Suno音乐对象
  */
 export async function saveSunoAssetToDatabase(sunoMedia: SunoMedia): Promise<void> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return;
+    }
     try {
         const apiKey = gptServerStore.myData.OPENAI_API_KEY;
 
@@ -88,6 +91,9 @@ export async function getSunoAssetsFromDatabase(options?: {
     limit?: number;
     offset?: number;
 }): Promise<SunoMedia[]> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return [];
+    }
     console.log('[Suno Asset Load] 🌐 开始从数据库加载资产...');
 
     try {

@@ -7,7 +7,7 @@ import { ss } from '@/utils/storage';
 export interface UnifiedVideoTask {
   // 核心标识
   id: string;
-  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2';
+  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2' | 'minimax';
 
   // 核心内容
   url: string;                    // 视频URL (原始URL,暂不上传云存储)
@@ -182,6 +182,7 @@ export class UnifiedVideoStore {
         runway: tasks.filter(t => t.service === 'runway').length,
         pika: tasks.filter(t => t.service === 'pika').length,
         kling: tasks.filter(t => t.service === 'kling').length,
+        minimax: tasks.filter(t => t.service === 'minimax').length,
         sora2: tasks.filter(t => t.service === 'sora2').length,
       },
       byStatus: {

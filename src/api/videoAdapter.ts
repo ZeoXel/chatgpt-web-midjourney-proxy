@@ -9,6 +9,7 @@ import type { RunwayTask } from './runwayStore';
 import type { PikaTask } from './pikaStore';
 import type { KlingTask } from './klingStore';
 import type { Sora2Task } from './sora2Store';
+import type { MinimaxTask } from './minimaxStore';
 
 /**
  * Vidu → Unified
@@ -85,6 +86,15 @@ function determineRunwayModel(task: RunwayTask): string {
   // 根据taskType或options推断模型
   if (task.taskType === 'gen3') return 'gen3';
   if (task.taskType === 'gen2') return 'gen2';
+  if (task.taskType === 'gen3a_turbo') return 'gen3a_turbo';
+  if (task.taskType === 'europa') return 'gen3';
+  if (task.taskType === 'europa-fast') return 'gen3-fast';
+
+  // video2video 任务检测：如果有 video_prompt 或 structure_transformation
+  if (task.options?.video_prompt || task.options?.structure_transformation !== undefined) {
+    return 'runway-video2video';
+  }
+
   if (task.options?.gen2Options) return 'gen2';
   return 'runway-gen3'; // 默认
 }
@@ -172,6 +182,111 @@ function mapKlingStatus(status: string): UnifiedVideoTask['status'] {
 }
 
 /**
+ * MiniMax → Unified
+ */
+export function convertMinimaxToUnified(task: MinimaxTask): UnifiedVideoTask {
+  const result = task.result ?? task.task_result ?? task.data ?? {};
+
+  const selectFirstString = (...values: Array<any>) => {
+    for (const value of values) {
+      if (typeof value === 'string' && value) return value;
+    }
+    return '';
+  };
+
+  const normalizeTimestamp = (value?: string | number) => {
+    if (!value) return Date.now();
+    if (typeof value === 'number') return value < 100000000000 ? value * 1000 : value;
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) return parsed < 100000000000 ? parsed * 1000 : parsed;
+    const date = Date.parse(value);
+    return Number.isNaN(date) ? Date.now() : date;
+  };
+
+  const normalizeProgress = (progress?: number) => {
+    if (typeof progress !== 'number') return undefined;
+    if (progress > 1) return Math.round(progress);
+    if (progress >= 0 && progress <= 1) return Math.round(progress * 100);
+    return undefined;
+  };
+
+  const status = mapMinimaxStatus(task);
+  const fileInfo = task.file ?? task.data?.file ?? result?.file;
+
+  const url = selectFirstString(
+    result?.video_url,
+    result?.videoUrl,
+    result?.video?.url,
+    result?.url,
+    task.video_url,
+    task.data?.video_url,
+    task.data?.url,
+    task.result_url,
+    fileInfo?.download_url,
+  );
+
+  const poster = selectFirstString(
+    result?.cover_image_url,
+    result?.coverUrl,
+    result?.cover_image,
+    result?.thumbnail_url,
+    result?.thumbnail,
+    task.cover_image_url,
+    task.cover_url,
+  );
+
+  const duration = result?.duration ?? task.duration;
+  const aspectRatio = result?.aspect_ratio ?? task.resolution ?? task.data?.aspect_ratio;
+
+  const errorMessage = task.error
+    ?? (task.base_resp?.status_code && task.base_resp.status_code !== 0 ? task.base_resp.status_msg : undefined);
+
+  const prompt = task.prompt
+    ?? task.data?.prompt
+    ?? result?.prompt
+    ?? '';
+
+  const model = task.model ?? result?.model ?? 'MiniMax-Hailuo-2.3';
+
+  return {
+    id: task.task_id,
+    service: 'minimax',
+    url,
+    poster,
+    status,
+    prompt,
+    model,
+    duration,
+    aspect_ratio: aspectRatio,
+    created_at: normalizeTimestamp(task.created_at),
+    updated_at: normalizeTimestamp(task.last_feed ?? task.updated_at),
+    error: status === 'failed' ? errorMessage : undefined,
+    progress: normalizeProgress(task.progress ?? result?.progress),
+    extra: {
+      originalTask: task,
+      base_resp: task.base_resp,
+      file_id: fileInfo?.file_id ?? fileInfo?.id,
+      filename: fileInfo?.filename,
+      download_url: fileInfo?.download_url,
+      bytes: fileInfo?.bytes,
+    },
+  };
+}
+
+function mapMinimaxStatus(task: MinimaxTask): UnifiedVideoTask['status'] {
+  const status = (task.task_status || task.status || '').toString().toLowerCase();
+
+  if (['success', 'succeed', 'succeeded', 'finished', 'completed'].includes(status)) return 'success';
+  if (['failed', 'error', 'cancelled', 'canceled'].includes(status)) return 'failed';
+  if (['processing', 'running', 'in_progress', 'generating'].includes(status)) return 'processing';
+  if (['pending', 'created', 'queueing', 'queued', 'waiting'].includes(status)) return 'pending';
+
+  if (task.base_resp?.status_code && task.base_resp.status_code !== 0) return 'failed';
+
+  return 'pending';
+}
+
+/**
  * Sora2 → Unified
  */
 export function convertSora2ToUnified(task: Sora2Task): UnifiedVideoTask {
@@ -219,8 +334,8 @@ export function convertRunwayMLToUnified(task: any): UnifiedVideoTask {
  * 通用转换函数 - 根据服务类型自动选择转换器
  */
 export function convertToUnified(
-  task: ViduTask | RunwayTask | PikaTask | KlingTask | Sora2Task,
-  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2'
+  task: ViduTask | RunwayTask | PikaTask | KlingTask | Sora2Task | MinimaxTask,
+  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2' | 'minimax'
 ): UnifiedVideoTask {
   switch (service) {
     case 'vidu':
@@ -233,6 +348,8 @@ export function convertToUnified(
       return convertKlingToUnified(task as KlingTask);
     case 'sora2':
       return convertSora2ToUnified(task as Sora2Task);
+    case 'minimax':
+      return convertMinimaxToUnified(task as MinimaxTask);
     case 'runwayml':
       return convertRunwayMLToUnified(task);
     default:

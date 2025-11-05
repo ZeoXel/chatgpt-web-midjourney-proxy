@@ -25,7 +25,8 @@ const serviceInfo: Record<string, { name: string; color: string }> = {
   pika: { name: 'Pika', color: '#ff6b6b' },
   kling: { name: 'Kling', color: '#4ecdc4' },
   runwayml: { name: 'RunwayML', color: '#7f0df9' },
-  sora2: { name: 'Sora 2', color: '#52c41a' }
+  sora2: { name: 'Sora 2', color: '#52c41a' },
+  minimax: { name: 'MiniMax', color: '#2f54eb' }
 };
 
 const currentService = serviceInfo[props.task.service] || { name: props.task.service, color: '#666' };

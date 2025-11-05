@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import path from 'path'
 import fs from 'fs'
 import multer from 'multer'
@@ -16,12 +17,15 @@ import { auth, authV2, regCookie, turnstileCheck, verify } from './middleware/au
 import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
-import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, minimaxProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 import assetsRouter from './api/assets'
 import supabaseUploadRouter from './api/supabase-upload'
 
 const app = express()
 const router = express.Router()
+const isCloudStorageEnabled = process.env.ENABLE_CLOUD_STORAGE === 'true'
+const isDatabaseEnabled = process.env.ENABLE_DATABASE === 'true'
+const isSupabaseUploadEnabled = process.env.ENABLE_SUPABASE_UPLOAD !== 'false'
 
 app.use(express.static('public', {
   // 设置响应头，允许带有查询参数的请求访问静态文件
@@ -88,13 +92,13 @@ router.post('/session', async (req, res) => {
     const googleId = process.env.TJ_GOOGLE_ID ?? ''
     const notify = process.env.SYS_NOTIFY ?? ''
     const disableGpt4 = process.env.DISABLE_GPT4 ?? ''
-    const isUploadR2 = isNotEmptyString(process.env.R2_DOMAIN)
+    const isUploadR2 = isCloudStorageEnabled && isNotEmptyString(process.env.R2_DOMAIN)
     const isWsrv = process.env.MJ_IMG_WSRV ?? ''
     const uploadImgSize = process.env.UPLOAD_IMG_SIZE ?? '15'
     const gptUrl = process.env.GPT_URL ?? ''
     const theme = process.env.SYS_THEME ?? 'dark'
     const isCloseMdPreview = !!process.env.CLOSE_MD_PREVIEW
-    const uploadType = process.env.UPLOAD_TYPE
+    const uploadType = isCloudStorageEnabled ? process.env.UPLOAD_TYPE : ''
     const turnstile = process.env.TURNSTILE_SITE
     const menuDisable = process.env.MENU_DISABLE ?? ''
     const visionModel = process.env.VISION_MODEL ?? ''
@@ -127,6 +131,8 @@ router.post('/session', async (req, res) => {
       isApiGallery,
       cmodels,
       isUploadR2,
+      isDatabaseEnabled,
+      isSupabaseUploadEnabled,
       gptUrl,
       turnstile,
       menuDisable,
@@ -261,39 +267,50 @@ const R2Client = () => {
 }
 
 // cloudflare R2 upload
-app.post('/openapi/pre_signed', (req, res) => {
-  const bucketName = process.env.R2_BUCKET_NAME
-  const domain = process.env.R2_DOMAIN
-  const s3 = R2Client()
-  const fileName = uuidv4()
-  const saveFile = `${new Date().toISOString().split('T')[0]}/${fileName}${req.body.file_name}`
+if (isCloudStorageEnabled) {
+  app.post('/openapi/pre_signed', (req, res) => {
+    const bucketName = process.env.R2_BUCKET_NAME
+    const domain = process.env.R2_DOMAIN
+    const s3 = R2Client()
+    const fileName = uuidv4()
+    const saveFile = `${new Date().toISOString().split('T')[0]}/${fileName}${req.body.file_name}`
 
-  const params = {
-    Bucket: bucketName,
-    Key: saveFile,
-    ContentType: req.body.ContentType,
-    Expires: 60 * 60, // 1 hour
-  }
-
-  s3.getSignedUrl('putObject', params, (err, url) => {
-    if (err) {
-      res.status(500).json({
-        status: 'Error',
-        message: `Couldn't get presigned URL for PutObject: ${err.message}`,
-      })
-      return
+    const params = {
+      Bucket: bucketName,
+      Key: saveFile,
+      ContentType: req.body.ContentType,
+      Expires: 60 * 60, // 1 hour
     }
 
-    res.json({
-      status: 'Success',
-      message: '',
-      data: {
-        up: url,
-        url: `${domain}/${saveFile}`,
-      },
+    s3.getSignedUrl('putObject', params, (err, url) => {
+      if (err) {
+        res.status(500).json({
+          status: 'Error',
+          message: `Couldn't get presigned URL for PutObject: ${err.message}`,
+        })
+        return
+      }
+
+      res.json({
+        status: 'Success',
+        message: '',
+        data: {
+          up: url,
+          url: `${domain}/${saveFile}`,
+        },
+      })
     })
   })
-})
+}
+else {
+  app.post('/openapi/pre_signed', (_req, res) => {
+    res.status(503).json({
+      status: 'Error',
+      message: 'Cloud storage is disabled in this environment.',
+      data: null,
+    })
+  })
+}
 
 app.use(
   '/openapi/v1/audio/transcriptions', authV2,
@@ -360,8 +377,13 @@ app.use('/viggle', authV2, viggleProxy)
 app.use('/pro/viggle', authV2, viggleProxy)
 
 app.use('/runwayml', authV2, runwaymlProxy)
+
+// Runway 通用代理（使用 JSON 格式）
 app.use('/runway', authV2, runwayProxy)
+app.use('/pro/runway', authV2, runwayProxy)
 app.use('/kling', authV2, klingProxy)
+app.use('/minimax', authV2, minimaxProxy)
+app.use('/pro/minimax', authV2, minimaxProxy)
 
 app.use('/ideogram/remix', authV2, upload2.single('image_file'), ideoProxyFileDo)
 app.use('/ideogram', authV2, ideoProxy)
@@ -764,8 +786,30 @@ app.use('', router)
 app.use('/api', router)
 
 // AI资产存储API
-app.use('/api/assets', assetsRouter)
-app.use('/api/supabase', supabaseUploadRouter)
+if (isDatabaseEnabled) {
+  app.use('/api/assets', assetsRouter)
+}
+else {
+  app.use('/api/assets', (_req, res) => {
+    res.status(503).json({
+      success: false,
+      error: 'Database integration is disabled in this environment.',
+    })
+  })
+}
+
+// Supabase 上传接口（可独立控制）
+if (isSupabaseUploadEnabled) {
+  app.use('/api/supabase', supabaseUploadRouter)
+}
+else {
+  app.use('/api/supabase', (_req, res) => {
+    res.status(503).json({
+      success: false,
+      error: 'Supabase upload is disabled in this environment.',
+    })
+  })
+}
 
 app.set('trust proxy', 1)
 

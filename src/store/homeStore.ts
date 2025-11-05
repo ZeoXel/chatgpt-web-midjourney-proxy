@@ -114,6 +114,8 @@ export interface gptServerType{
     IDEO_KEY:string
     KLING_SERVER:string
     KLING_KEY:string
+    MINIMAX_SERVER:string
+    MINIMAX_KEY:string
     PIKA_SERVER:string
     PIKA_KEY:string
     SORA2_SERVER:string
@@ -163,6 +165,8 @@ let v:gptServerType={
         IDEO_KEY:'',
         KLING_SERVER:'',
         KLING_KEY:'',
+        MINIMAX_SERVER:'',
+        MINIMAX_KEY:'',
         PIKA_SERVER:'',
         PIKA_KEY:'',
         SORA2_SERVER:'',

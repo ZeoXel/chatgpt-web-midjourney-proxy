@@ -39,7 +39,7 @@ const refresh = () => {
 
 // 监听全局事件,自动刷新
 watch(() => homeStore.myData.act, (act) => {
-  const feedEvents = ['ViduFeed', 'RunwayFeed', 'PikaFeed', 'KlingFeed', 'RunwayMLFeed', 'Sora2Feed'];
+const feedEvents = ['ViduFeed', 'RunwayFeed', 'PikaFeed', 'KlingFeed', 'RunwayMLFeed', 'Sora2Feed', 'MiniMaxFeed'];
   if (feedEvents.includes(act)) {
     mlog('🔔 [UnifiedVideoList] Feed event received:', act);
     refresh();

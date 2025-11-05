@@ -446,6 +446,9 @@ export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
  * 从数据库加载MJ资产，转换为GalleryImage格式
  */
 async function loadMJFromDatabase(): Promise<GalleryImage[]> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return [];
+    }
     try {
         console.log('📡 [MJ DB Gallery] 正在从数据库加载MJ资产...');
 
@@ -477,6 +480,9 @@ async function loadMJFromDatabase(): Promise<GalleryImage[]> {
  * 从数据库加载DALL-E资产，转换为GalleryImage格式
  */
 async function loadDallFromDatabase(): Promise<GalleryImage[]> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return [];
+    }
     try {
         console.log('📡 [DALL-E DB Gallery] 正在从数据库加载DALL-E资产...');
 

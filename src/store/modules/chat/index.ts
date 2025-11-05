@@ -31,6 +31,9 @@ export const useChatStore = defineStore('chat-store', {
      * 在应用启动时调用
      */
     async loadFromDatabase() {
+      if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return
+      }
       try {
         console.log('[Chat Store] 🌐 开始从数据库加载对话历史...')
         const mergedState = await getLocalStateWithDB()

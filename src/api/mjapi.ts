@@ -553,6 +553,9 @@ export async function getMJAssetsFromDatabase(options?: {
     limit?: number;
     offset?: number;
 }): Promise<any[]> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return [];
+    }
     console.log('[MJ Asset Load] 🌐 开始从数据库加载资产...');
 
     try {
@@ -611,6 +614,9 @@ export async function getMJAssetsFromDatabase(options?: {
  * 当生成完成时自动调用（SUCCESS + 100% + 有图片URL）
  */
 async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return;
+    }
     try {
         // 获取用户的API Key
         const apiKey = gptServerStore.myData.OPENAI_API_KEY;

@@ -8,12 +8,13 @@ import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
 
 const router = Router();
+const isSupabaseUploadEnabled = process.env.ENABLE_SUPABASE_UPLOAD !== 'false';
 
 // 使用内存存储
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 限制
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB 限制（支持视频）
 });
 
 // 初始化 Supabase 客户端
@@ -42,6 +43,12 @@ function getSupabaseClient() {
  */
 router.post('/upload', upload.single('file'), async (req: any, res: any) => {
   try {
+    if (!isSupabaseUploadEnabled) {
+      return res.status(503).json({
+        success: false,
+        error: 'Supabase upload is disabled in this environment.',
+      });
+    }
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -50,7 +57,10 @@ router.post('/upload', upload.single('file'), async (req: any, res: any) => {
     }
 
     const supabase = getSupabaseClient();
-    const bucketName = 'pika-images'; // 固定使用 pika-images 存储桶
+
+    // 根据文件类型选择存储桶
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const bucketName = isVideo ? 'runway-videos' : 'pika-images';
 
     // 生成唯一文件路径
     const timestamp = Date.now();
@@ -137,6 +147,12 @@ router.post('/upload', upload.single('file'), async (req: any, res: any) => {
  */
 router.get('/health', async (req: any, res: any) => {
   try {
+    if (!isSupabaseUploadEnabled) {
+      return res.status(503).json({
+        success: false,
+        error: 'Supabase upload is disabled in this environment.',
+      });
+    }
     const supabase = getSupabaseClient();
 
     // 测试连接：列出存储桶

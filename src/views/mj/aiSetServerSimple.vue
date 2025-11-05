@@ -38,6 +38,7 @@ const syncSettings = () => {
   gptServerStore.myData.RUNWAY_SERVER = baseUrl
   gptServerStore.myData.IDEO_SERVER = baseUrl
   gptServerStore.myData.KLING_SERVER = baseUrl
+  gptServerStore.myData.MINIMAX_SERVER = baseUrl
   gptServerStore.myData.PIKA_SERVER = baseUrl
   gptServerStore.myData.PIXVERSE_SERVER = baseUrl
   gptServerStore.myData.UDIO_SERVER = baseUrl
@@ -53,6 +54,7 @@ const syncSettings = () => {
     gptServerStore.myData.RUNWAY_KEY = apiKey
     gptServerStore.myData.IDEO_KEY = apiKey
     gptServerStore.myData.KLING_KEY = apiKey
+    gptServerStore.myData.MINIMAX_KEY = apiKey
     gptServerStore.myData.PIKA_KEY = apiKey
     gptServerStore.myData.PIXVERSE_KEY = apiKey
     gptServerStore.myData.UDIO_KEY = apiKey
@@ -158,6 +160,10 @@ initializeDefaultUrl()
             <div class="flex items-center space-x-1">
               <span class="w-2 h-2 bg-green-500 rounded-full" />
               <span>Kling</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 bg-green-500 rounded-full" />
+              <span>MiniMax</span>
             </div>
             <div class="flex items-center space-x-1">
               <span class="w-2 h-2 bg-green-500 rounded-full" />

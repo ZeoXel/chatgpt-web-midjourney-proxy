@@ -179,11 +179,12 @@ export const GptUploader =   ( _url :string, FormData:FormData )=>{
     }
 
     //处理上传流程 
+    const allowR2 = homeStore.myData.session.isUploadR2 === true;
     const uploadType=   ( (homeStore.myData.session.uploadType??'') as string).toLocaleLowerCase() ;
     let headers=   {'Content-Type': 'multipart/form-data' }
     
     //R2
-    if(uploadType=='r2' ){
+    if(allowR2 && uploadType=='r2' ){
         return upLoaderR2(); 
     //容器
     }else if( uploadType=='container' ) { 
@@ -207,7 +208,7 @@ export const GptUploader =   ( _url :string, FormData:FormData )=>{
     }
 
     //默认上传流程
-    if(homeStore.myData.session.isUploadR2){
+    if(allowR2){
     return upLoaderR2();
     }
     return uploadNomal( _url);
@@ -250,6 +251,9 @@ function getAssetsApiPath(): string {
  * 支持模型: nano-banana, nano-banana-hd, doubao-seedream-4-0-250828, seedream-3.0
  */
 async function saveDallAssetToDatabase(chat: Chat.Chat, requestData: any): Promise<void> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return;
+    }
     try {
         // 获取用户的API Key
         const apiKey = gptServerStore.myData.OPENAI_API_KEY;
@@ -326,6 +330,9 @@ export async function getDallAssetsFromDatabase(options?: {
     limit?: number;
     offset?: number;
 }): Promise<any[]> {
+    if (!homeStore.myData.session?.isDatabaseEnabled) {
+        return [];
+    }
     console.log('[DALL-E Asset Load] 🌐 开始从数据库加载资产...');
 
     try {
@@ -964,6 +971,7 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
                 VIGGLE_SERVER:url,
                 IDEO_SERVER:url,
                 KLING_SERVER:url,
+                MINIMAX_SERVER:url,
                 PIKA_SERVER:url,
                 UDIO_SERVER:url,
                 PIXVERSE_SERVER:url,
@@ -979,6 +987,7 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
                 VIGGLE_KEY:key,
                 IDEO_KEY:key,
                 KLING_KEY:key,
+                MINIMAX_KEY:key,
                 PIKA_KEY:key,
                 UDIO_KEY:key,
                 PIXVERSE_KEY:key,

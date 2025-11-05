@@ -163,6 +163,9 @@ export async function saveChatToDatabase(
   chatData: Chat.Chat[],
   force = false
 ): Promise<void> {
+  if (!homeStore.myData.session?.isDatabaseEnabled) {
+    return
+  }
   try {
     const apiKey = gptServerStore.myData.OPENAI_API_KEY
 
@@ -249,6 +252,9 @@ let saveAllDebounceTimer: NodeJS.Timeout | null = null
  * @param immediate - 是否立即保存，跳过防抖
  */
 export async function saveAllChatsToDatabase(state: Chat.ChatState, immediate = false): Promise<void> {
+  if (!homeStore.myData.session?.isDatabaseEnabled) {
+    return
+  }
   // 防抖处理
   if (!immediate) {
     if (saveAllDebounceTimer) {
@@ -313,6 +319,9 @@ export async function saveAllChatsToDatabase(state: Chat.ChatState, immediate = 
  * @returns ChatState 包含所有对话
  */
 export async function getAllChatsFromDatabase(): Promise<Partial<Chat.ChatState> | null> {
+  if (!homeStore.myData.session?.isDatabaseEnabled) {
+    return null
+  }
   console.log('[Chat Load] 🌐 开始从数据库加载对话...')
 
   try {
@@ -409,6 +418,9 @@ export async function getAllChatsFromDatabase(): Promise<Partial<Chat.ChatState>
  * @param uuid - 对话UUID
  */
 export async function deleteChatFromDatabase(uuid: number): Promise<void> {
+  if (!homeStore.myData.session?.isDatabaseEnabled) {
+    return
+  }
   try {
     const apiKey = gptServerStore.myData.OPENAI_API_KEY
     if (!apiKey) {

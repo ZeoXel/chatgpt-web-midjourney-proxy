@@ -7,8 +7,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+const isDatabaseEnabled = process.env.ENABLE_DATABASE === 'true';
+
 // 初始化 Supabase 客户端
 const getSupabaseClient = () => {
+  if (!isDatabaseEnabled) {
+    throw new Error('Database integration is disabled.');
+  }
+
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -241,6 +247,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!isDatabaseEnabled) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database integration is disabled in this environment.'
+      });
+    }
     // 认证
     const authResult = await authenticateApiKey(req);
     if (!authResult.authenticated) {

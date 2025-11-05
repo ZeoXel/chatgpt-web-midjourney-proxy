@@ -15,26 +15,44 @@
 
 import { Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const router = Router();
+const isDatabaseEnabled = process.env.ENABLE_DATABASE === 'true';
 
-// 初始化Supabase客户端
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+let supabase: SupabaseClient | null = null;
+if (isDatabaseEnabled) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    supabase = createClient(
+      supabaseUrl,
+      supabaseKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
   }
-);
+  else {
+    console.warn('[Assets API] 缺少 Supabase 配置，已禁用数据库读取功能');
+  }
+}
 
 /**
  * 认证中间件：从请求头提取api_key并映射到user_id
  */
 async function authenticateApiKey(req: any, res: any, next: any) {
   try {
+    if (!isDatabaseEnabled || !supabase) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database integration is disabled in this environment.'
+      });
+    }
     // 从请求头获取api_key
     const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
 

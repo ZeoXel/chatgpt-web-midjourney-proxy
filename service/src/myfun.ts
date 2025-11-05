@@ -31,7 +31,15 @@ export const runwayProxy = proxy(process.env.RUNWAY_SERVER ?? API_BASE_URL, {
   https: false,
   limit: '15mb',
   proxyReqPathResolver(req) {
-    return req.originalUrl // req.originalUrl.replace('/sunoapi', '') // 将URL中的 `/openapi` 替换为空字符串
+    // 移除 /runway 或 /pro/runway 前缀
+    let url = req.originalUrl
+    if (url.startsWith('/pro/runway')) {
+      url = url.replace('/pro/runway', '')
+    } else if (url.startsWith('/runway')) {
+      url = url.replace('/runway', '')
+    }
+    console.log('[Runway Proxy] Original URL:', req.originalUrl, '→ Proxied URL:', url)
+    return url
   },
   proxyReqOptDecorator(proxyReqOpts, srcReq) {
     // mlog("sunoapi")
@@ -83,6 +91,24 @@ export const klingProxy = proxy(process.env.KLING_SERVER ?? API_BASE_URL, {
       proxyReqOpts.headers.Authorization = `Bearer ${process.env.KLING_KEY}`
     else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
     proxyReqOpts.headers['Content-Type'] = 'application/json'
+    proxyReqOpts.headers['Mj-Version'] = pkg.version
+    return proxyReqOpts
+  },
+
+})
+
+export const minimaxProxy = proxy(process.env.MINIMAX_SERVER ?? API_BASE_URL, {
+  https: false,
+  limit: '15mb',
+  proxyReqPathResolver(req) {
+    return req.originalUrl
+  },
+  proxyReqOptDecorator(proxyReqOpts, srcReq) {
+    if (process.env.MINIMAX_KEY)
+      proxyReqOpts.headers.Authorization = `Bearer ${process.env.MINIMAX_KEY}`
+    else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
+    proxyReqOpts.headers['Content-Type'] = 'application/json'
+    proxyReqOpts.headers['Accept-Encoding'] = 'identity'
     proxyReqOpts.headers['Mj-Version'] = pkg.version
     return proxyReqOpts
   },
