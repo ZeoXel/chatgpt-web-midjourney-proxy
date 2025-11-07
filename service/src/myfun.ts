@@ -289,6 +289,7 @@ export const sunoProxy = proxy(process.env.SUNO_SERVER ?? API_BASE_URL, {
 export const sora2Proxy = proxy(process.env.SORA2_SERVER ?? API_BASE_URL, {
   https: false,
   limit: '15mb',
+  timeout: 120000, // 设置 2 分钟超时（用于文件上传）
   proxyReqPathResolver(req) {
     const targetServer = process.env.SORA2_SERVER ?? API_BASE_URL
     console.log(`[Sora2] 代理请求到: ${targetServer}${req.originalUrl}`)
@@ -332,7 +333,8 @@ export const sora2Proxy = proxy(process.env.SORA2_SERVER ?? API_BASE_URL, {
       }
     }
     catch (e) {
-      // 如果不是JSON，忽略
+      // 如果不是JSON，记录原始响应
+      console.log('[Sora2] 响应不是 JSON，原始数据:', proxyResData.toString('utf8').substring(0, 500))
     }
     return proxyResData
   },

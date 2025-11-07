@@ -83,28 +83,58 @@ export const sora2Fetch=(url:string, data?:any, opt2?:any)=>{
         }
         fetch(finalUrl, opt)
         .then(async (d) =>{
-            if (!d.ok) {
-                let msg = '发生错误: '+ d.status
-                try{
-                  let bjson:any = await d.json();
-                  msg = '('+ d.status+')发生错误: '+(bjson?.error?.message??'')
-                }catch(e){
+            // ✅ 先尝试获取响应文本（无论状态码）
+            let responseText = '';
+            let responseData: any = null;
+
+            try {
+                responseText = await d.text();
+                mlog('sora2Fetch response text:', responseText);
+
+                // 尝试解析 JSON
+                if (responseText && responseText.trim().length > 0) {
+                    try {
+                        responseData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        mlog('⚠️ JSON 解析失败，响应文本:', responseText.substring(0, 200));
+                    }
                 }
+            } catch (textError) {
+                mlog('⚠️ 无法读取响应文本:', textError);
+            }
+
+            // ✅ 特殊处理：如果返回 500 但包含有效的任务 ID，视为成功
+            // 原因：某些网关在任务提交成功后处理响应时可能超时，但任务已创建
+            if (!d.ok) {
+                // 检查是否有任务 ID（表示任务已创建）
+                if (responseData && responseData.id) {
+                    mlog('⚠️ [Sora2] 虽然返回错误状态，但检测到任务 ID，视为提交成功:', responseData.id);
+                    resolve(responseData); // 返回任务数据
+                    return;
+                }
+
+                // 真正的错误
+                let msg = `发生错误: ${d.status}`;
+                if (responseData?.message) {
+                    msg = `(${d.status}) ${responseData.message}`;
+                } else if (responseData?.error?.message) {
+                    msg = `(${d.status}) ${responseData.error.message}`;
+                }
+
                 // 只在非静默模式下显示错误
                 if (!silent) {
-                    homeStore.myData.ms && homeStore.myData.ms.error(msg)
+                    homeStore.myData.ms && homeStore.myData.ms.error(msg);
                 }
                 throw new Error(msg);
             }
 
-            d.json().then(d=> resolve(d)).catch(e=>{
-                // 只在非静默模式下显示错误
-                if (!silent) {
-                    homeStore.myData.ms && homeStore.myData.ms.error('发生错误'+ e)
-                }
-                reject(e)
+            // 正常响应
+            if (responseData) {
+                resolve(responseData);
+            } else {
+                throw new Error('响应为空或无效');
             }
-        )})
+        })
         .catch(e=>{
             // 只在非静默模式下显示错误
             if (!silent) {
@@ -149,6 +179,12 @@ export const sora2Feed = async(id:string)=>{
             mlog("sora2 task", a)
 
             task.last_feed = new Date().getTime()
+            if (!task.url && task.video_url)
+                task.url = task.video_url;
+            if (typeof task.progress === 'string') {
+                const parsed = Number(task.progress);
+                task.progress = Number.isNaN(parsed) ? task.progress : parsed;
+            }
 
             // 保存到旧Store (保留兼容性)
             store.save(task)

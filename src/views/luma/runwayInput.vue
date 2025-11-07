@@ -1,27 +1,28 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { runwayVideo2Video } from '@/api/runway';
+import { runwayAlephContext } from '@/api/runway';
 import { homeStore } from '@/store';
-import { useMessage, NInput, NButton, NTag, NSlider, NSwitch } from 'naive-ui';
+import { useMessage, NInput, NButton, NTag } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
-import { smartUploadVideo, getVideoDuration } from '@/api/videoUpload';
+import { smartUploadVideo, getVideoDuration, type VideoUploadResult } from '@/api/videoUpload';
 
 const fsRef = ref();
 const videoUrl = ref<string>('');
 const videoFile = ref<File | null>(null);
 const prompt = ref<string>('');
 const videoDuration = ref<number>(0);
+const supabaseUpload = ref<VideoUploadResult | null>(null);
 const st = ref({
     isDo: false,
-    uploading: false,
-    structure_transformation: 0.3,  // 降低默认值以更好地保留原视频内容
-    flip: false
+    uploading: false
 });
 const ms = useMessage();
 
 async function selectFile(input: any) {
     const file = input.target.files[0];
     if (!file) return;
+
+    supabaseUpload.value = null;
 
     // 检查文件类型
     const validTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
@@ -35,16 +36,16 @@ async function selectFile(input: any) {
         return;
     }
 
-    // 检查文件大小（建议不超过 200MB）
+    // 检查文件大小（Aleph 限制 50MB）
     const sizeMB = file.size / 1024 / 1024;
-    const maxSizeMB = 200;
+    const maxSizeMB = 50;
 
     if (sizeMB > maxSizeMB) {
         ms.error(`视频大小 ${sizeMB.toFixed(2)}MB 超过限制 ${maxSizeMB}MB`);
         return;
     }
 
-    if (sizeMB > 100) {
+    if (sizeMB > 30) {
         ms.warning(`视频文件较大 (${sizeMB.toFixed(2)}MB)，提交时可能需要较长时间`);
     }
 
@@ -64,27 +65,40 @@ async function selectFile(input: any) {
 
         // 上传视频到 Supabase
         const result = await smartUploadVideo(file, maxSizeMB);
+        if (result.type !== 'url') {
+            ms.error('视频上传失败：未获取到可访问的云端地址，请检查 Supabase 配置或稍后重试');
+            videoUrl.value = '';
+            videoFile.value = null;
+            videoDuration.value = 0;
+            supabaseUpload.value = null;
+            st.value.uploading = false;
+            return;
+        }
+
         videoUrl.value = result.url;
         videoFile.value = file;
+        supabaseUpload.value = result;
 
         const durationInfo = videoDuration.value > 0
             ? `, 时长 ${videoDuration.value.toFixed(1)}秒`
             : '';
 
         // 根据上传类型显示不同的提示
-        if (result.type === 'url') {
-            ms.success(`视频上传成功 (${sizeMB.toFixed(2)}MB${durationInfo})`);
-        } else {
-            ms.success(`视频已选择 (${sizeMB.toFixed(2)}MB${durationInfo}) - 使用本地预览`);
-        }
+        ms.success(`视频上传成功 (${sizeMB.toFixed(2)}MB${durationInfo})`);
+
+        st.value.uploading = false;
     } catch (e: any) {
         console.error('视频上传错误:', e);
         ms.error(`视频上传失败: ${e.message || e}`);
         videoUrl.value = '';
         videoFile.value = null;
         videoDuration.value = 0;
+        supabaseUpload.value = null;
     }
     st.value.uploading = false;
+    if (input?.target) {
+        input.target.value = '';
+    }
 }
 
 const clearInput = () => {
@@ -97,8 +111,7 @@ const clearInput = () => {
     videoFile.value = null;
     prompt.value = '';
     videoDuration.value = 0;
-    st.value.structure_transformation = 0.3;  // 降低默认值以更好地保留原视频内容
-    st.value.flip = false;
+    supabaseUpload.value = null;
 };
 
 const generate = async () => {
@@ -111,17 +124,29 @@ const generate = async () => {
         return;
     }
 
+    if (!videoUrl.value.startsWith('http')) {
+        ms.error('视频未上传到可公开访问的地址，请重新上传');
+        return;
+    }
+
     st.value.isDo = true;
     try {
-        // 传递视频 URL（Supabase 公网 URL 或 Blob URL）
-        await runwayVideo2Video(
+        // 调试日志 - 输出完整的请求参数
+        console.log('🎬 [Runway Submit] 准备提交任务:', {
+            videoUrl: videoUrl.value,
+            prompt: prompt.value,
+            supabaseUpload: supabaseUpload.value
+        });
+
+        // 传递视频 URL（必须是 Supabase 等可访问的公网地址）
+        await runwayAlephContext(
             videoUrl.value,
-            'runway-video2video',
             prompt.value,
-            st.value.structure_transformation,
-            st.value.flip
+            {
+                seconds: 5
+            }
         );
-        ms.success('Video2Video 任务已提交');
+        ms.success('Aleph 任务已提交');
     } catch (e: any) {
         ms.error(e.message || e);
     }
@@ -193,40 +218,20 @@ onUnmounted(() => {
                         <div class="text-center text-xs" v-else>
                             <div>点击上传</div>
                             <div class="text-[10px] text-gray-500 mt-1">MP4/MOV/WebM</div>
-                            <div class="text-[9px] text-gray-600 mt-0.5">最大200MB</div>
+                            <div class="text-[9px] text-gray-600 mt-0.5">最大50MB</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 结构改造强度 -->
-        <div class="pt-2">
-            <div class="flex justify-between items-center mb-1">
-                <span class="text-sm">结构改造强度</span>
-                <span class="text-xs text-gray-400">{{ st.structure_transformation.toFixed(2) }}</span>
-            </div>
-            <n-slider
-                v-model:value="st.structure_transformation"
-                :step="0.01"
-                :min="0"
-                :max="1"
-                size="small"
-            />
-            <div class="flex justify-between text-[10px] text-gray-500 mt-1">
-                <span>保留结构</span>
-                <span>完全重绘</span>
+            <div
+                class="pt-2 text-xs"
+                :class="videoUrl ? 'text-green-500' : 'text-gray-500'"
+            >
+                <span v-if="videoUrl">视频已上传到云端，Aleph 将自动分析上下文</span>
+                <span v-else>上传 3-10 秒短视频可获得最佳效果</span>
             </div>
         </div>
-
-        <!-- 视频方向 -->
-        <section class="pt-2 flex justify-between items-center">
-            <div class="text-sm">视频方向</div>
-            <n-switch v-model:value="st.flip" size="small">
-                <template #checked>竖屏(9:16)</template>
-                <template #unchecked>横屏(16:9)</template>
-            </n-switch>
-        </section>
 
         <!-- 操作按钮 -->
         <section class="pt-3 flex justify-end items-end">
@@ -256,9 +261,10 @@ onUnmounted(() => {
         <!-- 说明 -->
         <div class="pt-2 text-[11px] text-gray-500">
             <div>• 支持格式: MP4、MOV、AVI、WebM</div>
-            <div>• 文件大小: 最大 200MB</div>
-            <div>• 建议时长: 3-10秒 (短视频效果更佳)</div>
-            <div>• 结构改造强度: 越低越保留原视频结构</div>
+            <div>• 文件大小: 最大 50MB (Aleph 限制)</div>
+            <div>• 固定时长: Aleph Alpha 输出约 5 秒</div>
+            <div>• 建议时长: 3-10 秒 (短视频效果更佳)</div>
+            <div>• 分辨率由模型根据输入自动匹配</div>
         </div>
     </div>
 </template>

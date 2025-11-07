@@ -26,6 +26,9 @@ export interface UnifiedVideoTask {
   error?: string;                 // 错误信息
   progress?: number;              // 进度 0-100
   extra?: Record<string, any>;    // 服务特有数据,用于扩展功能
+  expired?: boolean;              // 链接是否已过期
+  expire_reason?: string;         // 过期原因
+  expired_at?: number;            // 标记过期时间
 }
 
 /**
@@ -58,18 +61,35 @@ export class UnifiedVideoStore {
 
     if (index > -1) {
       // 更新现有任务 - 保留原始created_at，但验证合理性
-      const existingCreatedAt = arr[index].created_at;
+      const existing = arr[index];
+      const existingCreatedAt = existing.created_at;
+      const hasUrlChanged = task.url && task.url !== existing.url;
+      const nextExpired = task.expired ?? (hasUrlChanged ? false : existing.expired ?? false);
+      const nextExpireReason = nextExpired
+        ? task.expire_reason ?? (hasUrlChanged ? undefined : existing.expire_reason)
+        : undefined;
+      const nextExpiredAt = nextExpired
+        ? task.expired_at ?? (hasUrlChanged ? undefined : existing.expired_at)
+        : undefined;
+
       arr[index] = {
+        ...existing,
         ...task,
         created_at: existingCreatedAt, // 保留原始创建时间
-        updated_at: now
+        updated_at: now,
+        expired: nextExpired,
+        expire_reason: nextExpireReason,
+        expired_at: nextExpiredAt
       };
     } else {
       // 添加新任务
       arr.push({
         ...task,
         created_at: validatedCreatedAt,
-        updated_at: now
+        updated_at: now,
+        expired: task.expired ?? false,
+        expire_reason: task.expire_reason,
+        expired_at: task.expired_at
       });
     }
 
@@ -147,6 +167,34 @@ export class UnifiedVideoStore {
       console.log(`✅ Video cleanup completed: ${arr.length} tasks remaining`);
     } catch (error) {
       console.error('Failed to cleanup video tasks:', error);
+    }
+  }
+
+  /**
+   * 标记指定任务的链接为过期状态
+   */
+  markExpired(id: string, reason?: string) {
+    try {
+      const arr = this.getAll();
+      const index = arr.findIndex(task => task.id === id);
+      if (index === -1)
+        return false;
+
+      if (arr[index].expired)
+        return false;
+
+      arr[index] = {
+        ...arr[index],
+        expired: true,
+        expire_reason: reason,
+        expired_at: Date.now()
+      };
+
+      ss.set(this.localKey, arr);
+      return true;
+    } catch (error) {
+      console.error('Failed to mark video task expired:', error);
+      return false;
     }
   }
 

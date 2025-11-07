@@ -89,11 +89,14 @@ function determineRunwayModel(task: RunwayTask): string {
   if (task.taskType === 'gen3a_turbo') return 'gen3a_turbo';
   if (task.taskType === 'europa') return 'gen3';
   if (task.taskType === 'europa-fast') return 'gen3-fast';
+  if (task.taskType === 'aleph') return 'runway-aleph';
 
   // video2video 任务检测：如果有 video_prompt 或 structure_transformation
   if (task.options?.video_prompt || task.options?.structure_transformation !== undefined) {
     return 'runway-video2video';
   }
+
+  if (task.options?.seconds === 5) return 'runway-aleph';
 
   if (task.options?.gen2Options) return 'gen2';
   return 'runway-gen3'; // 默认
@@ -290,22 +293,41 @@ function mapMinimaxStatus(task: MinimaxTask): UnifiedVideoTask['status'] {
  * Sora2 → Unified
  */
 export function convertSora2ToUnified(task: Sora2Task): UnifiedVideoTask {
+  const normalizeTimestamp = (value?: number) => {
+    if (!value) return Date.now();
+    return value < 10000000000 ? value * 1000 : value;
+  };
+
+  const normalizeProgress = (value?: number | string) => {
+    if (value === undefined || value === null) return undefined;
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (Number.isNaN(numeric)) return undefined;
+    if (numeric > 1) return Math.round(numeric);
+    if (numeric >= 0 && numeric <= 1) return Math.round(numeric * 100);
+    return undefined;
+  };
+
+  const videoUrl = task.video_url || task.url || '';
+
   return {
     id: task.id,
     service: 'sora2',
-    url: task.url || '',
+    url: videoUrl,
     poster: task.thumbnail,
     status: mapSora2Status(task.status),
     prompt: task.prompt,
     model: task.model,
     duration: task.seconds ? parseFloat(task.seconds) : undefined,
-    created_at: task.created_at || Date.now(),
-    updated_at: task.last_feed || Date.now(),
+    created_at: normalizeTimestamp(task.created_at),
+    updated_at: task.last_feed || normalizeTimestamp(task.completed_at ?? task.created_at),
     error: task.error,
+    progress: normalizeProgress(task.progress),
     extra: {
       originalTask: task,
       size: task.size,
       watermark: task.watermark,
+      video_url: videoUrl,
+      completed_at: task.completed_at ? normalizeTimestamp(task.completed_at) : undefined,
     }
   };
 }

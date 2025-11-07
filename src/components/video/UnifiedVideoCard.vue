@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { UnifiedVideoTask } from '@/api/videoStore';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import { UnifiedVideoTask, UnifiedVideoStore } from '@/api/videoStore';
 import { NButton, NButtonGroup, NPopconfirm } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
@@ -17,6 +17,13 @@ const emit = defineEmits<{
 }>();
 
 const isHover = ref(false);
+const videoRef = ref<HTMLVideoElement | null>(null);
+const DEFAULT_EXPIRE_TEXT = '链接已过期';
+const expireState = ref(props.task.expired === true);
+const expireReason = ref(props.task.expire_reason || (expireState.value ? DEFAULT_EXPIRE_TEXT : ''));
+const checking = ref(false);
+const hasChecked = ref(false); // ✅ 标记是否已经检查过可用性
+const store = new UnifiedVideoStore();
 
 // 服务信息映射
 const serviceInfo: Record<string, { name: string; color: string }> = {
@@ -30,6 +37,105 @@ const serviceInfo: Record<string, { name: string; color: string }> = {
 };
 
 const currentService = serviceInfo[props.task.service] || { name: props.task.service, color: '#666' };
+const hasPreview = computed(() => props.task.status === 'success' && !!props.task.url && !expireState.value);
+
+const markExpired = (reason?: string) => {
+  if (expireState.value)
+    return;
+
+  expireState.value = true;
+  expireReason.value = reason ? `${DEFAULT_EXPIRE_TEXT} (${reason})` : DEFAULT_EXPIRE_TEXT;
+  store.markExpired(props.task.id, expireReason.value);
+};
+
+const handleVideoError = () => {
+  markExpired('load error');
+};
+
+const checkAvailability = async () => {
+  // ✅ 防止重复检查: 已检查过、正在检查、已过期、无URL
+  if (hasChecked.value || checking.value || expireState.value || !props.task.url)
+    return;
+
+  checking.value = true;
+  hasChecked.value = true; // ✅ 标记为已检查,防止重复
+
+  try {
+    let headResponse: Response | null = null;
+    try {
+      headResponse = await fetch(props.task.url, { method: 'HEAD' });
+    }
+    catch (error) {
+      console.warn('[UnifiedVideoCard] HEAD availability check failed:', error);
+    }
+
+    if (headResponse) {
+      if (headResponse.ok)
+        return;
+
+      if (headResponse.status >= 400 && headResponse.status !== 405 && headResponse.status !== 501) {
+        markExpired(`HTTP ${headResponse.status}`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(props.task.url, {
+        method: 'GET',
+        headers: {
+          Range: 'bytes=0-1'
+        }
+      });
+      if (!response.ok && response.status >= 400)
+        markExpired(`HTTP ${response.status}`);
+    }
+    catch (error) {
+      console.warn('[UnifiedVideoCard] Range availability check failed:', error);
+    }
+  }
+  catch (error) {
+    console.warn('[UnifiedVideoCard] Availability check failed:', error);
+  }
+  finally {
+    checking.value = false;
+  }
+};
+
+const tryLoadVideo = async () => {
+  if (!hasPreview.value)
+    return;
+  await nextTick();
+  videoRef.value?.load();
+  checkAvailability();
+};
+
+onMounted(() => {
+  if (expireState.value)
+    return;
+  tryLoadVideo();
+});
+
+// ✅ 优化watch: 只监听真正会影响视频可用性的关键属性,忽略updated_at避免轮询时重复触发
+watch(() => [props.task.url, props.task.status, props.task.expired, props.task.expire_reason], ([newUrl, newStatus, newExpired, newExpireReason], [oldUrl, oldStatus, oldExpired, oldExpireReason]) => {
+  // 更新过期状态
+  expireState.value = props.task.expired === true;
+  expireReason.value = props.task.expire_reason || (expireState.value ? DEFAULT_EXPIRE_TEXT : '');
+
+  if (expireState.value)
+    return;
+
+  // ✅ 只在URL变化或状态变为成功时才重新检查
+  const urlChanged = newUrl !== oldUrl;
+  const statusChangedToSuccess = newStatus === 'success' && oldStatus !== 'success';
+
+  if (urlChanged || statusChangedToSuccess) {
+    // URL变化时重置检查标记,允许重新检查
+    if (urlChanged) {
+      hasChecked.value = false;
+    }
+    tryLoadVideo();
+  }
+});
 </script>
 
 <template>
@@ -41,25 +147,41 @@ const currentService = serviceInfo[props.task.service] || { name: props.task.ser
     <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85]">
 
       <!-- 成功状态 - 显示视频 -->
-      <template v-if="task.status === 'success' && task.url">
+      <template v-if="hasPreview">
         <video
+          ref="videoRef"
           loop
           playsinline
+          muted
           :controls="isHover"
           :poster="task.poster"
+          preload="metadata"
+          @error="handleVideoError"
           controlsList="nodownload"
           class="w-full h-full object-cover"
           referrerpolicy="no-referrer"
         >
-          <!-- 性能优化:悬停时才加载视频源 -->
           <source
-            v-if="isHover"
             :src="task.url"
             type="video/mp4"
             referrerpolicy="no-referrer"
           >
         </video>
       </template>
+
+      <!-- 过期状态 -->
+      <div
+        v-else-if="expireState"
+        class="w-full h-[200px] flex flex-col justify-center items-center text-center p-4 bg-black/10 dark:bg-white/5"
+      >
+        <SvgIcon icon="mdi:link-variant-off" size="lg" class="text-red-400 mb-2" />
+        <div class="text-red-400 font-medium">
+          {{ expireReason || DEFAULT_EXPIRE_TEXT }}
+        </div>
+        <div class="text-xs text-gray-400 mt-1">
+          更新时间: {{ new Date(task.updated_at).toLocaleString() }}
+        </div>
+      </div>
 
       <!-- 失败状态 -->
       <div
@@ -130,7 +252,7 @@ const currentService = serviceInfo[props.task.service] || { name: props.task.ser
         <n-button-group size="tiny">
           <!-- 下载按钮 -->
           <n-button
-            v-if="task.status === 'success' && task.url"
+            v-if="task.status === 'success' && task.url && !expireState"
             size="tiny"
             round
             ghost

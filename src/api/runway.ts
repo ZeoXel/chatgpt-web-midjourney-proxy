@@ -50,10 +50,18 @@ export const getUrl = (url: string) => {
         return `${gptServerStore.myData.OPENAI_API_BASE_URL}${url}`;
     }
 
-    // 后端代理模式：需要处理 /pro 前缀
-    const pro_prefix = url.indexOf('/pro') > -1 ? '/pro' : '';
-    url = url.replaceAll('/pro', '');
-    return `${pro_prefix}/runway${url}`;
+    // 本地代理模式下保持原始路径结构，避免错误移除 /pro 前缀
+    let normalized = url.startsWith('/') ? url : `/${url}`;
+
+    if (normalized.startsWith('/runway') || normalized.startsWith('/pro/runway')) {
+        return normalized;
+    }
+
+    if (normalized.startsWith('/pro')) {
+        return `/pro/runway${normalized.slice(4)}`;
+    }
+
+    return `/runway${normalized}`;
 }
 
 /**
@@ -107,6 +115,72 @@ export const runwayFetch = (url: string, data?: any, opt2?: any) => {
     });
 }
 
+export interface RunwayUploadRequest {
+    url: string;
+    bucket?: string;
+    path?: string;
+    filename?: string;
+    contentType?: string;
+    size?: number;
+    assetType?: 'video' | 'image' | 'audio';
+    extra?: Record<string, any>;
+}
+
+export interface RunwayUploadResponse {
+    asset_id: string;
+    asset_url?: string;
+    bytes?: number;
+    content_type?: string;
+    reuse?: boolean;
+    reused?: boolean;
+    [key: string]: any;
+}
+
+export const runwayUploadAsset = async (options: RunwayUploadRequest): Promise<RunwayUploadResponse> => {
+    const payload: any = {
+        asset_type: options.assetType ?? 'video',
+        source: {
+            type: 'supabase_public_url',
+            url: options.url
+        }
+    };
+
+    if (options.bucket) payload.source.bucket = options.bucket;
+    if (options.path) payload.source.path = options.path;
+
+    const metadata: any = {};
+    if (options.filename) metadata.filename = options.filename;
+    if (options.contentType) metadata.content_type = options.contentType;
+    if (typeof options.size === 'number') metadata.size = options.size;
+    if (Object.keys(metadata).length > 0) payload.metadata = metadata;
+
+    if (options.extra && typeof options.extra === 'object') {
+        Object.assign(payload, options.extra);
+    }
+
+    mlog('📤 [runwayUploadAsset] 上传请求:', payload);
+
+    const result = await runwayFetch('/runway/uploads', payload);
+
+    mlog('📥 [runwayUploadAsset] 网关响应:', result);
+
+    if (typeof result?.code === 'number' && result.code !== 200) {
+        const message = result?.msg || result?.message || result?.error?.message || 'Runway 上传失败';
+        throw new Error(message);
+    }
+    const data = result?.data ?? result;
+
+    // 验证返回的 asset_id
+    const assetId = data?.asset_id ?? data?.id;
+    if (!assetId) {
+        mlog('⚠️ [runwayUploadAsset] 警告: 网关未返回 asset_id!', data);
+    } else {
+        mlog('✅ [runwayUploadAsset] 成功获取 asset_id:', assetId);
+    }
+
+    return data as RunwayUploadResponse;
+};
+
 /**
  * 任务轮询监控
  * 每 5.2 秒检查一次任务状态，最多 200 次
@@ -123,7 +197,7 @@ export const runwayFeed = async (id: string) => {
         url: '',
         status: 'pending',
         prompt: 'Loading...',
-        model: 'runway-video2video',
+        model: 'runway-aleph',
         created_at: Date.now(),
         updated_at: Date.now()
     };
@@ -157,8 +231,8 @@ export const runwayFeed = async (id: string) => {
                 image: null,
                 createdAt: taskData.create_time ? new Date(parseInt(taskData.create_time) * 1000).toISOString() : new Date().toISOString(),
                 updatedAt: taskData.update_time ? new Date(parseInt(taskData.update_time) * 1000).toISOString() : new Date().toISOString(),
-                taskType: 'video2video',
-                options: {},
+                taskType: 'aleph',
+                options: { seconds: 5 },
                 // status 映射: "1"=处理中, "2"=失败, "3"=成功
                 status: taskData.status === '3' ? 'SUCCEEDED' : taskData.status === '2' ? 'FAILED' : 'RUNNING',
                 error: taskData.msg,
@@ -195,46 +269,57 @@ export const runwayFeed = async (id: string) => {
 }
 
 /**
- * Video to Video - 视频转视频风格重绘
- * @param videoUrl 视频 URL（Supabase 公网 URL 或其他可访问 URL）
- * @param model 模型名称（例如：runway-video2video）
- * @param prompt 描述词（支持中文）
- * @param structure_transformation 结构改造 0-1 之间
- * @param flip 是否竖屏（默认为 false，即 16:9 宽屏）
+ * Aleph 上下文视频模型（Alpha）
+ * @param videoUrl 可公开访问的视频地址,最大 50MB
+ * @param prompt 正向提示词
+ * @param options 可选项: seconds(默认5)、images(最多1张)、extraOptions(透传给 options)
  */
-export const runwayVideo2Video = async (
+export const runwayAlephContext = async (
     videoUrl: string,
-    model: string,
     prompt: string,
-    structure_transformation: number,
-    flip: boolean = false
+    options?: {
+        seconds?: number;
+        images?: string[];
+        extraOptions?: Record<string, any>;
+    }
 ) => {
-    const payload = {
-        model,
+    if (!videoUrl) throw new Error('视频地址不能为空');
+    if (!prompt) throw new Error('提示词不能为空');
+
+    const seconds = Number.isFinite(options?.seconds) ? Number(options?.seconds) : 5;
+    const payload: Record<string, any> = {
+        video: videoUrl,
         prompt,
-        video_url: videoUrl,
-        structure_transformation,
-        flip
+        options: {
+            seconds,
+            ...(options?.extraOptions ?? {})
+        }
     };
 
-    mlog('runwayVideo2Video', payload);
+    if (options?.images?.length) {
+        payload.images = options.images.slice(0, 1);
+    }
+
+    mlog('runwayAlephContext payload:', payload);
 
     try {
-        // 发送 JSON 请求到网关 - 使用 Runway 专用路径
-        const result = await runwayFetch('/runway/v1/pro/video2video', payload);
-        mlog('runwayVideo2Video result', result);
+        const result = await runwayFetch('/runway/v1/pro/aleph', payload);
+        if (typeof result?.code === 'number' && result.code !== 200) {
+            const message = result?.msg || result?.message || result?.error?.message || 'Runway Aleph 请求失败';
+            throw new Error(message);
+        }
+        mlog('runwayAlephContext result', result);
 
-        // Runway 网关返回格式: { code: 200, data: { task_id: "..." } }
         const taskId = result.data?.task_id || result.id;
 
         if (taskId) {
-            mlog('🎬 Starting feed for video2video task:', taskId);
+            mlog('🎬 Starting feed for Aleph task:', taskId);
             runwayFeed(taskId);
         }
 
         return result;
     } catch (error) {
-        mlog('runwayVideo2Video error', error);
+        mlog('runwayAlephContext error', error);
         throw error;
     }
 }

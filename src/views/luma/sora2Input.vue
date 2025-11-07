@@ -6,6 +6,7 @@ import { homeStore } from '@/store';
 import { t } from "@/locales";
 import { sora2Feed, sora2Fetch } from '@/api/sora2';
 import { UnifiedVideoStore, UnifiedVideoTask } from '@/api/videoStore';
+import { compressImage } from '@/utils/imageCompressor';
 
 // Sora2 尺寸选项
 const sizeOptions = [
@@ -40,38 +41,62 @@ async function selectFile(input: any) {
     const file = input.target.files[0];
     if (!file) return;
 
+    // ✅ 验证文件类型和大小
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+        ms.error('仅支持 JPG、PNG、GIF 格式的图片');
+        return;
+    }
+
+    const maxSize = 15 * 1024 * 1024; // 15MB
+    if (file.size > maxSize) {
+        ms.error('图片大小不能超过 15MB');
+        return;
+    }
+
     try {
-        // ✅ 验证文件类型和大小
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        if (!validTypes.includes(file.type)) {
-            ms.error('仅支持 JPG、PNG、GIF 格式的图片');
-            return;
+        const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        mlog(`📤 开始处理图片: ${file.name} (${originalSizeMB}MB)`);
+
+        // ✅ 压缩图片以加快上传速度（保持高质量）
+        let processedFile: File = file;
+        if (file.size > 2 * 1024 * 1024) { // 如果大于 2MB 则压缩
+            mlog('🔄 图片较大，开始压缩...');
+            const compressedBlob = await compressImage(file, {
+                maxWidth: 2048,
+                maxHeight: 2048,
+                quality: 0.9, // 高质量
+                maxSizeMB: 5   // 压缩到 5MB 以内
+            });
+
+            // 转换回 File 对象（保留原始文件名）
+            processedFile = new File([compressedBlob], file.name, {
+                type: compressedBlob.type || file.type
+            });
+
+            const compressedSizeMB = (processedFile.size / (1024 * 1024)).toFixed(2);
+            mlog(`✅ 压缩完成: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
+            ms.info(`图片已压缩: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
         }
 
-        const maxSize = 15 * 1024 * 1024; // 15MB
-        if (file.size > maxSize) {
-            ms.error('图片大小不能超过 15MB');
-            return;
-        }
-
-        // ✅ 保存原始文件对象
-        referenceFile.value = file;
+        // ✅ 保存处理后的文件对象（用于提交时直接上传）
+        referenceFile.value = processedFile;
 
         // ✅ 创建预览 URL
         if (previewUrl.value) {
-            URL.revokeObjectURL(previewUrl.value); // 释放旧的 URL
+            URL.revokeObjectURL(previewUrl.value);
         }
-        previewUrl.value = URL.createObjectURL(file);
+        previewUrl.value = URL.createObjectURL(processedFile);
 
-        fsRef.value = '';
-
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-        ms.success(`图片已选择 (${sizeMB}MB)`);
-
-        mlog('✅ Reference file selected:', file.name, file.type, `${sizeMB}MB`);
+        const finalSizeMB = (processedFile.size / (1024 * 1024)).toFixed(2);
+        ms.success(`图片已选择 (${finalSizeMB}MB)`);
     } catch (error: any) {
-        ms.error(`图片选择失败: ${error.message || error}`);
-        mlog('selectFile error:', error);
+        ms.error(`图片处理失败: ${error.message || error}`);
+        mlog('❌ selectFile error:', error);
+    }
+
+    if (input?.target) {
+        input.target.value = '';
     }
 }
 
@@ -97,7 +122,7 @@ const createVideo = async () => {
 
     st.value.isLoading = true;
     try {
-        // 创建 FormData
+        // ✅ 创建 FormData（后端需要 multipart/form-data 格式）
         const formData = new FormData();
         formData.append('model', sora2.value.model);
         formData.append('prompt', sora2.value.prompt);
@@ -105,12 +130,12 @@ const createVideo = async () => {
         formData.append('seconds', sora2.value.seconds);
         formData.append('watermark', sora2.value.watermark.toString());
 
-        // ✅ 直接传递 File 对象（而非 URL）
+        // ✅ 如果有参考图片，直接传递 File 对象（参考官方示例）
         if (referenceFile.value) {
             formData.append('input_reference', referenceFile.value, referenceFile.value.name);
         }
 
-        mlog('Creating Sora2 video:', {
+        mlog('Creating Sora2 video with FormData:', {
             model: sora2.value.model,
             prompt: sora2.value.prompt,
             size: sora2.value.size,
@@ -120,6 +145,7 @@ const createVideo = async () => {
             reference_file: referenceFile.value?.name
         });
 
+        // ✅ 使用 FormData 格式发送
         const result: any = await sora2Fetch('/v1/videos', formData, { upFile: true });
         st.value.isLoading = false;
 
@@ -140,7 +166,8 @@ const createVideo = async () => {
                 updated_at: Date.now(),
                 extra: {
                     size: sora2.value.size,
-                    watermark: sora2.value.watermark
+                    watermark: sora2.value.watermark,
+                    has_reference: !!referenceFile.value
                 }
             };
             unifiedStore.save(pendingTask);
@@ -153,7 +180,15 @@ const createVideo = async () => {
         }
     } catch (error: any) {
         st.value.isLoading = false;
-        ms.error(`创建失败: ${error.message || error}`);
+
+        // ✅ 特殊处理：response_processing_failed 可能表示任务已创建但响应超时
+        if (error.message && error.message.includes('response_processing_failed')) {
+            ms.warning('任务可能已提交，请稍后在任务列表中查看');
+            mlog('⚠️ [Sora2] 响应处理失败，但任务可能已创建');
+        } else {
+            ms.error(`创建失败: ${error.message || error}`);
+        }
+
         mlog('createVideo error:', error);
     }
 };
@@ -231,13 +266,20 @@ onUnmounted(() => {
                         accept="image/jpeg, image/jpg, image/png, image/gif"
                     />
                     <div
-                        class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer"
+                        class="h-[80px] w-[80px] overflow-hidden rounded-sm border border-gray-400/20 flex justify-center items-center cursor-pointer hover:border-gray-400/40 transition-colors"
                         @click="fsRef.click()"
                     >
+                        <!-- 已选择图片预览 -->
                         <img :src="previewUrl" v-if="previewUrl" class="w-full h-full object-cover" />
+                        <!-- 初始状态 -->
                         <div class="text-center text-xs" v-else>点击上传</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- 已选择图片提示 -->
+            <div class="pt-1 text-xs text-green-500" v-if="referenceFile">
+                ✅ 已选择图片: {{ referenceFile.name }}
             </div>
         </div>
 

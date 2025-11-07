@@ -10,6 +10,10 @@ export interface VideoUploadResult {
   type: 'blob' | 'url'; // 返回类型
   size: number;         // 文件大小（字节）
   duration?: number;    // 视频时长（秒）
+  bucket?: string;      // Supabase 存储桶
+  path?: string;        // Supabase 文件路径
+  contentType?: string; // MIME 类型
+  filename?: string;    // 原始文件名
 }
 
 /**
@@ -46,6 +50,10 @@ async function uploadVideoToBackend(file: File): Promise<VideoUploadResult> {
       url: data.url, // Supabase 返回的是完整的公网 URL
       type: 'url',
       size: file.size,
+      bucket: data.bucket,
+      path: data.path,
+      contentType: file.type,
+      filename: file.name,
     };
   } catch (error: any) {
     mlog('❌ Supabase 上传失败，降级到 Blob URL:', error);
@@ -67,6 +75,8 @@ function createBlobURL(file: File): VideoUploadResult {
     url: blobURL,
     type: 'blob',
     size: file.size,
+    contentType: file.type,
+    filename: file.name,
   };
 }
 

@@ -15,6 +15,8 @@ const list = ref(store.getAll());
 const refresh = () => {
   mlog('🔄 [UnifiedVideoList] Refreshing all tasks...');
 
+  store.cleanup();
+
   // 重新获取所有数据
   const allTasks = store.getAll();
   list.value = allTasks;

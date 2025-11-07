@@ -10,9 +10,12 @@ export interface Sora2Task {
   seconds?: string;
   watermark?: boolean;
   url?: string;
+  video_url?: string;
   thumbnail?: string;
   error?: string;
+  progress?: number | string;
   created_at?: number;
+  completed_at?: number;
   last_feed?: number;
 }
 
