@@ -9,7 +9,7 @@ import { t } from '@/locales'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { copyToClip } from '@/utils/copy'
 import { homeStore } from '@/store'
-import { getSeed, mlog ,mjImgUrl, isDallImageModel} from '@/api' 
+import { getSeed, mlog ,mjImgUrl, isDallImageModel, flechTask } from '@/api' 
 
 interface Props {
   dateTime?: string
@@ -145,8 +145,20 @@ async function handleCopy(txt?:string) {
   }
 }
 
+// 刷新按钮：改为重新获取任务详情，从而拿到最新图片链接
 const sendReload = () => {
-  homeStore.setMyData({act:'mjReload', actData:{mjID:props.chat.mjID} })
+  try {
+    if (props.chat?.mjID) {
+      // 直接重新拉取任务，更新 chat.opt（包含最新 imageUrl/imageUrls）
+      flechTask(props.chat)
+    } else {
+      // 兼容无 mjID 的情况，仍用旧逻辑触发本地刷新
+      homeStore.setMyData({ act: 'mjReload', actData: { mjID: props.chat.mjID } })
+    }
+  } catch (e) {
+    // 兜底：保持旧行为
+    homeStore.setMyData({ act: 'mjReload', actData: { mjID: props.chat.mjID } })
+  }
 }
 
 function handleRegenerate2() {

@@ -39,6 +39,35 @@ const serviceInfo: Record<string, { name: string; color: string }> = {
 const currentService = serviceInfo[props.task.service] || { name: props.task.service, color: '#666' };
 const hasPreview = computed(() => props.task.status === 'success' && !!props.task.url && !expireState.value);
 
+const formatTimestamp = (value: number | string) => {
+  if (!value)
+    return '';
+  const dateValue = typeof value === 'number' ? value : Date.parse(value);
+  if (Number.isNaN(dateValue))
+    return '';
+  return new Date(dateValue).toLocaleString();
+};
+
+const showProgress = computed(() => props.task.model !== 'runway-aleph' && props.task.progress !== undefined);
+
+const processingHint = computed(() => {
+  if (props.task.model === 'runway-aleph') {
+    const createdAt = typeof props.task.created_at === 'number' ? props.task.created_at : Date.parse(props.task.created_at);
+    const elapsedMinutes = Math.max(0, Math.floor((Date.now() - createdAt) / 60000));
+
+    if (elapsedMinutes < 1)
+      return '排队中，预计 10-15 分钟完成';
+    if (elapsedMinutes < 10)
+      return `已等待 ${elapsedMinutes} 分钟，预计 10-15 分钟完成`;
+    if (elapsedMinutes < 15)
+      return `进入处理阶段，预计还需 ${15 - elapsedMinutes} 分钟`;
+
+    return '已超过 15 分钟，如仍未完成可稍后再查看';
+  }
+
+  return formatTimestamp(props.task.updated_at);
+});
+
 const markExpired = (reason?: string) => {
   if (expireState.value)
     return;
@@ -209,11 +238,11 @@ watch(() => [props.task.url, props.task.status, props.task.expired, props.task.e
         class="flex flex-col items-center justify-center p-4"
       >
         <div class="mb-2">{{ t('video.process') }}</div>
-        <div v-if="task.progress !== undefined" class="text-lg font-bold text-blue-500">
+        <div v-if="showProgress" class="text-lg font-bold text-blue-500">
           {{ task.progress }}%
         </div>
         <div v-else class="text-sm text-gray-500 dark:text-gray-400">
-          {{ new Date(task.updated_at).toLocaleString() }}
+          {{ processingHint }}
         </div>
       </div>
 

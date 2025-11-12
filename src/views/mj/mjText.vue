@@ -311,7 +311,8 @@ const subV3=(type:string)=>{
     <div v-if="chat.opt?.status=='FAILURE'"> 
         <div>{{ $t('mjchat.failReason') }}<p>{{ chat.opt?.failReason }}</p></div>
     </div>
-    <template  v-else-if="chat.opt?.progress">
+    <!-- 放宽显示条件：progress 存在 或 返回 SUCCESS 或已有图片链接时都显示 -->
+    <template  v-else-if="chat.opt?.progress || chat.opt?.status==='SUCCESS' || chat.opt?.imageUrl || (chat.opt?.imageUrls && chat.opt?.imageUrls.length>0)">
        
         <div v-if="chat.opt?.action=='SHORTEN'" class="markdown-body" v-html="text " > 
              

@@ -30,12 +30,12 @@ const cameraOption = [
   { label: t('mj.left_turn_forward'), value: 'left_turn_forward' },
 ];
 const mvOption = [
-  { label: 'kling-v1-6', value: 'kling-v1-6' },
-  { label: 'kling-v1-5', value: 'kling-v1-5' },
   { label: 'kling-v1', value: 'kling-v1' },
+  { label: 'kling-v1-6', value: 'kling-v1-6' },
   { label: 'kling-v2-master', value: 'kling-v2-master' },
   { label: 'kling-video-v2-1', value: 'kling-video-v2-1' },
   { label: 'kling-video-v2-1-master', value: 'kling-video-v2-1-master' },
+  { label: 'kling-video-v2-5-turbo', value: 'kling-video-v2-5-turbo' },
 ];
 
 async function selectFile(input: any) {

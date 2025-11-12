@@ -8,7 +8,8 @@ import { t } from '@/locales'
 const emit = defineEmits(['close'])
 const ms = useMessage()
 
-const defaultUrl = 'https://api.lsaigc.chat'
+// 默认统一网关（已从 *.chat 迁移至 *.com）
+const defaultUrl = 'https://api.lsaigc.com'
 
 const save = () => {
   gptServerStore.setMyData(gptServerStore.myData)

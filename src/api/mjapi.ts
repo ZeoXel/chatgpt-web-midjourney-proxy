@@ -167,12 +167,33 @@ function getHeaderApiSecret(){
     }
 }
 
+// 标准化网关域名，兼容历史老域名
+function normalizeGatewayBase(base: string | undefined): string | undefined {
+    if (!base) return base
+    try {
+        const u = new URL(base)
+        // 将老域名迁移到新网关
+        if (u.hostname.includes('railway.lsaigc.com') || u.hostname.includes('api.lsaigc.chat')) {
+            u.hostname = 'api.lsaigc.com'
+            // 统一强制 https
+            u.protocol = 'https:'
+            return u.toString().replace(/\/$/, '')
+        }
+        return base
+    } catch {
+        return base
+    }
+}
+
 const getUrl=(url:string)=>{
     if(url.indexOf('http')==0) return url;
-    if(gptServerStore.myData.MJ_SERVER){
-        return `${ gptServerStore.myData.MJ_SERVER}${url}`;
+    let base = normalizeGatewayBase(gptServerStore.myData.MJ_SERVER)
+    if (base) {
+        // 将规范化后的地址回写，避免后续再次出现旧域名
+        gptServerStore.myData.MJ_SERVER = base
+        return `${ base }${url}`
     }
-    return `/mjapi${url}`;
+    return `/mjapi${url}`
 }
 
 export const mjFetch=(url:string,data?:any)=>{

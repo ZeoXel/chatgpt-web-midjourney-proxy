@@ -51,13 +51,13 @@ initLoad();
         <n-tab-pane name="runway" tab="Runway">
             <RunwayInput />
         </n-tab-pane>
-        <n-tab-pane name="sora2" tab="Sora2">
+        <n-tab-pane name="sora2" tab="Sora">
             <Sora2Input />
         </n-tab-pane>
         <n-tab-pane name="kling" :tab="$t('mj.kling')">
             <KlingInput />
         </n-tab-pane>
-        <n-tab-pane name="minimax" tab="MiniMax">
+        <n-tab-pane name="minimax" tab="海螺">
             <MinimaxInput />
         </n-tab-pane>
     </n-tabs>
@@ -83,9 +83,20 @@ initLoad();
     justify-content: center !important;
     width: 100% !important;
 }
-.abc1234 :deep(.n-tabs-tab) {
+.abc1234 :deep(.n-tabs-tab-wrapper) {
     flex: 1 1 calc(50% - 12px) !important;
     margin: 4px 6px !important;
+}
+.abc1234 :deep(.n-tabs-tab) {
+    width: 100% !important;
     justify-content: center !important;
+    position: relative !important;
+    border-bottom: 2px solid transparent !important;
+}
+.abc1234 :deep(.n-tabs-tab--active) {
+    border-bottom-color: #445ff6 !important;
+}
+.abc1234 :deep(.n-tabs-bar) {
+    display: none !important;
 }
 </style>

@@ -122,9 +122,25 @@ export const smartImageUrl = async (originalUrl: string): Promise<string> => {
     return bestUrl;
 }
 
+// 统一旧网关域名到新网关，避免 DNS 失效
+function normalizeOldGateway(url: string): string {
+    try {
+        const u = new URL(url)
+        if (u.hostname.includes('railway.lsaigc.com') || u.hostname.includes('api.lsaigc.chat')) {
+            u.hostname = 'api.lsaigc.com'
+            u.protocol = 'https:'
+            return u.toString()
+        }
+        return url
+    } catch {
+        return url
+    }
+}
+
 export const mjImgUrl= (url:string)=>{
-    if (gptServerStore.myData.MJ_CDN_WSRV || homeStore.myData.session.isWsrv ) return wsrvUrl(url);
-    return url;
+    const normalized = normalizeOldGateway(url)
+    if (gptServerStore.myData.MJ_CDN_WSRV || homeStore.myData.session.isWsrv ) return wsrvUrl(normalized);
+    return normalized;
 }
 
 // 新的画廊专用数据结构
