@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { mlog } from '@/api';
 import { useMessage, NButton, NInput, NTag, NSelect, NSwitch } from 'naive-ui';
 import { homeStore } from '@/store';
@@ -10,15 +10,29 @@ import { compressImage } from '@/utils/imageCompressor';
 
 // Sora2 尺寸选项
 const sizeOptions = [
-    { label: '720P横屏 (1280x720)', value: '1280x720', aspect: 16/9, style: 'width: 100%; height: 56.25%;' },
-    { label: '720P竖屏 (720x1280)', value: '720x1280', aspect: 9/16, style: 'width: 56.25%; height: 100%;' }
+    { label: '720P横屏 (1280x720)', value: '1280x720', aspect: 16/9, style: 'width: 100%; height: 56.25%;', requiresPro: false },
+    { label: '720P竖屏 (720x1280)', value: '720x1280', aspect: 9/16, style: 'width: 56.25%; height: 100%;', requiresPro: false },
+    // 1080P（按需求提供 1792x1024 与 1024x1792），仅 Pro 支持
+    { label: '1080P横屏 (1792x1024)', value: '1792x1024', aspect: 16/9, style: 'width: 100%; height: 56.25%;', requiresPro: true, tip: '1080P横屏仅 sora-2-pro 支持' },
+    { label: '1080P竖屏 (1024x1792)', value: '1024x1792', aspect: 9/16, style: 'width: 56.25%; height: 100%;', requiresPro: true, tip: '1080P竖屏仅 sora-2-pro 支持' },
 ];
 
-// 时长选项
+// 时长选项（25s 仅 Pro 支持）
 const secondsOptions = [
-    { label: '10秒', value: '10' },
-    { label: '15秒', value: '15' }
+    { label: '10秒', value: '10', requiresPro: false },
+    { label: '15秒', value: '15', requiresPro: false },
+    { label: '25秒', value: '25', requiresPro: true }
 ];
+
+// 根据模型动态禁用 25s（naive-ui 支持 options[].disabled）
+const uiSecondsOptions = computed(() => {
+    const isPro = sora2.value.model === 'sora-2-pro';
+    return secondsOptions.map(o => ({
+        label: o.label,
+        value: o.value,
+        disabled: !!o.requiresPro && !isPro
+    }));
+});
 
 const sora2 = ref({
     prompt: '',
@@ -114,9 +128,33 @@ const clearInput = () => {
     fsRef.value = '';
 };
 
+// 当切换为非 Pro 模型时，若当前选择为 1080P，自动降级为 720P
+watch(() => sora2.value.model, (m) => {
+    const isPro = m === 'sora-2-pro';
+    if (!isPro && (sora2.value.size === '1792x1024' || sora2.value.size === '1024x1792')) {
+        sora2.value.size = '720x1280';
+        ms.info('已切换为非 Pro 模型，分辨率自动调整为 720P');
+    }
+    if (!isPro && sora2.value.seconds === '25') {
+        sora2.value.seconds = '15';
+        ms.info('已切换为非 Pro 模型，时长自动调整为 15 秒');
+    }
+});
+
 const createVideo = async () => {
     if (!sora2.value.prompt) {
         ms.error('请输入视频描述');
+        return;
+    }
+
+    // 提交前校验：1080P 仅 Pro 支持
+    if (sora2.value.model !== 'sora-2-pro' && (sora2.value.size === '1792x1024' || sora2.value.size === '1024x1792')) {
+        ms.error('当前模型不支持 1080P，请切换为 sora-2-pro');
+        return;
+    }
+    // 提交前校验：25s 仅 Pro 支持
+    if (sora2.value.model !== 'sora-2-pro' && sora2.value.seconds === '25') {
+        ms.error('当前模型不支持 25 秒，请切换为 sora-2-pro');
         return;
     }
 
@@ -207,20 +245,49 @@ onUnmounted(() => {
 
 <template>
     <div class="p-2">
+        <!-- 模型选择 -->
+        <div class="pt-1">
+            <n-select
+                v-model:value="sora2.model"
+                :options="[
+                    { label: 'Sora 2', value: 'sora-2' },
+                    { label: 'Sora 2 Pro', value: 'sora-2-pro' }
+                ]"
+                size="small"
+                placeholder="选择模型"
+            />
+        </div>
+
         <!-- 尺寸选择 -->
         <div class="flex items-center justify-between space-x-1">
             <template v-for="item in sizeOptions" :key="item.value">
                 <section
                     class="aspect-item flex-1 rounded border-2 dark:border-neutral-700 cursor-pointer relative"
-                    :class="{'border-primary': sora2.size === item.value}"
-                    @click="sora2.size = item.value"
+                    :class="{
+                        'border-primary': sora2.size === item.value,
+                        'opacity-50 cursor-not-allowed': item.requiresPro && sora2.model !== 'sora-2-pro'
+                    }"
+                    @click="
+                        (item.requiresPro && sora2.model !== 'sora-2-pro')
+                          ? ms.warning(item.tip || '仅 sora-2-pro 支持该分辨率')
+                          : (sora2.size = item.value)
+                    "
                 >
                     <div class="aspect-box-wrapper mx-auto my-2 flex h-5 w-5 items-center justify-center">
                         <div class="aspect-box rounded border-2 dark:border-neutral-700" :style="item.style"></div>
                     </div>
-                    <p class="mb-1 text-center text-[11px]">{{ item.label.split(' ')[0] }}</p>
+                    <p class="mb-1 text-center text-[11px]">
+                        {{ item.label.split(' ')[0] }}
+                        <span v-if="item.requiresPro" class="text-amber-500 ml-1">Pro</span>
+                    </p>
                 </section>
             </template>
+        </div>
+
+        <!-- 分辨率提示 -->
+        <div class="pt-1 text-[11px] text-gray-500">
+            <div>1792x1024 1080P横屏仅 sora-2-pro 支持</div>
+            <div>1024x1792 1080P竖屏仅 sora-2-pro 支持</div>
         </div>
 
         <!-- 提示词输入 -->
