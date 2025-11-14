@@ -60,6 +60,12 @@ const urouter = useRouter() //
         <div class="text-[13px]">{{ $t('video.menu') }}</div>
       </div>
 
+      <!-- 模型 -->
+      <div v-if="!isDisableMenu ( 'model')" class="flex items-center justify-center flex-col" @click="urouter.push('/model')" :class="[ goHome =='model' ? 'active' : '']">
+        <SvgIcon icon="mdi:cube-outline" size="2xl" />
+        <div class="text-[13px]">{{ $t('model.menu') }}</div>
+      </div>
+
 
       <!-- 画廊 -->
       <div  v-if="!isDisableMenu ( 'gallery')"  class="flex items-center justify-center flex-col " @click="homeStore.setMyData({act:'gallery'})" >

@@ -97,6 +97,49 @@ export const klingProxy = proxy(process.env.KLING_SERVER ?? API_BASE_URL, {
 
 })
 
+export const tripoProxy = proxy(process.env.TRIPO_SERVER ?? 'https://api.tripo3d.ai/v2/openapi', {
+  https: false,
+  limit: '30mb',
+  proxyReqPathResolver(req) {
+    let url = req.originalUrl
+    // 从 /tripo 移除前缀,但保留后面的完整路径
+    // 例如: /tripo/v2/openapi/task -> /v2/openapi/task
+    if (url.startsWith('/tripo/'))
+      url = url.replace('/tripo/', '/')
+    else if (url.startsWith('/tripo'))
+      url = url.replace('/tripo', '')
+
+    // 如果网关配置已包含 /v2/openapi,则不需要添加
+    // 否则添加 /v2/openapi 前缀
+    const serverUrl = process.env.TRIPO_SERVER ?? ''
+    if (!serverUrl.includes('/v2/openapi') && !url.startsWith('/v2/openapi')) {
+      url = `/v2/openapi${url}`
+    }
+
+    return url || '/'
+  },
+  proxyReqOptDecorator(proxyReqOpts, srcReq) {
+    if (process.env.TRIPO_KEY)
+      proxyReqOpts.headers.Authorization = `Bearer ${process.env.TRIPO_KEY}`
+    else proxyReqOpts.headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`
+
+    const contentType = srcReq.headers['content-type'] ?? ''
+    if (!contentType?.includes('multipart/form-data'))
+      proxyReqOpts.headers['Content-Type'] = 'application/json'
+
+    proxyReqOpts.headers['Mj-Version'] = pkg.version
+    return proxyReqOpts
+  },
+  userResHeaderDecorator(headers, userReq, userRes, proxyReq, proxyRes) {
+    // 移除可能重复的 CORS 头,避免与全局中间件冲突
+    delete headers['access-control-allow-origin']
+    delete headers['access-control-allow-headers']
+    delete headers['access-control-allow-methods']
+    return headers
+  },
+
+})
+
 export const minimaxProxy = proxy(process.env.MINIMAX_SERVER ?? API_BASE_URL, {
   https: false,
   limit: '15mb',

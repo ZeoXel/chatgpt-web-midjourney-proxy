@@ -6,6 +6,7 @@ import { ChatLayout } from '@/views/chat/layout'
 import mjlayout from '@/views/mj/layout.vue'
 import sunoLayout from '@/views/suno/layout.vue'
 import lumaLayout from '@/views/luma/layout.vue'
+import modelLayout from '@/views/model/layout.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -102,6 +103,20 @@ const routes: RouteRecordRaw[] = [
         path: '/video/:uuid?',
         name: 'video',
         component: () => import('@/views/luma/video.vue'),
+      },
+    ],
+  },
+
+  {
+    path: '/model',
+    name: 'RootModel',
+    component: modelLayout,
+    redirect: '/model/index',
+    children: [
+      {
+        path: '/model/:uuid?',
+        name: 'model',
+        component: () => import('@/views/model/model.vue'),
       },
     ],
   },

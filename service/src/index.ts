@@ -36,10 +36,16 @@ app.use(express.static('public', {
 // app.use(express.json())
 app.use(bodyParser.json({ limit: '10mb' })) // 大文件传输
 
-app.all('*', (_, res, next) => {
+app.all('*', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'authorization, Content-Type')
+  res.header('Access-Control-Allow-Headers', 'authorization, Content-Type, x-vtoken, x-ctoken, x-ptoken')
   res.header('Access-Control-Allow-Methods', '*')
+
+  // 处理 OPTIONS 预检请求,直接返回,不转发到代理
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+
   next()
 })
 
@@ -382,6 +388,76 @@ app.use('/runwayml', authV2, runwaymlProxy)
 app.use('/runway', authV2, runwayProxy)
 app.use('/pro/runway', authV2, runwayProxy)
 app.use('/kling', authV2, klingProxy)
+
+// Tripo 文件上传端点 - 转发到网关的 Tripo API
+// 支持两种路径: /tripo/upload/sts 和 /tripo/v2/openapi/upload/sts
+const tripoUploadHandler = upload2.single('file');
+const tripoUploadLogic = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        code: 1004,
+        message: 'No file uploaded',
+        suggestion: 'Please provide a file in the request'
+      })
+    }
+
+    // 获取网关地址
+    const gatewayServer = process.env.OPENAI_API_BASE_URL || 'http://localhost:3000'
+    const apiKey = process.env.OPENAI_API_KEY
+
+    if (!apiKey) {
+      return res.status(500).json({
+        code: 1000,
+        message: 'OPENAI_API_KEY not configured',
+        suggestion: 'Please configure OPENAI_API_KEY in environment variables'
+      })
+    }
+
+    console.log('[Tripo Upload] 转发到网关:', `${gatewayServer}/v2/openapi/upload`)
+
+    // 创建 FormData 并转发到网关
+    const FormData = require('form-data')
+    const formData = new FormData()
+    formData.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    })
+
+    const response = await axios.post(
+      `${gatewayServer}/v2/openapi/upload`,
+      formData,
+      {
+        headers: {
+          // 关键：使用 formData.getHeaders() 自动生成正确的 Content-Type（包含 boundary）
+          ...formData.getHeaders(),
+          'Authorization': `Bearer ${apiKey}`
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      }
+    )
+
+    console.log('[Tripo Upload] 网关响应:', response.data)
+
+    // 返回网关的响应
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('[Tripo Upload] 错误:', error.response?.data || error.message)
+    res.status(error.response?.status || 500).json({
+      code: 1000,
+      message: error.response?.data?.message || error.message || 'Upload failed',
+      suggestion: 'Please try again'
+    })
+  }
+};
+
+app.post('/tripo/v2/openapi/upload/sts', authV2, tripoUploadHandler, tripoUploadLogic)
+app.post('/tripo/upload/sts', authV2, tripoUploadHandler, tripoUploadLogic)
+
+// 注意: Tripo 其他 API 请求应该由前端直接调用网关,不经过后端转发
+// 如果需要后端转发,请在前端设置中配置正确的网关地址
 app.use('/minimax', authV2, minimaxProxy)
 app.use('/pro/minimax', authV2, minimaxProxy)
 

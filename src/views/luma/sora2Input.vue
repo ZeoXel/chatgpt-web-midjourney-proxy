@@ -307,7 +307,7 @@ onUnmounted(() => {
                 <span class="text-sm">时长</span>
                 <n-select
                     v-model:value="sora2.seconds"
-                    :options="secondsOptions"
+                    :options="uiSecondsOptions"
                     size="small"
                     class="!w-[70%]"
                 />

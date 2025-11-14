@@ -128,6 +128,8 @@ export interface gptServerType{
     RIFF_KEY:string
     VIDU_SERVER:string
     VIDU_KEY:string
+    TRIPO_SERVER:string
+    TRIPO_KEY:string
     IS_SET_SYNC?:boolean
     GPTS_GX?:boolean
     IS_LUMA_PRO?:boolean
@@ -135,6 +137,7 @@ export interface gptServerType{
     DRAW_TYPE?:string
     IS_VIGGLE_PRO?:boolean
     TAB_VIDEO?:string
+    TAB_MODEL?:string
     TTS_VOICE?:string
     REALTIME_SYSMSG?:string
     REALTIME_MODEL?:string
@@ -179,7 +182,10 @@ let v:gptServerType={
         RIFF_SERVER:'',
         RIFF_KEY:'',
         VIDU_SERVER:'',
-        VIDU_KEY:''
+        VIDU_KEY:'',
+        TRIPO_SERVER:'',
+        TRIPO_KEY:'',
+        TAB_MODEL:'image'
     }
     return v ;
 }

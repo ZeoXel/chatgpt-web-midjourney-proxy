@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { UnifiedVideoTask, UnifiedVideoStore } from '@/api/videoStore';
-import { NButton, NButtonGroup, NPopconfirm } from 'naive-ui';
+import { NButton, NButtonGroup, NPopconfirm, useMessage, NTooltip } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
 import { t } from '@/locales';
 
@@ -24,6 +24,7 @@ const expireReason = ref(props.task.expire_reason || (expireState.value ? DEFAUL
 const checking = ref(false);
 const hasChecked = ref(false); // ✅ 标记是否已经检查过可用性
 const store = new UnifiedVideoStore();
+const message = useMessage();
 
 // 服务信息映射
 const serviceInfo: Record<string, { name: string; color: string }> = {
@@ -79,6 +80,31 @@ const markExpired = (reason?: string) => {
 
 const handleVideoError = () => {
   markExpired('load error');
+};
+
+const copyPrompt = async () => {
+  const text = props.task?.prompt || '';
+  if (!text) {
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    message.success('提示词已复制');
+  } catch (e) {
+    message.error('复制失败');
+  }
 };
 
 const checkAvailability = async () => {
@@ -279,23 +305,35 @@ watch(() => [props.task.url, props.task.status, props.task.expired, props.task.e
       <!-- 右侧: 操作按钮 -->
       <section class="flex justify-end items-center flex-shrink-0">
         <n-button-group size="tiny">
+          <!-- 复制提示词（仅图标，悬停提示） -->
+          <n-tooltip v-if="task.prompt" trigger="hover" placement="bottom">
+            <template #trigger>
+              <n-button size="tiny" round ghost @click="copyPrompt">
+                <SvgIcon icon="mdi:content-copy" size="xs" />
+              </n-button>
+            </template>
+            <span>{{ t('vidu.actions.copy') }}</span>
+          </n-tooltip>
           <!-- 下载按钮 -->
-          <n-button
+          <n-tooltip
             v-if="task.status === 'success' && task.url && !expireState"
-            size="tiny"
-            round
-            ghost
+            trigger="hover"
+            placement="bottom"
           >
-            <a
-              :href="task.url"
-              download
-              target="_blank"
-              class="flex justify-center items-center gap-1"
-            >
-              <SvgIcon icon="mdi:download" size="sm" />
-              {{ t('video.download') }}
-            </a>
-          </n-button>
+            <template #trigger>
+              <n-button size="tiny" round ghost>
+                <a
+                  :href="task.url"
+                  download
+                  target="_blank"
+                  class="flex justify-center items-center gap-1"
+                >
+                  <SvgIcon icon="mdi:download" size="sm" />
+                </a>
+              </n-button>
+            </template>
+            <span>{{ t('video.download') }}</span>
+          </n-tooltip>
 
           <!-- 扩展按钮 (仅Runway) -->
           <n-button

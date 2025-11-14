@@ -540,4 +540,72 @@ export default {
     use: "Sử dụng"
 }
 
+,model: {
+  menu: 'Model',
+  subtitle: 'Tripo3D image & multiview generation',
+  imageTab: 'Image to Model',
+  multiviewTab: 'Multiview to Model',
+  modelVersion: 'Model Version',
+  texture: 'Texture',
+  pbr: 'PBR',
+  quad: 'Quad Mesh',
+  smartLowPoly: 'Smart Low Poly',
+  autoSize: 'Auto Scale',
+  noteLabel: 'Notes / Prompt',
+  notePlaceholder: 'Describe desired style, pose or reminders',
+  imageInput: 'Reference Image',
+  uploadPlaceholder: 'Click to upload image',
+  imageUrlPlaceholder: 'or paste an image URL',
+  advanced: 'Advanced Options',
+  advancedShow: 'Show advanced options',
+  advancedHide: 'Hide advanced options',
+  actions: {
+    submit: 'Submit Task',
+    refresh: 'Refresh',
+    delete: 'Delete',
+  },
+  multiviewHint: 'Provide at least two views, front view required',
+  views: {
+    front: 'Front',
+    left: 'Left',
+    back: 'Back',
+    right: 'Right',
+  },
+  status: {
+    success: 'Completed',
+    processing: 'Processing',
+    pending: 'Queued',
+    failed: 'Failed',
+  },
+  download: {
+    model: 'Model',
+    base: 'Base Mesh',
+    pbr: 'PBR',
+    copy: 'Copy URL',
+  },
+  previewPlaceholder: 'Preview unavailable',
+  versionLabel: 'Model Version',
+  createdAt: 'Created At',
+  confirmDelete: 'Remove this model record?',
+  empty: 'No model tasks yet. Submit one to get started.',
+  toast: {
+    uploadSuccess: 'Upload success',
+    imageRequired: 'Please upload or paste one reference image',
+    multiviewFront: 'Front view is required for multiview tasks',
+    multiviewMin: 'Provide at least two views for multiview tasks',
+    submitted: 'Tripo3D task submitted',
+    noModel: 'Model download link not ready yet',
+    copied: 'Link copied',
+    refreshed: 'Task refreshed',
+  },
+  tips: {
+    texture: 'Texture: bake color info from the source image',
+    pbr: 'PBR: output metal/roughness maps for realistic lighting',
+    quad: 'Quad mesh: only quads, easier for rigging or subdivision',
+    smartLowPoly: 'Low poly: reduce faces for real-time scenes',
+    autoSize: 'Auto scale: normalize size to meters'
+  },
+}
+
+
 }

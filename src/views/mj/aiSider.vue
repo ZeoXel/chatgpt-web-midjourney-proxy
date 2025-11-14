@@ -77,6 +77,16 @@ const chatId= computed(()=>chatStore.active??'1002' );
                     </div>
             </a>
 
+            <!-- 模型 -->
+            <a v-if="!isDisableMenu ( 'model')" @click="st.active='model'; urouter.push('/model')"
+               class="router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]"
+               :class="{ 'bg-white dark:bg-[#34373c]': goHome === 'model' }">
+                    <div class="flex h-full justify-center items-center py-1 flex-col" :class="[ goHome =='model' ? 'text-[#445ff6]' : '']">
+                      <SvgIcon icon="mdi:cube-outline" size="2xl" class="flex-1" />
+                      <span class="text-[10px]">{{ $t('model.menu') }}</span>
+                    </div>
+            </a>
+
 
             <!-- 画廊 -->
              <a  v-if="!isDisableMenu ( 'gallery')"  @click="homeStore.setMyData({act:'gallery'}) " class=" router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': homeStore.myData.act === 'gallery' }">

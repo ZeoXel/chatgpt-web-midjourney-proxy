@@ -45,6 +45,7 @@ const syncSettings = () => {
   gptServerStore.myData.UDIO_SERVER = baseUrl
   gptServerStore.myData.RIFF_SERVER = baseUrl
   gptServerStore.myData.VIDU_SERVER = baseUrl
+  gptServerStore.myData.TRIPO_SERVER = baseUrl
 
   // 同步密钥到所有服务（如果有密钥）
   if (apiKey) {
@@ -61,6 +62,7 @@ const syncSettings = () => {
     gptServerStore.myData.UDIO_KEY = apiKey
     gptServerStore.myData.RIFF_KEY = apiKey
     gptServerStore.myData.VIDU_KEY = apiKey
+    gptServerStore.myData.TRIPO_KEY = apiKey
   }
 }
 
@@ -189,6 +191,10 @@ initializeDefaultUrl()
             <div class="flex items-center space-x-1">
               <span class="w-2 h-2 bg-green-500 rounded-full" />
               <span>Ideogram</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 bg-green-500 rounded-full" />
+              <span>Tripo3D</span>
             </div>
           </div>
         </section>
