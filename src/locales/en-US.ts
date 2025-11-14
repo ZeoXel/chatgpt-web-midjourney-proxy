@@ -569,7 +569,7 @@ export default {
     download: {
       model: 'Model',
       base: 'Base Mesh',
-      pbr: 'PBR',
+      pbr: 'Download Model',
       copy: 'Copy URL',
     },
     previewPlaceholder: 'Preview unavailable',

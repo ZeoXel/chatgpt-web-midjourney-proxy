@@ -587,7 +587,7 @@ export default {
     download: {
       model: '模型',
       base: '基础网格',
-      pbr: 'PBR',
+      pbr: '模型下载',
       copy: '复制链接',
     },
     previewPlaceholder: '暂无预览',
