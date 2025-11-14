@@ -610,7 +610,8 @@ export default {
       pbr: 'PBR：生成金属/粗糙度等材质，灯光更真实',
       quad: '四边面：输出纯四边形拓扑，方便绑定或细分',
       smartLowPoly: '低面数：自动减面，适合实时渲染',
-      autoSize: '自动定标：按米制调整模型尺寸'
+      autoSize: '自动定标：按米制调整模型尺寸',
+      multiviewVersion: '注意：v3.0-20250812 版本不支持多视角建模',
     },
   },
   vidu: {

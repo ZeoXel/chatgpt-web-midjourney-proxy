@@ -592,7 +592,8 @@ export default {
       pbr: 'PBR: output metal/roughness maps for realistic lighting',
       quad: 'Quad mesh: only quads, easier for rigging or subdivision',
       smartLowPoly: 'Low poly: reduce faces for real-time scenes',
-      autoSize: 'Auto scale: normalize size to meters'
+      autoSize: 'Auto scale: normalize size to meters',
+      multiviewVersion: 'Note: v3.0-20250812 does not support multiview_to_model',
     },
   },
   vidu:{

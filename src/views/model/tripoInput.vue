@@ -5,9 +5,17 @@ import { createImageToModelTask, createMultiviewToModelTask, tripoFeed, tripoUpl
 import { gptServerStore, homeStore } from '@/store'
 import { t } from '@/locales'
 
-const versionOptions = [
+// 单图生模型支持的版本
+const imageVersionOptions = [
   { label: 'Turbo-v1.0-20250506', value: 'Turbo-v1.0-20250506' },
   { label: 'v3.0-20250812', value: 'v3.0-20250812' },
+  { label: 'v2.5-20250123', value: 'v2.5-20250123' },
+  { label: 'v2.0-20240919', value: 'v2.0-20240919' },
+]
+
+// 多视角生模型支持的版本（v3.0 不支持 multiview）
+const multiviewVersionOptions = [
+  { label: 'Turbo-v1.0-20250506', value: 'Turbo-v1.0-20250506' },
   { label: 'v2.5-20250123', value: 'v2.5-20250123' },
   { label: 'v2.0-20240919', value: 'v2.0-20240919' },
 ]
@@ -264,7 +272,7 @@ const triggerMultiviewUpload = (key: string) => {
       <NTabPane :name="'image'" :tab="t('model.imageTab')">
         <NForm label-placement="top" size="small" class="space-y-2">
           <NFormItem :label="t('model.modelVersion')">
-            <NSelect v-model:value="imageForm.modelVersion" :options="versionOptions" />
+            <NSelect v-model:value="imageForm.modelVersion" :options="imageVersionOptions" />
           </NFormItem>
           <NFormItem :label="t('model.texture')">
             <div class="flex items-center justify-between w-full">
@@ -330,7 +338,10 @@ const triggerMultiviewUpload = (key: string) => {
       <NTabPane :name="'multiview'" :tab="t('model.multiviewTab')">
         <NForm label-placement="top" size="small" class="space-y-2">
           <NFormItem :label="t('model.modelVersion')">
-            <NSelect v-model:value="multiviewForm.modelVersion" :options="versionOptions" />
+            <NSelect v-model:value="multiviewForm.modelVersion" :options="multiviewVersionOptions" />
+            <div class="mt-1 text-[11px] text-orange-500">
+              {{ t('model.tips.multiviewVersion') }}
+            </div>
           </NFormItem>
           <NFormItem :label="t('model.texture')">
             <div class="flex items-center justify-between w-full">
