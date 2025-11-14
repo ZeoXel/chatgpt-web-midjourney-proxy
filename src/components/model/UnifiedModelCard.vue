@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NButton, NButtonGroup, NCard, NImage, NPopconfirm, NProgress, NTag, useMessage } from 'naive-ui'
+import { NButton, NButtonGroup, NCard, NImage, NPopconfirm, NProgress, NTag, useMessage, NTooltip } from 'naive-ui'
+import { SvgIcon } from '@/components/common'
 import type { UnifiedModelTask } from '@/api/modelStore'
 import { t } from '@/locales'
 
@@ -50,13 +51,10 @@ const handleCopy = async () => {
 </script>
 
 <template>
-  <NCard size="small" :title="`Tripo · ${sourceLabel}`" class="h-full flex flex-col">
-    <template #header-extra>
-      <NTag size="small" :type="statusMap.type as any">{{ statusMap.label }}</NTag>
-    </template>
+  <NCard size="small" class="h-full flex flex-col">
 
     <div class="space-y-3 flex-1">
-      <div class="h-48 bg-gray-100 dark:bg-[#1f1f24] rounded flex items-center justify-center overflow-hidden">
+      <div class="relative flex items-center justify-center bg-white bg-opacity-10 rounded-[16px] overflow-hidden aspect-[16/8.85]">
         <NImage
           v-if="task.preview"
           :src="task.preview"
@@ -64,6 +62,71 @@ const handleCopy = async () => {
           lazy
         />
         <div v-else class="text-xs text-gray-500">{{ t('model.previewPlaceholder') }}</div>
+      </div>
+
+      <!-- 信息栏：左侧服务/状态/来源，右侧操作按钮组 -->
+      <div class="flex justify-between items-center mt-2">
+        <section class="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+          <span
+            class="text-xs px-2 py-0.5 rounded"
+            style="background-color: rgba(68,95,246,0.12); color: #445ff6;"
+          >
+            Tripo3D
+          </span>
+          <NTag v-if="task.status !== 'success'" size="small" :type="statusMap.type as any">{{ statusMap.label }}</NTag>
+          <span class="text-xs text-gray-400 truncate">{{ sourceLabel }}</span>
+        </section>
+
+        <section class="flex justify-end items-center flex-shrink-0">
+          <NButtonGroup size="tiny">
+            <!-- 多个下载项：图标 + 悬停提示 -->
+            <template v-for="item in downloads" :key="item.label">
+              <NTooltip trigger="hover" placement="bottom">
+                <template #trigger>
+                  <NButton tag="a" target="_blank" :href="item.url" size="tiny" round ghost>
+                    <SvgIcon icon="mdi:download" size="xs" />
+                  </NButton>
+                </template>
+                <span>{{ item.label }}</span>
+              </NTooltip>
+            </template>
+
+            <!-- 复制链接 -->
+            <NTooltip v-if="task.modelUrl" trigger="hover" placement="bottom">
+              <template #trigger>
+                <NButton size="tiny" round ghost @click="handleCopy">
+                  <SvgIcon icon="mdi:content-copy" size="xs" />
+                </NButton>
+              </template>
+              <span>{{ t('model.download.copy') }}</span>
+            </NTooltip>
+
+            <!-- 刷新 -->
+            <NTooltip trigger="hover" placement="bottom">
+              <template #trigger>
+                <NButton size="tiny" round ghost @click="handleRefresh">
+                  <SvgIcon icon="mdi:refresh" size="xs" />
+                </NButton>
+              </template>
+              <span>{{ t('model.actions.refresh') }}</span>
+            </NTooltip>
+
+            <!-- 删除（确认） -->
+            <NPopconfirm :positive-text="t('mj.confirmDelete')" :negative-text="t('common.cancel')" @positive-click="handleDelete">
+              <template #trigger>
+                <NTooltip trigger="hover" placement="bottom">
+                  <template #trigger>
+                    <NButton size="tiny" round ghost class="hover:text-red-500">
+                      <SvgIcon icon="mdi:delete" size="xs" />
+                    </NButton>
+                  </template>
+                  <span>{{ t('model.actions.delete') }}</span>
+                </NTooltip>
+              </template>
+              {{ t('model.confirmDelete') }}
+            </NPopconfirm>
+          </NButtonGroup>
+        </section>
       </div>
 
       <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
@@ -74,36 +137,6 @@ const handleCopy = async () => {
         </div>
         <div>{{ t('model.createdAt') }}：{{ createdAtText }}</div>
       </div>
-
-      <div class="flex flex-wrap gap-2">
-        <NButtonGroup v-if="downloads.length">
-          <NButton
-            v-for="item in downloads"
-            :key="item.label"
-            tag="a"
-            target="_blank"
-            :href="item.url"
-            size="small"
-          >
-            {{ item.label }}
-          </NButton>
-        </NButtonGroup>
-        <NButton v-if="task.modelUrl" size="small" tertiary @click="handleCopy">
-          {{ t('model.download.copy') }}
-        </NButton>
-      </div>
     </div>
-
-    <template #footer>
-      <div class="flex items-center justify-between">
-        <NButton size="tiny" tertiary @click="handleRefresh">{{ t('model.actions.refresh') }}</NButton>
-        <NPopconfirm :positive-text="t('mj.confirmDelete')" :negative-text="t('common.cancel')" @positive-click="handleDelete">
-          <template #trigger>
-            <NButton size="tiny" quaternary type="error">{{ t('model.actions.delete') }}</NButton>
-          </template>
-          {{ t('model.confirmDelete') }}
-        </NPopconfirm>
-      </div>
-    </template>
   </NCard>
 </template>
