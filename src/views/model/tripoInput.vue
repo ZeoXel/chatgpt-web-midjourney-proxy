@@ -167,6 +167,9 @@ const buildMultiviewPayload = () => {
     throw new Error(t('model.toast.multiviewFront'))
   if (filled.length < 2)
     throw new Error(t('model.toast.multiviewMin'))
+
+  // Tripo API 要求 files 是 4 元素数组: [front, left, back, right]
+  // 需要传递所有视角信息，包括 view 字段用于后端识别顺序
   return {
     model_version: multiviewForm.modelVersion,
     texture: multiviewForm.texture,
@@ -177,13 +180,11 @@ const buildMultiviewPayload = () => {
     texture_seed: multiviewForm.textureSeed ? Number(multiviewForm.textureSeed) : undefined,
     texture_alignment: multiviewForm.textureAlignment,
     note: multiviewForm.note,
-    files: multiviewForm.files
-      .filter(item => item.url)
-      .map(item => ({
-        view: item.key,
-        url: item.url,  // 使用 Supabase URL
-        type: item.fileType?.split('/')[1] || 'jpeg',  // 简化格式: image/jpeg → jpeg
-      })),
+    files: multiviewForm.files.map(item => ({
+      view: item.key,  // 保留 view 用于后端重排序
+      url: item.url || '',  // 空字符串表示缺失的视角
+      type: item.fileType?.split('/')[1] || 'jpeg',
+    })),
   }
 }
 
@@ -326,11 +327,64 @@ const triggerMultiviewUpload = (key: string) => {
         </NForm>
       </NTabPane>
 
-      <NTabPane :name="'multiview'" :tab="t('model.multiviewTab')" :disabled="true">
-        <div class="p-6 text-center text-gray-500">
-          <p class="mb-2">{{ t('model.multiviewUnavailable') }}</p>
-          <p class="text-xs">当前网关暂不支持多视角建模功能，敬请期待</p>
-        </div>
+      <NTabPane :name="'multiview'" :tab="t('model.multiviewTab')">
+        <NForm label-placement="top" size="small" class="space-y-2">
+          <NFormItem :label="t('model.modelVersion')">
+            <NSelect v-model:value="multiviewForm.modelVersion" :options="versionOptions" />
+          </NFormItem>
+          <NFormItem :label="t('model.texture')">
+            <div class="flex items-center justify-between w-full">
+              <NSwitch v-model:value="multiviewForm.texture" size="small" />
+              <span class="text-[11px] text-gray-500 ml-3">{{ t('model.tips.texture') }}</span>
+            </div>
+          </NFormItem>
+          <NButton size="tiny" tertiary block @click="showMultiviewAdvanced = !showMultiviewAdvanced">
+            {{ showMultiviewAdvanced ? t('model.advancedHide') : t('model.advancedShow') }}
+          </NButton>
+          <NCollapseTransition :show="showMultiviewAdvanced">
+            <div class="mt-2 space-y-3 rounded border border-gray-200/60 dark:border-gray-700/60 p-3 bg-gray-50 dark:bg-[#1c1c23]">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs font-medium">{{ t('model.pbr') }}</div>
+                  <p class="text-[11px] text-gray-500">{{ t('model.tips.pbr') }}</p>
+                </div>
+                <NSwitch v-model:value="multiviewForm.pbr" size="small" />
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs font-medium">{{ t('model.quad') }}</div>
+                  <p class="text-[11px] text-gray-500">{{ t('model.tips.quad') }}</p>
+                </div>
+                <NSwitch v-model:value="multiviewForm.quad" size="small" />
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs font-medium">{{ t('model.smartLowPoly') }}</div>
+                  <p class="text-[11px] text-gray-500">{{ t('model.tips.smartLowPoly') }}</p>
+                </div>
+                <NSwitch v-model:value="multiviewForm.smartLowPoly" size="small" />
+              </div>
+            </div>
+          </NCollapseTransition>
+          <NFormItem :label="t('model.noteLabel')">
+            <NInput v-model:value="multiviewForm.note" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" :placeholder="t('model.notePlaceholder')" />
+          </NFormItem>
+
+          <NDivider title-placement="left">{{ t('model.multiviewHint') }}</NDivider>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-for="view in multiviewForm.files" :key="view.key" class="space-y-1">
+              <div class="text-xs font-medium">{{ viewLabel(view.key as ViewSlot) }}</div>
+              <div class="h-[120px] border border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer" @click="triggerMultiviewUpload(view.key)">
+                <img v-if="view.preview" :src="view.preview" class="w-full h-full object-cover rounded" alt="preview" />
+                <span v-else class="text-xs text-gray-500">{{ t('model.uploadPlaceholder') }}</span>
+              </div>
+              <input :ref="el => setMultiInputRef(view.key, el as HTMLInputElement | null)" type="file" class="hidden" accept="image/*" @change="(e) => onMultiviewFileChange(e, view.key as ViewSlot)" />
+            </div>
+          </div>
+          <NButton type="primary" block :loading="multiviewForm.submitting" @click="submitMultiviewTask">
+            {{ t('model.actions.submit') }}
+          </NButton>
+        </NForm>
       </NTabPane>
     </NTabs>
   </div>

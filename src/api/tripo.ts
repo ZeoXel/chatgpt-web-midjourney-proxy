@@ -261,6 +261,20 @@ export async function createImageToModelTask(options: ImageToModelOptions) {
 }
 
 export async function createMultiviewToModelTask(options: MultiviewToModelOptions) {
+  // Tripo API 要求 files 必须是精确 4 个元素的数组: [front, left, back, right]
+  // 缺失的视角用空对象 {} 占位
+  const viewOrder: Array<'front' | 'left' | 'back' | 'right'> = ['front', 'left', 'back', 'right']
+  const files = viewOrder.map((view) => {
+    const file = options.files.find(f => f.view === view)
+    if (!file || !file.url) {
+      return {} // 缺失视角用空对象占位
+    }
+    return {
+      type: file.type || 'jpeg',
+      url: file.url,
+    }
+  })
+
   const payload = {
     type: 'multiview_to_model',
     model_version: options.model_version,
@@ -271,12 +285,10 @@ export async function createMultiviewToModelTask(options: MultiviewToModelOption
     face_limit: options.face_limit || undefined,
     texture_seed: options.texture_seed || undefined,
     texture_alignment: options.texture_alignment || undefined,
-    files: options.files.map((item) => ({
-      view: item.view,
-      type: item.type?.split('/')[1] || 'jpeg',  // 简化格式: image/jpeg → jpeg
-      url: item.url,  // 每个文件也是对象格式
-    })),
+    files, // 4 元素数组，不包含 view 字段
   }
+
+  mlog('[Tripo] 创建多视角任务 payload:', JSON.stringify(payload, null, 2))
 
   const res = await tripoFetch<{ code: number; data: { task_id: string } }>('/task', {
     method: 'POST',

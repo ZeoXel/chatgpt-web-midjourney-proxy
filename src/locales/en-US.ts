@@ -534,7 +534,6 @@ export default {
     subtitle: 'Tripo3D image & multiview generation',
     imageTab: 'Image to Model',
     multiviewTab: 'Multiview to Model',
-    multiviewUnavailable: 'Multiview Modeling Unavailable',
     modelVersion: 'Model Version',
     texture: 'Texture',
     pbr: 'PBR',
