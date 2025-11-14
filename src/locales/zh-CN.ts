@@ -552,6 +552,7 @@ export default {
     subtitle: '图片 / 多视角生成 3D 模型',
     imageTab: '图片转模型',
     multiviewTab: '多视角建模',
+    multiviewUnavailable: '多视角建模暂不可用',
     modelVersion: '模型版本',
     texture: '贴图',
     pbr: 'PBR',
