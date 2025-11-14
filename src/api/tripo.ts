@@ -242,7 +242,7 @@ export async function createImageToModelTask(options: ImageToModelOptions) {
     texture_alignment: options.texture_alignment || undefined,
     style: options.style || undefined,
     file: {
-      type: options.file.type || 'image/jpeg',
+      type: options.file.type?.split('/')[1] || 'jpeg',  // 简化格式: image/jpeg → jpeg
       url: options.file.url,  // 正确格式：对象包含 type 和 url
     },
   }
@@ -273,7 +273,7 @@ export async function createMultiviewToModelTask(options: MultiviewToModelOption
     texture_alignment: options.texture_alignment || undefined,
     files: options.files.map((item) => ({
       view: item.view,
-      type: item.type || 'image/jpeg',
+      type: item.type?.split('/')[1] || 'jpeg',  // 简化格式: image/jpeg → jpeg
       url: item.url,  // 每个文件也是对象格式
     })),
   }
