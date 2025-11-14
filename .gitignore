@@ -31,3 +31,6 @@ coverage
 # Environment variables files
 /service/.env
 /service/uploads
+
+# Documentation with sensitive examples
+/doc
