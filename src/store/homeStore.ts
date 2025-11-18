@@ -17,6 +17,7 @@ export const homeStore = reactive({
         ,is_luma_pro:false
         ,is_viggle_pro:false
         ,hasBalance:true //用户余额状态，默认为true
+        ,balanceAmount:0 // iframe传递的具体余额
         ,balanceWarningDismissed:false //余额警告是否已关闭
 
     }

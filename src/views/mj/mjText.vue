@@ -157,55 +157,60 @@ const maskOk=(d:any)=>{
    //imageSend({t:'V',v: 23,chat:props?.chat,  data:{ mask:d.mask,prompt:d.prompt} })
    st.value.isShow= false;
 }
-//专业版本按钮
-const bt= [ 
+//专业版本按钮 - 智能过滤,仅显示API返回的可用按钮
+const bt= [
     [
     {k:':upsample::1',n:'U1'}
     ,{k:':upsample::2',n:'U2'}
     ,{k:':upsample::3',n:'U3'}
-    ,{k:':upsample::4',n:'U4'} 
-        ,{k:'high_variation',n: t('mj.high_variation')},
-        {k:'low_variation',n:t('mj.low_variation')},
-        {k:':Inpaint::1',n:t('mj.redraw')},
-        {k:'Outpaint::50',n: t('mj.p15')},
-        {k:'Outpaint::75',n: t('mj.p20')}
-        ,{k:'CustomZoom::',n: t('mj.czoom')},
-        {k:'Outpaint::100',n: t('mj.p100')}
-        //MJ::CustomZoom
+    ,{k:':upsample::4',n:'U4'}
+        // V5+功能 - 强变化/弱变化 (需要V5及以上模型支持)
+        ,{k:'high_variation',n: t('mj.high_variation'), requiredVersion: 'v5+'}
+        ,{k:'low_variation',n:t('mj.low_variation'), requiredVersion: 'v5+'}
+        // 高级编辑功能 (需要V6及以上模型支持)
+        ,{k:':Inpaint::1',n:t('mj.redraw'), requiredVersion: 'v6+'}
+        ,{k:'Outpaint::50',n: t('mj.p15'), requiredVersion: 'v6+'}
+        ,{k:'Outpaint::75',n: t('mj.p20'), requiredVersion: 'v6+'}
+        ,{k:'CustomZoom::',n: t('mj.czoom'), requiredVersion: 'v6+'}
+        ,{k:'Outpaint::100',n: t('mj.p100'), requiredVersion: 'v6+'}
 
+        // 图片分析功能
         ,{k:'Job::PicReader::1',n:'T1'}
         ,{k:'Job::PicReader::2',n:'T2'}
         ,{k:'Job::PicReader::3',n:'T3'}
         ,{k:'Job::PicReader::4',n:'T4'}
         ,{k:'Picread::Retry',n: t('mj.retry')}
-        
+
+        // Prompt分析功能
         ,{k:'PromptAnalyzer::1',n:'T1'}
         ,{k:'PromptAnalyzer::2',n:'T2'}
         ,{k:'PromptAnalyzer::3',n:'T3'}
         ,{k:'PromptAnalyzer::4',n:'T4'}
         ,{k:'PromptAnalyzer::5',n:'T5'}
-
-        //PromptAnalyzer::1
-       // ,{k:'Job::PicReader::all',n:'全4张'}
     ]
     ,[
     {k:':variation::1',n:'V1'}
     ,{k:':variation::2',n:'V2'}
     ,{k:':variation::3',n:'V3'}
     ,{k:':variation::4',n:'V4'}
-    ,{k:'pan_left',n: t('mj.pan_left')}
-    ,{k:'pan_right',n:t('mj.pan_right') }
-    ,{k:'pan_up',n:t('mj.pan_up')}
-    ,{k:'pan_down',n:t('mj.pan_down')}
+    // Pan功能 (需要V6及以上模型支持)
+    ,{k:'pan_left',n: t('mj.pan_left'), requiredVersion: 'v6+'}
+    ,{k:'pan_right',n:t('mj.pan_right'), requiredVersion: 'v6+'}
+    ,{k:'pan_up',n:t('mj.pan_up'), requiredVersion: 'v6+'}
+    ,{k:'pan_down',n:t('mj.pan_down'), requiredVersion: 'v6+'}
     ,{k:'reroll::0',n: t('mjchat.reroll')}
-    ,{k:'upsample_v5_2x',n:t('mj.up2')}
-    ,{k:'upsample_v5_4x',n:t('mj.up4')} 
-    ,{k:'upsample_v6_2x_subtle',n:t('mj.subtle')}//t('mj.up2') 'Subtle'
-    ,{k:'upsample_v6_2x_creative',n:t('mj.creative')}  //'Creative'
-    ,{k:'upsample_v6r1_2x_subtle',n:t('mj.subtle')} 
-    ,{k:'upsample_v6r1_2x_creative',n:t('mj.creative')} 
-    ,{k:'upsample_v7_2x_subtle',n:t('mj.subtle')} 
-    ,{k:'upsample_v7_2x_creative',n:t('mj.creative')} 
+    // V5 Upscale功能
+    ,{k:'upsample_v5_2x',n:t('mj.up2'), requiredVersion: 'v5'}
+    ,{k:'upsample_v5_4x',n:t('mj.up4'), requiredVersion: 'v5'}
+    // V6 Upscale功能
+    ,{k:'upsample_v6_2x_subtle',n:t('mj.subtle'), requiredVersion: 'v6'}
+    ,{k:'upsample_v6_2x_creative',n:t('mj.creative'), requiredVersion: 'v6'}
+    // V6.1 Upscale功能
+    ,{k:'upsample_v6r1_2x_subtle',n:t('mj.subtle'), requiredVersion: 'v6.1'}
+    ,{k:'upsample_v6r1_2x_creative',n:t('mj.creative'), requiredVersion: 'v6.1'}
+    // V7 Upscale功能
+    ,{k:'upsample_v7_2x_subtle',n:t('mj.subtle'), requiredVersion: 'v7'}
+    ,{k:'upsample_v7_2x_creative',n:t('mj.creative'), requiredVersion: 'v7'}
     ]
 ]
 
@@ -255,6 +260,8 @@ watch(()=>homeStore.myData.act,(n)=>{
          st.value.isLoadImg=false;
          load( true );
          if( !actData.noShow ) ms.success( t('mj.success1'));
+         // 加载完成后检测按钮支持情况
+         setTimeout(() => checkUnsupportedButtons(), 500);
     }
 })
 const text = computed(() => {
@@ -281,9 +288,9 @@ const changCustom = ()=>{
 
 const otherButton= computed(()=>{
     //mlog('otherButton');
-    
+
     if( chat.value.opt?.buttons && chat.value.opt?.buttons.length>0){
-     
+
         let  rz= [...chat.value.opt?.buttons]
         // mlog('otherButton222',rz.length );
         for(let bts of bt ){
@@ -295,11 +302,42 @@ const otherButton= computed(()=>{
         let i= rz.findIndex(v=>v.customId.indexOf('BOOKMARK')>-1) //BOOKMARK
         if(i>-1) rz.splice(i,1)
         //mlog('otherButton2323',rz.length,rz );
-        return rz 
+        return rz
 
     }
     return []
 })
+
+// 检测不可用的按钮功能 - 用于开发调试
+const checkUnsupportedButtons = ()=>{
+    if(!chat.value.opt?.buttons || chat.value.opt?.buttons.length === 0) return;
+
+    const apiButtons = chat.value.opt.buttons.map((b:any) => b.customId);
+    const unsupported:any[] = [];
+
+    for(let bts of bt){
+        for(let ib of bts){
+            const i = getIndex(chat.value.opt.buttons, ib);
+            if(i === -1 && ib.requiredVersion){
+                unsupported.push({
+                    name: ib.n,
+                    key: ib.k,
+                    requiredVersion: ib.requiredVersion
+                });
+            }
+        }
+    }
+
+    if(unsupported.length > 0 && localStorage.getItem('debug')){
+        console.group('⚠️ MJ按钮功能检测');
+        console.log(`总按钮数: ${apiButtons.length}`);
+        console.log('不可用功能:');
+        unsupported.forEach(b => {
+            console.log(`  ❌ ${b.name} (${b.key}) - 需要${b.requiredVersion}`);
+        });
+        console.groupEnd();
+    }
+}
 
 const subV3=(type:string)=>{
     mst.value.isShow= true

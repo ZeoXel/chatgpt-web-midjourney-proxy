@@ -946,11 +946,22 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
     //mlog()
     mlog('setting', q )
 
-    // 处理hasBalance参数
+    // 处理hasBalance参数（iframe现传入具体余额数值）
     if(q.hasBalance !== undefined) {
-        const hasBalance = q.hasBalance === 'true';
-        homeStore.setMyData({ hasBalance });
-        mlog('hasBalance设置为:', hasBalance);
+        const rawBalance = q.hasBalance;
+        const balanceAmount = typeof rawBalance === 'number' ? rawBalance : Number(rawBalance);
+        let hasBalance = true;
+
+        if (!Number.isNaN(balanceAmount)) {
+            hasBalance = balanceAmount > 0;
+            homeStore.setMyData({ hasBalance, balanceAmount });
+            mlog('hasBalance设置为:', hasBalance, '余额:', balanceAmount);
+        } else {
+            // 兼容旧的布尔字符串传参
+            hasBalance = String(rawBalance).toLowerCase() === 'true';
+            homeStore.setMyData({ hasBalance, balanceAmount: hasBalance ? 1 : 0 });
+            mlog('hasBalance布尔兼容模式，状态:', hasBalance);
+        }
 
         // hasBalance状态已设置，由BalanceWarning组件统一处理UI提示
     }
