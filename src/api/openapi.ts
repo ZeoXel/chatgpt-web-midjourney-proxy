@@ -966,6 +966,18 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
         // hasBalance状态已设置，由BalanceWarning组件统一处理UI提示
     }
 
+    // 未登录：URL 中既没有密钥也没有余额信息
+    const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+    const missingPortalCredentials = isIframe && !Reflect.has(q, 'hasBalance') && !Reflect.has(q, 'settings');
+    if (missingPortalCredentials) {
+        const needNotify = homeStore.myData.hasBalance !== false;
+        homeStore.setMyData({ hasBalance: false, balanceAmount: 0, balanceWarningDismissed: false });
+        gptServerStore.setInit();
+        if (needNotify) {
+            ms.warning('检测到未登录，请先登录后再继续使用');
+        }
+    }
+
     if(q.settings){
         mlog('q.setting', q.settings )
         try {
