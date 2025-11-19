@@ -19,6 +19,7 @@ export const homeStore = reactive({
         ,hasBalance:true //用户余额状态，默认为true
         ,balanceAmount:0 // iframe传递的具体余额
         ,balanceWarningDismissed:false //余额警告是否已关闭
+        ,balanceNeedsLogin:false // 是否因缺少登录信息被限制
 
     }
     

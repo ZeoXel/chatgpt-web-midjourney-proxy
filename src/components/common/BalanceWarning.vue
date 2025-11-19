@@ -14,10 +14,10 @@
           />
           <div class="flex-1">
             <p class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-              账户余额不足
+              {{ warningTitle }}
             </p>
             <p class="text-sm text-gray-600 dark:text-gray-300">
-              当前账户余额不足，所有AI功能已被禁用。您仍可以查看历史记录和已生成的内容。
+              {{ warningDescription }}
             </p>
           </div>
           <button
@@ -33,12 +33,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { homeStore } from '@/store'
 import { SvgIcon } from '@/components/common'
 
 const handleClose = () => {
   homeStore.setMyData({ balanceWarningDismissed: true })
 }
+
+const warningTitle = computed(() => homeStore.myData.balanceNeedsLogin ? '请先登录账号' : '账户余额不足')
+const warningDescription = computed(() => homeStore.myData.balanceNeedsLogin
+  ? '检测到当前页面缺少登录信息，请先登录后再继续使用所有 AI 功能。'
+  : '当前账户余额不足，所有AI功能已被禁用。您仍可以查看历史记录和已生成的内容。')
 
 // 仅显示一次，不重复显示
 </script>

@@ -240,7 +240,7 @@ const isDall=(chat: Chat.Chat)=>{
       <whisperText v-if="chat.model && chat.model.indexOf('whisper')>-1 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
       <ttsText v-if="!inversion && chat.opt?.duration && chat.opt?.duration>0 && chat.opt?.lkey " :isW="true"  :chat="chat" class="w-full" />
 
-      
+
 
     </div>
   </div>

@@ -954,12 +954,12 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
 
         if (!Number.isNaN(balanceAmount)) {
             hasBalance = balanceAmount > 0;
-            homeStore.setMyData({ hasBalance, balanceAmount });
+            homeStore.setMyData({ hasBalance, balanceAmount, balanceNeedsLogin: false });
             mlog('hasBalance设置为:', hasBalance, '余额:', balanceAmount);
         } else {
             // 兼容旧的布尔字符串传参
             hasBalance = String(rawBalance).toLowerCase() === 'true';
-            homeStore.setMyData({ hasBalance, balanceAmount: hasBalance ? 1 : 0 });
+            homeStore.setMyData({ hasBalance, balanceAmount: hasBalance ? 1 : 0, balanceNeedsLogin: false });
             mlog('hasBalance布尔兼容模式，状态:', hasBalance);
         }
 
@@ -970,12 +970,13 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
     const isIframe = typeof window !== 'undefined' && window.self !== window.top;
     const missingPortalCredentials = isIframe && !Reflect.has(q, 'hasBalance') && !Reflect.has(q, 'settings');
     if (missingPortalCredentials) {
-        const needNotify = homeStore.myData.hasBalance !== false;
-        homeStore.setMyData({ hasBalance: false, balanceAmount: 0, balanceWarningDismissed: false });
+        homeStore.setMyData({
+            hasBalance: false,
+            balanceAmount: 0,
+            balanceWarningDismissed: false,
+            balanceNeedsLogin: true
+        });
         gptServerStore.setInit();
-        if (needNotify) {
-            ms.warning('检测到未登录，请先登录后再继续使用');
-        }
     }
 
     if(q.settings){

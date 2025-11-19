@@ -100,24 +100,24 @@ watch(()=>homeStore.myData.act,debounce( (n)=> {
         </HoverButton>
       </div>
     </div>
-    
+
     <div @click="st.isShow=true" class="absolute left-1/2   top-full -translate-x-1/2 -translate-y-8 cursor-pointer select-none rounded-b-md border  bg-white px-2 dark:border-neutral-800 dark:bg-[#111114]">
     <!-- <div @click="st.isShow=true" class="absolute left-1/2   top-full -translate-x-1/2 cursor-pointer select-none rounded-b-md px-2"> -->
         <div class="flex items-center   justify-center space-x-1 cursor-pointer hover:text-primary" v-if="homeStore.myData.local!='draw'">
             <template   v-if="nGptStore.gpts">
-             <SvgIcon icon="ri:apps-fill" size="md" /> 
-             <span class="line-clamp-1 overflow-hidden">{{ nGptStore.gpts.name }}</span> 
+             <SvgIcon icon="ri:apps-fill" size="md" />
+             <span class="line-clamp-1 overflow-hidden">{{ nGptStore.gpts.name }}</span>
             </template>
             <template v-else >
-            <SvgIcon icon="heroicons:sparkles" size="md" /> 
-            <span >{{ nGptStore.model }}</span> 
+            <SvgIcon icon="heroicons:sparkles" size="md" />
+            <span >{{ nGptStore.model }}</span>
             </template>
             <SvgIcon icon="icon-park-outline:right" size="sm" />
         </div>
     </div>
   </header>
 
-  <NModal v-model:show="st.isShow"   preset="card"  :title="$t('mjchat.modelChange')" class="!max-w-[620px]" @close="st.isShow=false" >  
+  <NModal v-model:show="st.isShow"   preset="card"  :title="$t('mjchat.modelChange')" class="!max-w-[620px]" @close="st.isShow=false" >
         <aiModel @close="st.isShow=false"/>
   </NModal>
 </template>

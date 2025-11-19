@@ -22,14 +22,14 @@ const authStore = useAuthStore()
 const rt = useRoute();
 const ms = useMessage();
 openaiSetting( rt.query, ms )
-if(rt.name =='GPTs'){ 
+if(rt.name =='GPTs'){
   let model= `gpt-4-gizmo-${rt.params.gid.toString()}`  ;
   gptConfigStore.setMyData({model:model});
   ms.success(`GPTs ${t('mj.modleSuccess')}`);
-}else if(rt.name=='Setting'){ 
+}else if(rt.name=='Setting'){
   openaiSetting( rt.query,ms );
-  if(isObject( rt.query ))  ms.success( t('mj.setingSuccess') ); 
-}else if(rt.name=='Model'){ 
+  if(isObject( rt.query ))  ms.success( t('mj.setingSuccess') );
+}else if(rt.name=='Model'){
   let model= `${rt.params.gid.toString()}`  ;
   gptConfigStore.setMyData({model:model});
   ms.success( t('mj.modleSuccess') );
@@ -58,7 +58,7 @@ const collapsed = computed(() => appStore.siderCollapsed)
 
 const needPermission = computed(() => {
 //mlog( 'Layout token',  authStore.token   )
-   
+
  return  !!authStore.session?.auth && !authStore.token
 })
 
@@ -73,7 +73,7 @@ const getContainerClass = computed(() => {
     'h-full',
     { 'abc': !isMobile.value && !collapsed.value },
   ]
-}) 
+})
 </script>
 
 <template>

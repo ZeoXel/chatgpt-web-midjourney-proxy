@@ -9,7 +9,7 @@ import { t } from '@/locales'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { copyToClip } from '@/utils/copy'
 import { homeStore } from '@/store'
-import { getSeed, mlog ,mjImgUrl, isDallImageModel, flechTask } from '@/api' 
+import { getSeed, mlog ,mjImgUrl, isDallImageModel, flechTask } from '@/api'
 
 interface Props {
   dateTime?: string
@@ -112,7 +112,7 @@ const options = computed(() => {
 
 function handleSelect(key: 'copyText' | 'delete' | 'edit' | 'toggleRenderType' | 'tts') {
   switch (key) {
-    case 'tts': 
+    case 'tts':
       homeStore.setMyData({act:'gpt.ttsv2', actData:{ index:props.index , uuid:props.chat.uuid, text:props.text } });
       return;
     case 'copyText':
@@ -208,7 +208,7 @@ function handleRegenerateImage() {
     message.error('未找到原始配置信息');
   }
 }
- 
+
 </script>
 
 <template>
@@ -230,7 +230,7 @@ function handleRegenerateImage() {
         <!-- <span>{{ chat.opt?.progress }}</span> -->
         <template  v-if="chat.opt?.status=='SUCCESS'">
           <SvgIcon icon="ri:restart-line" size="md" @click="sendReload" class="cursor-pointer text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300" />
-          
+
           <div @click="getSeed(chat, message )" class="cursor-pointer">
             <span v-if="chat.opt?.seed">Seed:{{ chat.opt?.seed }}</span>
             <span v-else>Seed</span>
@@ -238,10 +238,10 @@ function handleRegenerateImage() {
           <a :href=" mjImgUrl(chat.opt?.imageUrl)" class="hidden group-hover:block active  cursor-pointer underline " target="_blank">{{ $t('mj.ulink') }}</a>
         </template>
       </p>
-      
+
       <div  class="flex items-end gap-1 mt-2"
-        :class="[inversion ? 'flex-row-reverse' : 'flex-row']" > 
-        <TextComponent 
+        :class="[inversion ? 'flex-row-reverse' : 'flex-row']" >
+        <TextComponent
           ref="textRef"
           :inversion="inversion"
           :error="error"
