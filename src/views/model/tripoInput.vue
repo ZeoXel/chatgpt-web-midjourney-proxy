@@ -206,6 +206,7 @@ const submitImageTask = async () => {
       sourceType: 'image_to_model',
       note: imageForm.note,
       modelVersion: imageForm.modelVersion,
+      autoConvertToSTL: false, // 禁用自动转换，改为手动
       inputs: [
         {
           label: 'image',
@@ -234,6 +235,7 @@ const submitMultiviewTask = async () => {
       sourceType: 'multiview_to_model',
       note: multiviewForm.note,
       modelVersion: multiviewForm.modelVersion,
+      autoConvertToSTL: false, // 禁用自动转换，改为手动
       inputs: multiviewForm.files
         .filter(item => item.url)
         .map(item => ({

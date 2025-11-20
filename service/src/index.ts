@@ -17,7 +17,7 @@ import { auth, authV2, regCookie, turnstileCheck, verify } from './middleware/au
 import { chatConfig, chatReplyProcess, currentModel } from './chatgpt'
 import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
-import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, minimaxProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
+import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, minimaxProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, tripoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 import assetsRouter from './api/assets'
 import supabaseUploadRouter from './api/supabase-upload'
 
@@ -456,8 +456,9 @@ const tripoUploadLogic = async (req, res) => {
 app.post('/tripo/v2/openapi/upload/sts', authV2, tripoUploadHandler, tripoUploadLogic)
 app.post('/tripo/upload/sts', authV2, tripoUploadHandler, tripoUploadLogic)
 
-// 注意: Tripo 其他 API 请求应该由前端直接调用网关,不经过后端转发
-// 如果需要后端转发,请在前端设置中配置正确的网关地址
+// Tripo 通用 API 代理 (任务创建、查询、转换等)
+app.use('/tripo', authV2, tripoProxy)
+
 app.use('/minimax', authV2, minimaxProxy)
 app.use('/pro/minimax', authV2, minimaxProxy)
 

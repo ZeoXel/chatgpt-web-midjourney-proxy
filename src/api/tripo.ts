@@ -4,7 +4,7 @@ import { sleep } from './suno'
 import { UnifiedModelStore, type UnifiedModelTask, type ModelTaskStatus } from './modelStore'
 import { smartUploadImage } from './imageUpload'
 
-type TaskType = 'image_to_model' | 'multiview_to_model'
+type TaskType = 'image_to_model' | 'multiview_to_model' | 'convert_model'
 
 const FINAL_STATUS = new Set(['success', 'failed', 'banned', 'expired', 'cancelled'])
 
@@ -100,7 +100,11 @@ async function tripoFetch<T = any>(url: string, options: RequestInit & { isForm?
   if (!options.isForm && !headers.has('Content-Type'))
     headers.set('Content-Type', 'application/json')
 
-  const response = await fetch(getUrl(url), {
+  const finalUrl = getUrl(url)
+  mlog('[Tripo] 请求 URL:', finalUrl)
+  mlog('[Tripo] 请求 Body:', options.body)
+
+  const response = await fetch(finalUrl, {
     method: options.method || (options.body ? 'POST' : 'GET'),
     body: options.body,
     headers,
@@ -108,6 +112,7 @@ async function tripoFetch<T = any>(url: string, options: RequestInit & { isForm?
 
   if (!response.ok) {
     const msg = await response.text().catch(() => response.statusText)
+    mlog('[Tripo] 请求失败:', response.status, msg)
     throw new Error(`Tripo API 请求失败 (${response.status}): ${msg}`)
   }
 
@@ -343,7 +348,12 @@ async function fetchTask(taskId: string) {
   return res.data
 }
 
-export async function tripoFeed(taskId: string, meta: { sourceType: TaskType; note?: string; modelVersion?: string; inputs?: UnifiedModelTask['inputs'] }) {
+// 导出查询任务状态的函数
+export async function fetchTripoTaskStatus(taskId: string) {
+  return await fetchTask(taskId)
+}
+
+export async function tripoFeed(taskId: string, meta: { sourceType: TaskType; note?: string; modelVersion?: string; inputs?: UnifiedModelTask['inputs']; autoConvertToSTL?: boolean }) {
   const store = new UnifiedModelStore()
   const pending: UnifiedModelTask = {
     id: taskId,
@@ -359,20 +369,52 @@ export async function tripoFeed(taskId: string, meta: { sourceType: TaskType; no
   store.save(pending)
   homeStore.setMyData({ act: 'TripoFeed' })
 
+  let glbTaskSuccess = false
   for (let i = 0; i < 240; i++) {
     try {
       const task = await fetchTask(taskId)
       mlog('[Tripo] feed', taskId, task.status, task.progress)
       store.save(buildTaskSnapshot(task, meta))
       homeStore.setMyData({ act: 'TripoFeed' })
-      if (FINAL_STATUS.has(task.status))
+
+      if (FINAL_STATUS.has(task.status)) {
+        glbTaskSuccess = task.status === 'success'
         break
+      }
     }
     catch (error) {
       console.error('Tripo 轮询失败', error)
       break
     }
     await sleep(5000)
+  }
+
+  // 如果 GLB 生成成功且需要自动转换为 STL
+  if (glbTaskSuccess && meta.autoConvertToSTL) {
+    try {
+      mlog('[Tripo] GLB 生成成功，开始自动转换为 STL...')
+      const stlTaskId = await convertModel({
+        original_model_task_id: taskId,
+        format: 'STL',
+        pivot_to_center_bottom: true, // STL 常用于 3D 打印，底部居中
+      })
+
+      mlog('[Tripo] STL 转换任务已创建:', stlTaskId)
+
+      // 递归轮询 STL 转换任务
+      await tripoFeed(stlTaskId, {
+        sourceType: 'convert_model', // 转换任务类型
+        note: meta.note ? `${meta.note} (STL)` : 'STL 转换',
+        modelVersion: meta.modelVersion,
+        inputs: meta.inputs,
+        autoConvertToSTL: false, // 避免无限递归
+      })
+    }
+    catch (error: any) {
+      console.error('[Tripo] STL 转换失败:', error)
+      mlog('[Tripo] STL 转换错误详情:', error?.message || error)
+      homeStore.myData.ms?.error?.('STL 转换失败，但 GLB 模型已生成')
+    }
   }
 }
 
@@ -401,5 +443,53 @@ export function tripoStatusTag(status: ModelTaskStatus) {
       return { type: 'info', label: '排队中' }
     default:
       return { type: 'error', label: '失败' }
+  }
+}
+
+/**
+ * 转换模型格式 (GLB → STL/OBJ/FBX/USDZ等)
+ */
+export interface ConvertModelOptions {
+  original_model_task_id: string
+  format: 'STL' | 'OBJ' | 'FBX' | 'USDZ' | 'GLTF' | '3MF'
+  quad?: boolean
+  face_limit?: number
+  texture_size?: number
+  flatten_bottom?: boolean
+  pivot_to_center_bottom?: boolean
+}
+
+export async function convertModel(options: ConvertModelOptions) {
+  const payload = {
+    type: 'convert_model',
+    format: options.format,
+    original_model_task_id: options.original_model_task_id,
+    quad: options.quad,
+    face_limit: options.face_limit,
+    texture_size: options.texture_size,
+    flatten_bottom: options.flatten_bottom,
+    pivot_to_center_bottom: options.pivot_to_center_bottom,
+  }
+
+  mlog('[Tripo] 转换模型 payload:', JSON.stringify(payload, null, 2))
+
+  try {
+    // 使用与生成任务相同的路径 /task（网关会自动处理）
+    const res = await tripoFetch<{ code: number; data: { task_id: string }; message?: string }>('/task', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+
+    mlog('[Tripo] 转换响应:', res)
+
+    if (res.code !== 0 || !res.data?.task_id) {
+      throw new Error(`Tripo 格式转换失败: ${res.message || 'Unknown error'}`)
+    }
+
+    return res.data.task_id
+  }
+  catch (error: any) {
+    mlog('[Tripo] convertModel 错误:', error)
+    throw error
   }
 }

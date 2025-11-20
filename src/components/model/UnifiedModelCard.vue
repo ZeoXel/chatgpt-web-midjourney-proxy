@@ -6,9 +6,16 @@ import type { UnifiedModelTask } from '@/api/modelStore'
 import { t } from '@/locales'
 
 const props = defineProps<{ task: UnifiedModelTask }>()
-const emit = defineEmits(['delete', 'refresh'])
+const emit = defineEmits(['delete', 'refresh', 'convert'])
 
 const ms = useMessage()
+
+// 是否可以转换（成功状态 且 不是转换任务 且 还没有 STL）
+const canConvert = computed(() => {
+  return props.task.status === 'success'
+    && props.task.sourceType !== 'convert_model'
+    && !props.task.stlModelUrl
+})
 
 const statusMap = computed(() => {
   switch (props.task.status) {
@@ -24,11 +31,18 @@ const statusMap = computed(() => {
 })
 
 const downloads = computed(() => {
-  return [
+  const items = [
     { label: t('model.download.model'), url: props.task.modelUrl },
     { label: t('model.download.base'), url: props.task.baseModelUrl },
     { label: t('model.download.pbr'), url: props.task.pbrModelUrl },
-  ].filter(item => !!item.url)
+  ]
+
+  // 如果有 STL URL，添加到下载列表
+  if (props.task.stlModelUrl) {
+    items.push({ label: 'STL', url: props.task.stlModelUrl })
+  }
+
+  return items.filter(item => !!item.url)
 })
 
 const createdAtText = computed(() => new Date(props.task.created_at).toLocaleString())
@@ -39,6 +53,7 @@ const sourceLabel = computed(() => props.task.sourceType === 'multiview_to_model
 
 const handleDelete = () => emit('delete', props.task.id)
 const handleRefresh = () => emit('refresh', props.task.id)
+const handleConvert = () => emit('convert', props.task.id)
 
 const handleCopy = async () => {
   if (!props.task.modelUrl) {
@@ -99,6 +114,16 @@ const handleCopy = async () => {
                 </NButton>
               </template>
               <span>{{ t('model.download.copy') }}</span>
+            </NTooltip>
+
+            <!-- 转换为 STL -->
+            <NTooltip v-if="canConvert" trigger="hover" placement="bottom">
+              <template #trigger>
+                <NButton size="tiny" round ghost @click="handleConvert">
+                  <SvgIcon icon="mdi:file-sync" size="xs" />
+                </NButton>
+              </template>
+              <span>转换为 STL</span>
             </NTooltip>
 
             <!-- 刷新 -->

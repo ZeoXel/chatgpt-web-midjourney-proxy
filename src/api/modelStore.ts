@@ -5,7 +5,7 @@ export type ModelTaskStatus = 'pending' | 'processing' | 'success' | 'failed'
 export interface UnifiedModelTask {
   id: string
   service: 'tripo'
-  sourceType: 'image_to_model' | 'multiview_to_model'
+  sourceType: 'image_to_model' | 'multiview_to_model' | 'convert_model'
   status: ModelTaskStatus
   modelVersion?: string
   prompt?: string
@@ -14,6 +14,7 @@ export interface UnifiedModelTask {
   modelUrl?: string
   baseModelUrl?: string
   pbrModelUrl?: string
+  stlModelUrl?: string // STL 格式下载链接
   progress?: number
   inputs?: Array<{ label: string; token?: string; url?: string; preview?: string }>
   error?: string

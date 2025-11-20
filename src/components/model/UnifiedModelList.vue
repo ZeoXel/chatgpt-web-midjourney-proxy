@@ -3,7 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { NEmpty, useMessage } from 'naive-ui'
 import UnifiedModelCard from './UnifiedModelCard.vue'
 import { UnifiedModelStore } from '@/api/modelStore'
-import { refreshTripoTask } from '@/api/tripo'
+import { convertModel, fetchTripoTaskStatus, refreshTripoTask } from '@/api/tripo'
 import { homeStore } from '@/store'
 import { t } from '@/locales'
 
@@ -40,6 +40,59 @@ const handleRefresh = async (id: string) => {
   }
 }
 
+const handleConvert = async (id: string) => {
+  const originalTask = store.getAll().find(t => t.id === id)
+  if (!originalTask) {
+    ms.error('找不到原始任务')
+    return
+  }
+
+  try {
+    ms.info('开始转换为 STL 格式...')
+    const stlTaskId = await convertModel({
+      original_model_task_id: id,
+      format: 'STL',
+      pivot_to_center_bottom: true,
+    })
+
+    ms.success('STL 转换任务已创建，正在处理...')
+
+    // 轮询 STL 转换任务，成功后更新原任务
+    const pollInterval = setInterval(async () => {
+      try {
+        const stlTask = await fetchTripoTaskStatus(stlTaskId)
+
+        if (stlTask.status === 'success') {
+          clearInterval(pollInterval)
+          // 将 STL URL 添加到原任务
+          store.save({
+            ...originalTask,
+            stlModelUrl: stlTask.output?.model,
+          })
+          refresh()
+          ms.success('STL 转换完成！')
+        }
+        else if (stlTask.status === 'failed') {
+          clearInterval(pollInterval)
+          ms.error('STL 转换失败')
+        }
+      }
+      catch (error) {
+        clearInterval(pollInterval)
+        ms.error('查询转换状态失败')
+      }
+    }, 3000)
+
+    // 30秒超时
+    setTimeout(() => {
+      clearInterval(pollInterval)
+    }, 30000)
+  }
+  catch (error: any) {
+    ms.error(`转换失败: ${error.message || error}`)
+  }
+}
+
 onMounted(() => {
   refresh()
   homeStore.setMyData({ ms })
@@ -55,6 +108,7 @@ onMounted(() => {
         :task="task"
         @delete="handleDelete(task.id)"
         @refresh="handleRefresh(task.id)"
+        @convert="handleConvert(task.id)"
       />
     </div>
   </div>
