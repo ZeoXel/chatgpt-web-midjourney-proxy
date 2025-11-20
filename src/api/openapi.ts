@@ -967,9 +967,17 @@ export const openaiSetting= ( q:any,ms:MessageApiInjection )=>{
     }
 
     // 未登录：URL 中既没有密钥也没有余额信息
+    // 重要：只在首次检测到缺少凭据且当前没有有效登录状态时才触发
     const isIframe = typeof window !== 'undefined' && window.self !== window.top;
     const missingPortalCredentials = isIframe && !Reflect.has(q, 'hasBalance') && !Reflect.has(q, 'settings');
-    if (missingPortalCredentials) {
+
+    // 防止路由切换时误触发：只有在真正未登录时才重置状态
+    // 如果 balanceNeedsLogin 已经是 false，说明用户之前已成功传递凭据，不应重置
+    const shouldResetToNeedsLogin = missingPortalCredentials &&
+                                     homeStore.myData.balanceNeedsLogin !== false &&
+                                     homeStore.myData.balanceAmount === 0;
+
+    if (shouldResetToNeedsLogin) {
         homeStore.setMyData({
             hasBalance: false,
             balanceAmount: 0,
