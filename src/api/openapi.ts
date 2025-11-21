@@ -437,16 +437,16 @@ export async function getDallAssetsFromDatabase(options?: {
 const convertSizeToAspectRatio = (size: string): string => {
 	const sizeMap: Record<string, string> = {
 		"1024x1024": "1:1",
+		"1536x1024": "3:2", // 4:3 和 3:2 都映射到这个尺寸
+		"1024x1536": "2:3", // 3:4 和 2:3 都映射到这个尺寸
 		"1792x1024": "16:9",
 		"1024x1792": "9:16",
+		"1920x1080": "21:9",
+		// 其他常见尺寸
 		"512x512": "1:1",
 		"256x256": "1:1",
-		"1536x1024": "3:2",
-		"1024x1536": "2:3",
 		"1280x720": "16:9",
 		"720x1280": "9:16",
-		"1920x1080": "16:9",
-		"1080x1920": "9:16",
 	};
 	return sizeMap[size] || "1:1"; // 默认返回 1:1
 };

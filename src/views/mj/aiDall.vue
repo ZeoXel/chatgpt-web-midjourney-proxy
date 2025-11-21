@@ -146,6 +146,15 @@ watch(
 );
 
 const qualityOption = computed(() => {
+	// nano-banana-2 支持 image_size (1K, 2K, 4K)
+	if (f.value.model === "nano-banana-2") {
+		return [
+			{ label: "4K (Ultra HD)", value: "high" },
+			{ label: "2K (High)", value: "medium" },
+			{ label: "1K (Standard)", value: "low" },
+		];
+	}
+	// 其他模型使用标准 quality 选项
 	return [
 		{ label: "High", value: "high" },
 		{ label: "Medium", value: "medium" },
@@ -191,18 +200,39 @@ const dimensionsList = computed(() => {
 		f.value.model == "doubao-seedream-4-0-250828" ||
 		f.value.model == "seedream-3.0"
 	) {
+		// 根据 API 文档提供完整的 aspect_ratio 选项
 		return [
 			{
-				label: "1024px*1024px",
+				label: "1:1 (正方形)",
 				value: "1024x1024",
 			},
 			{
-				label: "1792px*1024px",
+				label: "4:3 (横向)",
+				value: "1536x1024",
+			},
+			{
+				label: "3:4 (纵向)",
+				value: "1024x1536",
+			},
+			{
+				label: "16:9 (超宽屏)",
 				value: "1792x1024",
 			},
 			{
-				label: "1024px*1792px",
+				label: "9:16 (竖屏)",
 				value: "1024x1792",
+			},
+			{
+				label: "3:2 (经典横向)",
+				value: "1536x1024",
+			},
+			{
+				label: "2:3 (经典纵向)",
+				value: "1024x1536",
+			},
+			{
+				label: "21:9 (电影宽屏)",
+				value: "1920x1080",
 			},
 		];
 	}
