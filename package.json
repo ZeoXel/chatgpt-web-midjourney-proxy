@@ -21,7 +21,7 @@
     "buildold": "run-p type-check build-only",
     "preview": "vite preview",
     "build-only": "vite build",
-    "build-service": "cd service && pnpm install && pnpm build",
+    "build-service": "cd service && yarn install && yarn build",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
