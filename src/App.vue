@@ -5,7 +5,7 @@ import { NaiveProvider } from '@/components/common'
 import { useTheme } from '@/hooks/useTheme'
 import { useLanguage } from '@/hooks/useLanguage'
 import aiOther from "@/views/mj/aiOther.vue"
-import { useChatStore } from '@/store'
+import { useChatStore, useAuthStore } from '@/store'
 import { checkAndMigrate } from '@/utils/videoMigration'
 import { restoreAllAssets, getRestorationSummary } from '@/utils/assetRestoration'
 import '@/styles/color-override.css'
@@ -13,10 +13,16 @@ import '@/styles/color-override.css'
 const { theme, themeOverrides } = useTheme()
 const { language } = useLanguage()
 const chatStore = useChatStore()
+const authStore = useAuthStore()
 
 // 跨平台资产复原系统
 onMounted(async () => {
   console.log('[App] 🚀 应用启动...')
+
+  // 0. 先加载session配置 (必须在最前面)
+  console.log('[App] 🔧 加载session配置...')
+  await authStore.getSession()
+  console.log('[App] ✅ Session配置加载完成')
 
   // 1. 加载对话历史 (从COS)
   console.log('[App] 📚 加载对话历史...')
