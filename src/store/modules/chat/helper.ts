@@ -1,6 +1,7 @@
 import { ss } from '@/utils/storage'
 import { getUserUuid } from '@/utils/userUuid'
 import { saveChatStorageToCOS, loadChatStorageFromCOS } from '@/api/chatStorage'
+import { getCache, setCache, CACHE_KEYS } from '@/utils/assetCache'
 
 const LOCAL_NAME = 'chatStorage'
 const LAST_CHAT_UUID_KEY = 'lastChatUuid'
@@ -191,6 +192,15 @@ export async function getAllChatsFromCOS(): Promise<Partial<Chat.ChatState> | nu
     return null
   }
 
+  // 尝试从缓存加载
+  const cached = getCache<Chat.ChatState>(CACHE_KEYS.CHAT_HISTORY)
+  if (cached) {
+    console.log('[COS Load] 📦 使用缓存对话历史:', {
+      对话数: cached.history?.length || 0
+    })
+    return cached
+  }
+
   console.log('[COS Load] 🌐 开始从COS加载对话...', { userUuid })
 
   try {
@@ -202,6 +212,9 @@ export async function getAllChatsFromCOS(): Promise<Partial<Chat.ChatState> | nu
     }
 
     const chatState = response.data as Chat.ChatState
+
+    // 保存到缓存
+    setCache(CACHE_KEYS.CHAT_HISTORY, chatState)
 
     console.log('[COS Load] ✅ 加载成功:', {
       对话数: chatState.history?.length || 0,
