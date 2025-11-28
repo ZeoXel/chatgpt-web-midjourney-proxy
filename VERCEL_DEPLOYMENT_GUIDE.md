@@ -1,311 +1,301 @@
-# Vercel 部署指南 - 数据库API集成
+# Vercel 部署环境变量配置指导
 
-## 问题诊断
+## 问题解决说明
 
-**症状**: 生产环境返回 404 Not Found when accessing `/api/assets`
+**原因**: `.env` 文件包含敏感凭证(腾讯云SecretId)被提交到Git历史，触发GitHub Push Protection。
 
-**原因**: Vercel 使用 Serverless Functions 架构，需要在 `api/` 目录创建对应的函数文件
+**解决方案**:
+1. ✅ 已将 `.env` 添加到 `.gitignore`
+2. ✅ 已清理Git历史中的敏感文件
+3. ✅ 已成功推送到GitHub (不含敏感信息)
+
+**重要**: `.env` 文件仅用于本地开发，生产环境使用Vercel环境变量。
 
 ---
 
-## 🚀 部署步骤（3步完成）
+## Vercel 环境变量配置步骤
 
-### 步骤1: 添加依赖到根 package.json
+### 1. 登录Vercel并进入项目设置
 
-在项目根目录的 `package.json` 的 `dependencies` 中添加：
+1. 访问 [Vercel Dashboard](https://vercel.com/dashboard)
+2. 选择你的项目 `chatgpt-web-midjourney-proxy`
+3. 点击顶部导航栏的 **Settings** 标签
+4. 左侧菜单选择 **Environment Variables**
+
+### 2. 添加环境变量
+
+点击 **Add** 按钮，逐个添加以下环境变量：
+
+---
+
+## 必需环境变量列表
+
+### 腾讯云 COS 配置 (核心存储)
 
 ```bash
-pnpm add @supabase/supabase-js
+# COS 基本配置
+COS_SECRET_ID=你的腾讯云SecretId
+COS_SECRET_KEY=你的腾讯云SecretKey
+COS_BUCKET=你的存储桶名称-appid
+COS_REGION=存储桶地域(如: ap-guangzhou)
+
+# COS 可选配置
+COS_DOMAIN=可选的自定义域名
 ```
 
-或手动编辑 `package.json`，在 `dependencies` 部分添加：
+**获取方法**:
+- 登录 [腾讯云控制台](https://console.cloud.tencent.com/)
+- 访问 **访问管理** > **API密钥管理**
+- 创建或查看现有密钥获取 `SecretId` 和 `SecretKey`
+- 访问 **对象存储COS** 获取 `Bucket名称` 和 `Region`
+
+**安全注意**:
+- 确保Bucket权限配置正确（建议私有读写+签名访问）
+- 定期轮换API密钥
+- 使用子账号密钥而非主账号密钥
+
+---
+
+### OpenAI API 配置
+
+```bash
+# OpenAI 核心配置
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPENAI_API_BASE_URL=https://api.openai.com
+
+# 可选: 自定义模型
+OPENAI_API_MODEL=gpt-4-turbo
+```
+
+---
+
+### Midjourney 代理配置
+
+```bash
+# MJ 服务器配置
+MJ_SERVER=你的Midjourney代理服务器地址
+MJ_API_SECRET=你的Midjourney API密钥
+
+# 可选配置
+MJ_PROXY_ENDPOINT=自定义代理端点
+```
+
+---
+
+### Suno 音乐生成配置
+
+```bash
+SUNO_SERVER=https://api.suno.cn
+SUNO_KEY=你的Suno API密钥
+```
+
+---
+
+### Luma 视频生成配置
+
+```bash
+LUMA_SERVER=https://api.luma.ai
+LUMA_KEY=你的Luma API密钥
+```
+
+---
+
+### Vidu 视频生成配置
+
+```bash
+VIDU_SERVER=https://api.vidu.cn
+VIDU_KEY=你的Vidu API密钥
+```
+
+---
+
+### 应用访问控制 (推荐)
+
+```bash
+# 访问密钥 (用于保护API端点)
+AUTH_SECRET_KEY=你的自定义密钥(建议使用强随机字符串)
+
+# 可选: 速率限制
+RATE_LIMIT_PER_MINUTE=60
+```
+
+---
+
+### 前端配置
+
+```bash
+# API 代理地址
+VITE_GLOB_API_URL=/api
+
+# 后端API基础URL (生产环境使用相对路径)
+VITE_APP_API_BASE_URL=/api
+
+# 可选功能开关
+VITE_GLOB_OPEN_LONG_REPLY=false
+VITE_GLOB_APP_PWA=true
+```
+
+---
+
+## 3. 环境变量作用域设置
+
+对于每个环境变量，选择适用的环境:
+
+- ✅ **Production** - 必选（生产环境）
+- ✅ **Preview** - 推荐（预览部署）
+- ⚪ **Development** - 可选（本地开发使用 `.env` 文件）
+
+---
+
+## 4. Vercel 部署配置文件
+
+创建或更新 `vercel.json`:
 
 ```json
 {
-  "dependencies": {
-    "@supabase/supabase-js": "^2.76.1"
-  }
-}
-```
-
-然后运行：
-```bash
-pnpm install
-```
-
----
-
-### 步骤2: 配置 Vercel 环境变量
-
-在 Vercel 控制台添加以下环境变量：
-
-1. 打开你的 Vercel 项目
-2. 进入 **Settings** → **Environment Variables**
-3. 添加以下变量：
-
-| 变量名 | 值 | 说明 |
-|--------|-----|------|
-| `SUPABASE_URL` | `https://lxxbjwxwujcpgqfoquvv.supabase.co` | Supabase项目URL |
-| `SUPABASE_SERVICE_KEY` | `your_service_role_key_here` | Supabase Service Role Key |
-
-**获取 Service Role Key**：
-1. 打开 Supabase 项目控制台
-2. Settings → API → Project API keys
-3. 复制 `service_role` key（**注意**：不是 `anon` key）
-
----
-
-### 步骤3: 提交代码并重新部署
-
-```bash
-# 提交新创建的 api/assets.js
-git add api/assets.js
-git add package.json
-git commit -m "feat: 添加 Vercel Serverless Function 支持数据库API"
-git push origin main  # 或你的分支名
-
-# Vercel 会自动触发重新部署
-```
-
----
-
-## ✅ 验证部署
-
-### 方法1: 使用浏览器Console测试
-
-部署完成后，打开生产环境网站，按 F12 打开Console，执行：
-
-```javascript
-(async () => {
-  const store = localStorage.getItem('gptServerStore');
-  const config = store ? JSON.parse(store) : {};
-  const apiKey = config.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    console.error('请先配置API Key');
-    return;
-  }
-
-  const response = await fetch('/api/assets?service=midjourney&type=image&limit=5', {
-    method: 'GET',
-    headers: { 'x-api-key': apiKey }
-  });
-
-  console.log('状态:', response.status);
-  const data = await response.json();
-  console.log('响应:', data);
-})();
-```
-
-**预期结果**：
-```
-状态: 200
-响应: {success: true, assets: [...], total: X}
-```
-
----
-
-### 方法2: 使用curl测试
-
-```bash
-curl -X GET \
-  'https://你的域名.vercel.app/api/assets?service=midjourney&type=image&limit=5' \
-  -H 'x-api-key: 你的API_KEY'
-```
-
----
-
-## 📋 文件清单
-
-已创建的文件：
-
-- ✅ `api/assets.js` - Vercel Serverless Function
-- ✅ `VERCEL_DEPLOYMENT_GUIDE.md` - 本文档
-
-需要修改的文件：
-
-- ⏳ `package.json` - 添加 `@supabase/supabase-js` 依赖
-
----
-
-## 🔍 故障排查
-
-### 问题1: 部署后仍然返回 404
-
-**检查**：
-1. 确认 `api/assets.js` 文件已提交并推送
-2. 在 Vercel 控制台查看 Functions 标签，确认函数已部署
-3. 检查 Vercel 构建日志是否有错误
-
----
-
-### 问题2: 返回 500 Internal Server Error
-
-**原因**: 环境变量未配置
-
-**检查**：
-1. Vercel Settings → Environment Variables
-2. 确认 `SUPABASE_URL` 和 `SUPABASE_SERVICE_KEY` 已设置
-3. **重要**：添加环境变量后需要重新部署才能生效
-
----
-
-### 问题3: 返回 401 Unauthorized
-
-**原因**: API Key无效或未分配用户
-
-**解决**：
-```sql
--- 在 Supabase SQL Editor 执行
-SELECT key_value, status, assigned_user_id
-FROM api_keys
-WHERE key_value = '你的API_KEY';
-
--- 如果status不是'assigned'，执行
-UPDATE api_keys
-SET status = 'assigned'
-WHERE key_value = '你的API_KEY';
-
--- 如果assigned_user_id为空，执行
-UPDATE api_keys
-SET assigned_user_id = '<用户UUID>'
-WHERE key_value = '你的API_KEY';
-```
-
----
-
-### 问题4: Supabase连接超时
-
-**原因**: Service Role Key错误或Supabase项目不可用
-
-**检查**：
-1. 确认 `SUPABASE_URL` 格式正确（https://xxx.supabase.co）
-2. 确认 `SUPABASE_SERVICE_KEY` 是 service_role key，不是 anon key
-3. 尝试在 Supabase SQL Editor 运行查询，确认项目正常
-
----
-
-## 📊 Vercel Serverless Functions 架构说明
-
-### 传统Express架构 vs Vercel架构
-
-**传统方式** (本地开发):
-```
-service/src/index.ts  →  Express服务器
-  ├─ app.use('/api/assets', assetsRouter)
-  ├─ app.use('/api/proxy', proxyRouter)
-  └─ app.listen(3002)
-```
-
-**Vercel方式**:
-```
-api/
-  ├─ assets.js          →  /api/assets 路由
-  ├─ proxy.js           →  /api/proxy 路由
-  └─ [name].js          →  /api/[name] 路由
-```
-
-每个文件是一个独立的 Serverless Function，**不需要 Express 服务器**。
-
----
-
-## 🔄 本地开发 vs 生产环境
-
-### 本地开发
-```bash
-cd service
-bun run dev  # 启动 Express 服务器在 3002 端口
-```
-
-### 生产环境 (Vercel)
-- 前端静态文件由 Vercel CDN 提供
-- `/api/*` 路由由 Serverless Functions 处理
-- 无需手动启动服务器，Vercel 自动管理
-
----
-
-## 💡 优化建议
-
-### 1. 使用Edge Functions（可选）
-
-如果需要更低延迟，可以将 `api/assets.js` 改为 Edge Function：
-
-```javascript
-// api/assets.js
-export const config = {
-  runtime: 'edge',  // 使用 Edge Runtime
-};
-
-export default async function handler(req) {
-  // 代码保持不变
-}
-```
-
-**优点**：
-- 延迟更低（全球边缘节点）
-- 冷启动更快
-
-**限制**：
-- 不支持所有 Node.js API
-- 最大执行时间30秒
-
----
-
-### 2. 缓存优化
-
-在 `vercel.json` 中添加缓存配置：
-
-```json
-{
-  "headers": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/assets",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "s-maxage=60, stale-while-revalidate"
-        }
-      ]
+      "src": "package.json",
+      "use": "@vercel/node"
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/service/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
 ```
 
 ---
 
-### 3. 监控和日志
+## 5. 部署检查清单
 
-查看 Function 日志：
-1. Vercel 控制台 → Deployments
-2. 选择最新部署 → Functions 标签
-3. 点击 `api/assets` 查看实时日志
+### 部署前
+- [ ] 所有必需环境变量已添加到Vercel
+- [ ] `.env` 文件已添加到 `.gitignore`
+- [ ] Git历史中无敏感信息
+- [ ] `vercel.json` 配置正确
 
----
-
-## 📝 部署检查清单
-
-完成部署后，确认以下项目：
-
-- [ ] `api/assets.js` 文件已创建并提交
-- [ ] `package.json` 包含 `@supabase/supabase-js` 依赖
-- [ ] Vercel 环境变量 `SUPABASE_URL` 已配置
-- [ ] Vercel 环境变量 `SUPABASE_SERVICE_KEY` 已配置
-- [ ] 代码已推送到 Git 仓库
-- [ ] Vercel 自动部署已完成
-- [ ] 浏览器测试返回 200 状态码
-- [ ] 前端画廊可以读取数据库数据
+### 部署后
+- [ ] 访问应用URL检查前端加载
+- [ ] 测试 `/api/health` 端点检查后端
+- [ ] 测试COS上传功能
+- [ ] 测试各AI服务调用
+- [ ] 查看Vercel日志排查错误
 
 ---
 
-## 🎉 部署完成
+## 6. 常见问题排查
 
-部署成功后，你的生产环境将能够：
+### 问题1: COS上传失败
 
-✅ 自动保存 MJ UPSCALE 结果到 Supabase 数据库
-✅ 从数据库读取历史记录并与localStorage合并
-✅ 支持跨设备数据同步
-✅ 使用高性能索引优化查询速度
+**错误信息**: `NoSuchBucket` 或 `AccessDenied`
+
+**解决方案**:
+1. 检查 `COS_BUCKET` 格式是否正确(含appid)
+2. 检查 `COS_REGION` 是否与Bucket地域一致
+3. 验证 `COS_SECRET_ID` 和 `COS_SECRET_KEY` 是否有效
+4. 确认Bucket权限策略允许当前密钥操作
+
+### 问题2: API 调用 500 错误
+
+**排查步骤**:
+1. 访问Vercel Dashboard > Functions > Logs
+2. 查找具体错误堆栈信息
+3. 检查对应服务的环境变量是否配置
+4. 验证API密钥是否过期
+
+### 问题3: 环境变量未生效
+
+**解决方案**:
+1. 确认环境变量 **Environment** 选项已勾选 `Production`
+2. 重新部署项目 (Vercel不会自动应用新变量)
+3. 在Vercel Dashboard点击 **Redeploy** 按钮
 
 ---
 
-最后更新: 2025-10-24
+## 7. 安全最佳实践
+
+### API密钥管理
+- ✅ 使用环境变量，禁止硬编码
+- ✅ 定期轮换API密钥
+- ✅ 为不同环境使用不同密钥
+- ✅ 使用只读密钥（如适用）
+
+### COS 安全配置
+- ✅ Bucket设置为私有读写
+- ✅ 使用预签名URL访问资源
+- ✅ 配置防盗链白名单
+- ✅ 启用访问日志审计
+
+### 应用层安全
+- ✅ 配置 `AUTH_SECRET_KEY` 保护API
+- ✅ 实施速率限制防止滥用
+- ✅ 使用HTTPS加密传输
+- ✅ 定期审查Vercel访问日志
+
+---
+
+## 8. 快速参考
+
+### 核心环境变量 (最小配置)
+
+```bash
+# 腾讯云COS (必需)
+COS_SECRET_ID=
+COS_SECRET_KEY=
+COS_BUCKET=
+COS_REGION=
+
+# OpenAI (必需)
+OPENAI_API_KEY=
+OPENAI_API_BASE_URL=
+
+# 应用安全 (推荐)
+AUTH_SECRET_KEY=
+```
+
+### Vercel CLI 快速部署
+
+```bash
+# 安装Vercel CLI
+npm install -g vercel
+
+# 登录Vercel
+vercel login
+
+# 链接项目
+vercel link
+
+# 设置环境变量 (示例)
+vercel env add COS_SECRET_ID production
+
+# 部署到生产环境
+vercel --prod
+```
+
+---
+
+## 9. 技术支持
+
+遇到部署问题时:
+
+1. 查看 [Vercel文档](https://vercel.com/docs)
+2. 检查项目 [GitHub Issues](https://github.com/your-repo/issues)
+3. 审查Vercel Function Logs
+4. 验证环境变量配置完整性
+
+---
+
+**最后更新**: 2025-11-28
+**适用版本**: v2.0+ (COS存储系统)
