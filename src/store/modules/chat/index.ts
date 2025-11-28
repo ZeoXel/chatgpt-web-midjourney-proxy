@@ -32,8 +32,19 @@ export const useChatStore = defineStore('chat-store', {
      */
     async loadFromDatabase() {
       // 修改条件: 支持COS存储或Supabase数据库
-      const isStorageEnabled = homeStore.myData.session?.isDatabaseEnabled || homeStore.myData.session?.isCOSEnabled
+      const session = homeStore.myData.session
+      const isDatabaseEnabled = session?.isDatabaseEnabled
+      const isCOSEnabled = session?.isCOSEnabled
+
+      console.log('[Chat Store] 🔍 存储状态检查:', {
+        session: !!session,
+        isDatabaseEnabled,
+        isCOSEnabled
+      })
+
+      const isStorageEnabled = isDatabaseEnabled || isCOSEnabled
       if (!isStorageEnabled) {
+        console.log('[Chat Store] ⚠️ 存储未启用，跳过加载')
         return
       }
       try {
