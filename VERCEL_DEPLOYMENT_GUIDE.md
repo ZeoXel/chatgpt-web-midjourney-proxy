@@ -1,5 +1,33 @@
 # Vercel 部署环境变量配置指导
 
+## 架构说明
+
+**重要更新 (2025-11-28)**: 项目已升级为统一的Vercel Serverless架构
+
+### 新架构特性
+- ✅ 将整个Express应用包装为单一Serverless Function (`/api/server.js`)
+- ✅ 所有COS存储API (`/api/chat-storage`, `/api/mj-storage`, `/api/suno-storage`等)现在可以在Vercel生产环境正常工作
+- ✅ 保留外部AI服务代理的独立Serverless Function (`/api/proxy.js`)
+- ✅ 自动构建流程: `pnpm build` 同时编译前端(Vite)和后端(TypeScript)
+
+### 路由规则 (vercel.json)
+```json
+{
+  "rewrites": [
+    // 外部AI服务代理 → /api/proxy.js
+    { "source": "/openapi/(.*)", "destination": "/api/proxy" },
+    { "source": "/mjapi/(.*)", "destination": "/api/proxy" },
+    { "source": "/sunoapi/(.*)", "destination": "/api/proxy" },
+    // ... 其他外部代理
+
+    // 所有内部API → /api/server.js (完整Express应用)
+    { "source": "/api/(.*)", "destination": "/api/server" }
+  ]
+}
+```
+
+---
+
 ## 问题解决说明
 
 **原因**: `.env` 文件包含敏感凭证(腾讯云SecretId)被提交到Git历史，触发GitHub Push Protection。

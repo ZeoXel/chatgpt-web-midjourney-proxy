@@ -57,36 +57,8 @@
       "destination": "/api/proxy-image"
     },
     {
-      "source": "/api/chat-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/image-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/mj-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/suno-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/video-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/model-storage/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/cos/(.*)",
-      "destination": "/api/proxy"
-    },
-    {
-      "source": "/api/asset-mirror/(.*)",
-      "destination": "/api/proxy"
+      "source": "/api/(.*)",
+      "destination": "/api/server"
     }
   ]
 }

@@ -920,4 +920,10 @@ app.use('/api/image-storage', imageStorageRouter)
 
 app.set('trust proxy', 1)
 
-app.listen(3002, () => globalThis.console.log('Server is running on port 3002'))
+// 本地开发环境直接启动服务器
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(3002, () => globalThis.console.log('Server is running on port 3002'))
+}
+
+// Vercel Serverless环境导出Express应用
+export default app

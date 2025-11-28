@@ -17,10 +17,11 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "run-p build-only",
+    "build": "run-p build-only build-service",
     "buildold": "run-p type-check build-only",
     "preview": "vite preview",
     "build-only": "vite build",
+    "build-service": "cd service && pnpm install && pnpm build",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
