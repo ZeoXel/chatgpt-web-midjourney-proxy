@@ -55,7 +55,7 @@ const router = useRouter();
 const chatStore = useChatStore();
 
 const { isMobile } = useBasicLayout();
-const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } =
+const { addChat, updateChat, updateChatSome, updateChatSomeNoSave, getChatByUuidAndIndex } =
   useChat();
 const { scrollRef, scrollToBottom, scrollToBottomIfAtBottom } = useScroll();
 const { usingContext, toggleUsingContext } = useUsingContext();
@@ -89,6 +89,47 @@ const userStore = useUserStore();
 const userInfo = computed(() => userStore.userInfo);
 
 const backgroundImage = computed(()=>userInfo.value.backgroundImage ?? "");
+
+// 统一提取流式返回中的文本，兼容多种网关/模型结构
+function extractTextFromStreamChunk(data: any): string {
+  if (!data || typeof data !== 'object') return '';
+
+  // 1. 优先使用 chatgpt 库直接提供的 text 字段
+  if (typeof data.text === 'string' && data.text) return data.text;
+
+  // 2. 兼容 OpenAI / 网关返回的 chat-completions 结构
+  const tryExtract = (content: any): string => {
+    if (!content) return '';
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      return content
+        .map((c: any) => c?.text || c?.content || '')
+        .join('');
+    }
+    return '';
+  };
+
+  // 2.1 detail.choices[0]（部分网关会包一层 detail）
+  const choiceFromDetail = data.detail?.choices?.[0];
+
+  // 2.2 顶层 choices[0]（标准 OpenAI chat-completions.chunk）
+  const choiceFromRoot = data.choices?.[0];
+
+  const choice = choiceFromDetail || choiceFromRoot;
+  if (!choice) return '';
+
+  // 统一尝试从 delta/message/text 中提取内容
+  const fromDelta = tryExtract(choice.delta?.content ?? choice.delta);
+  if (fromDelta) return fromDelta;
+
+  const fromMessage = tryExtract(choice.message?.content ?? choice.message);
+  if (fromMessage) return fromMessage;
+
+  const fromText = tryExtract(choice.text);
+  if (fromText) return fromText;
+
+  return '';
+}
 
 function handleSubmit() {
   //onConversation() //把这个放到aiGpt
@@ -163,9 +204,14 @@ async function onConversation() {
           if (lastIndex !== -1) chunk = responseText.substring(lastIndex);
           try {
             const data = JSON.parse(chunk);
-            updateChat(+uuid, dataSources.value.length - 1, {
+
+            // 统一从流式数据中提取文本，兼容 gpt-5 / 网关等多种结构
+            const textChunk = extractTextFromStreamChunk(data);
+
+            // 流式更新仅更新UI+localStorage，不立即触发COS保存
+            updateChatSomeNoSave(+uuid, dataSources.value.length - 1, {
               dateTime: new Date().toLocaleString(),
-              text: lastText + (data.text ?? ""),
+              text: lastText + textChunk,
               inversion: false,
               error: false,
               loading: true,
@@ -178,10 +224,10 @@ async function onConversation() {
 
             if (
               openLongReply &&
-              data.detail.choices[0].finish_reason === "length"
+              data.detail?.choices?.[0]?.finish_reason === "length"
             ) {
               options.parentMessageId = data.id;
-              lastText = data.text;
+              lastText = lastText + textChunk;
               message = "";
               return fetchChatAPIOnce();
             }
@@ -280,9 +326,14 @@ async function onRegenerate(index: number) {
           if (lastIndex !== -1) chunk = responseText.substring(lastIndex);
           try {
             const data = JSON.parse(chunk);
-            updateChat(+uuid, index, {
+
+            // 统一从流式数据中提取文本，兼容 gpt-5 / 网关等多种结构
+            const textChunk = extractTextFromStreamChunk(data);
+
+            // 流式更新仅更新UI+localStorage，不立即触发COS保存
+            updateChatSomeNoSave(+uuid, index, {
               dateTime: new Date().toLocaleString(),
-              text: lastText + (data.text ?? ""),
+              text: lastText + textChunk,
               inversion: false,
               error: false,
               loading: true,
@@ -295,10 +346,10 @@ async function onRegenerate(index: number) {
 
             if (
               openLongReply &&
-              data.detail.choices[0].finish_reason === "length"
+              data.detail?.choices?.[0]?.finish_reason === "length"
             ) {
               options.parentMessageId = data.id;
-              lastText = data.text;
+              lastText = lastText + textChunk;
               message = "";
               return fetchChatAPIOnce();
             }

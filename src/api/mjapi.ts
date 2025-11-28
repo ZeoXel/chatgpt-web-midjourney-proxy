@@ -6,6 +6,7 @@ import { copyToClip } from "@/utils/copy";
 import { isNumber } from "@/utils/is";
 import { localGet, localSaveAny } from "./mjsave";
 import { t } from "@/locales";
+import { saveMJImageToCOS } from "./mjStorage";
 //import { useMessage } from "naive-ui";
 export interface gptsType{
     gid:string
@@ -279,38 +280,42 @@ export const flechTask= ( chat:Chat.Chat)=>{
 
         if(ts.progress && ts.progress== "100%") chat.loading=false;
 
-        homeStore.setMyData({act:'updateChat', actData:chat });
+        // 判断任务是否已完成或失败
+        const isTaskFinished = ["FAILURE","SUCCESS"].indexOf(ts.status) > -1;
 
-        // 阶段1: 生成完成后保存到数据库
-        // 只保存UPSCALE结果（单图），不保存4宫格IMAGINE结果
-        if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
-            // 调试：打印完整任务数据
-            console.log('[MJ Asset Save] 任务完成数据:', {
-                action: ts.action,
-                prompt: ts.prompt,
-                promptEn: ts.promptEn,
-                imageUrl: ts.imageUrl ? '有' : '无',
-                buttons: ts.buttons ? ts.buttons.map((b: any) => b.label) : []
-            });
+        // 只在任务完成/失败时触发COS保存,中间状态只更新UI
+        if (isTaskFinished) {
+            // 任务已结束,触发完整的状态保存(包括COS)
+            homeStore.setMyData({act:'updateChat', actData:chat });
 
-            // 方法：检查是否有U1-U4按钮（4宫格特征）
-            const hasUpscaleButtons = ts.buttons && ts.buttons.some((b: any) =>
-                b.label && ['U1', 'U2', 'U3', 'U4'].includes(b.label)
-            );
-
-            // 只保存没有U1-U4按钮的结果（即UPSCALE后的单图）
-            if (!hasUpscaleButtons) {
-                console.log('[MJ Asset Save] ✅ 保存UPSCALE单图到数据库');
-                saveMJAssetToDatabase(chat).catch(err => {
-                    console.warn('[MJ Asset Save] 保存失败（不影响用户体验）:', err);
+            // 如果是成功完成,保存URL到COS JSON文件(不下载图片)
+            if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
+                console.log('[MJ Asset Save] MJ URL已持久化,保存到COS JSON文件', {
+                    action: ts.action,
+                    imageUrl: ts.imageUrl
                 });
-            } else {
-                console.log('[MJ Asset Save] ⏭️ 跳过4宫格结果（检测到U1-U4按钮）');
+
+                // 保存到COS JSON文件（不阻塞，异步执行）
+                saveMJImageToCOS({
+                    id: chat.mjID || '',
+                    task_id: chat.mjID || '',
+                    prompt: chat.opt?.prompt || chat.opt?.promptEn || chat.requestOptions?.prompt || '',
+                    image_url: ts.imageUrl,
+                    action: ts.action,
+                    status: ts.status,
+                    created_at: new Date().toISOString(),
+                    metadata: chat.opt,
+                }).catch(err => {
+                    console.warn('[MJ Asset Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
             }
+        } else {
+            // 任务进行中,只更新前端UI,不触发COS保存
+            homeStore.setMyData({act:'updateTask', actData:chat });
         }
 
         //"NOT_START" //["SUBMITTED","IN_PROGRESS"].indexOf(ts.status)>-1
-        if( ["FAILURE","SUCCESS"].indexOf(ts.status)==-1 && cnt<100 ){
+        if( !isTaskFinished && cnt<100 ){
 
             setTimeout(() =>   check( ) , 5000 )
         }
@@ -551,149 +556,4 @@ export   function getFileFromClipboard(event:any ){
     }
     //console.log('passs>>' ,rz );
     return rz;
-}
-
-// ==================== 阶段1: 数据库集成 ====================
-
-/**
- * 获取API基础路径
- * 开发环境: /api/api (经过Vite代理重写)
- * 生产环境: /api (Vercel Serverless Functions)
- */
-function getAssetsApiPath(): string {
-    // 检测是否为开发环境
-    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isDev ? '/api/api/assets' : '/api/assets';
-}
-
-/**
- * 从数据库获取Midjourney资产列表
- * 返回用户的历史生成记录
- */
-export async function getMJAssetsFromDatabase(options?: {
-    limit?: number;
-    offset?: number;
-}): Promise<any[]> {
-    if (!homeStore.myData.session?.isDatabaseEnabled) {
-        return [];
-    }
-    console.log('[MJ Asset Load] 🌐 开始从数据库加载资产...');
-
-    try {
-        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
-        if (!apiKey) {
-            console.warn('[MJ Asset Load] ⚠️ 未配置API Key，跳过数据库读取');
-            return [];
-        }
-
-        const params = new URLSearchParams({
-            service: 'midjourney',
-            type: 'image',
-            limit: (options?.limit || 100).toString(),
-            offset: (options?.offset || 0).toString()
-        });
-
-        const apiPath = getAssetsApiPath();
-        console.log('[MJ Asset Load] 请求路径:', `${apiPath}?${params}`);
-
-        const response = await fetch(`${apiPath}?${params}`, {
-            method: 'GET',
-            headers: {
-                'x-api-key': apiKey
-            }
-        });
-
-        console.log('[MJ Asset Load] 响应状态:', response.status, response.statusText);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[MJ Asset Load] API错误响应:', errorText);
-            throw new Error(`API error: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`[MJ Asset Load] ✅ 从数据库加载 ${result.assets?.length || 0} 个资产`);
-
-        if (result.assets && result.assets.length > 0) {
-            console.log('[MJ Asset Load] 第一个资产示例:', {
-                id: result.assets[0].id,
-                prompt: result.assets[0].prompt?.substring(0, 30) + '...',
-                created_at: result.assets[0].created_at
-            });
-        }
-
-        return result.assets || [];
-
-    } catch (error) {
-        console.error('[MJ Asset Load] ❌ 加载失败:', error);
-        return [];
-    }
-}
-
-/**
- * 保存Midjourney资产到数据库
- * 当生成完成时自动调用（SUCCESS + 100% + 有图片URL）
- */
-async function saveMJAssetToDatabase(chat: Chat.Chat): Promise<void> {
-    if (!homeStore.myData.session?.isDatabaseEnabled) {
-        return;
-    }
-    try {
-        // 获取用户的API Key
-        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
-        if (!apiKey) {
-            console.warn('[MJ Asset Save] 未配置API Key，跳过保存');
-            return;
-        }
-
-        // 构建资产数据
-        // 优先从 opt 中获取 prompt（MJ API返回的原始prompt）
-        const actualPrompt = chat.opt?.prompt || chat.opt?.promptEn || chat.requestOptions?.prompt || '';
-
-        const assetData = {
-            service: 'midjourney',
-            type: 'image',
-            asset_data: {
-                ...chat.opt,
-                mjID: chat.mjID,
-                model: chat.model || 'midjourney',
-                timestamp: new Date().toISOString()
-            },
-            task_id: chat.mjID,
-            main_url: chat.opt?.imageUrl || chat.opt?.imageUrls?.[0]?.url,
-            prompt: actualPrompt
-        };
-
-        console.log('[MJ Asset Save] 保存数据:', {
-            mjID: chat.mjID,
-            prompt: actualPrompt ? `${actualPrompt.substring(0, 50)}...` : '(空)',
-            main_url: assetData.main_url ? '有' : '无'
-        });
-
-        // 调用后端API
-        // 开发环境: /api/api/assets (经过Vite代理重写)
-        // 生产环境: /api/assets (Vercel Serverless Functions)
-        const apiPath = getAssetsApiPath();
-        const response = await fetch(apiPath, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey
-            },
-            body: JSON.stringify(assetData)
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(`API error: ${response.status} - ${JSON.stringify(error)}`);
-        }
-
-        const result = await response.json();
-        console.log('[MJ Asset Save] ✅ 保存成功:', result.asset?.id);
-
-    } catch (error) {
-        // 静默失败，不影响用户体验
-        console.error('[MJ Asset Save] ❌ 保存失败:', error);
-        throw error; // 重新抛出以便上层catch处理
-    }
 }

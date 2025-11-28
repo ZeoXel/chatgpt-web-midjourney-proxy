@@ -1,192 +1,7 @@
 import { gptServerStore,homeStore,useAuthStore } from "@/store";
 import { mlog } from "./mjapi";
 import { sunoStore,SunoMedia } from "./sunoStore";
-
-/**
- * 获取 Assets API 路径（处理开发/生产环境差异）
- */
-function getAssetsApiPath(): string {
-    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isDev ? '/api/api/assets' : '/api/assets';
-}
-
-/**
- * 保存 Suno 音乐资产到数据库
- * @param sunoMedia - Suno音乐对象
- */
-export async function saveSunoAssetToDatabase(sunoMedia: SunoMedia): Promise<void> {
-    if (!homeStore.myData.session?.isDatabaseEnabled) {
-        return;
-    }
-    try {
-        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
-
-        console.log('[Suno Asset Save] 调试信息:', {
-            hasApiKey: !!apiKey,
-            apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'null',
-            sunoId: sunoMedia.id,
-            status: sunoMedia.status
-        });
-
-        if (!apiKey) {
-            console.warn('[Suno Asset Save] 未配置API Key，跳过保存');
-            return;
-        }
-
-        // 只保存已完成的音乐
-        if (sunoMedia.status !== 'complete') {
-            console.log('[Suno Asset Save] ⏭️ 跳过未完成的音乐:', sunoMedia.status);
-            return;
-        }
-
-        const assetData = {
-            service: 'suno',
-            type: 'audio',
-            asset_data: {
-                title: sunoMedia.title,
-                tags: sunoMedia.metadata?.tags,
-                model_version: sunoMedia.major_model_version,
-                model_name: sunoMedia.model_name,
-                duration: sunoMedia.metadata?.duration,
-                image_url: sunoMedia.image_url,
-                image_large_url: sunoMedia.image_large_url,
-                created_at: sunoMedia.created_at,
-                metadata_type: sunoMedia.metadata?.type,
-                timestamp: new Date().toISOString()
-            },
-            task_id: sunoMedia.id,
-            main_url: sunoMedia.audio_url,
-            prompt: sunoMedia.metadata?.prompt || sunoMedia.metadata?.gpt_description_prompt || ''
-        };
-
-        const apiPath = getAssetsApiPath();
-        const response = await fetch(apiPath, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey
-            },
-            body: JSON.stringify(assetData)
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(`API error: ${response.status} - ${JSON.stringify(error)}`);
-        }
-
-        const result = await response.json();
-        console.log('[Suno Asset Save] ✅ 保存成功:', result.asset?.id);
-    } catch (error) {
-        console.error('[Suno Asset Save] ❌ 保存失败:', error);
-        // 不抛出错误，静默失败，不影响用户体验
-    }
-}
-
-/**
- * 从数据库读取 Suno 音乐资产
- * @param options - 查询选项（limit, offset）
- * @returns SunoMedia 数组
- */
-export async function getSunoAssetsFromDatabase(options?: {
-    limit?: number;
-    offset?: number;
-}): Promise<SunoMedia[]> {
-    if (!homeStore.myData.session?.isDatabaseEnabled) {
-        return [];
-    }
-    console.log('[Suno Asset Load] 🌐 开始从数据库加载资产...');
-
-    try {
-        const apiKey = gptServerStore.myData.OPENAI_API_KEY;
-        if (!apiKey) {
-            console.warn('[Suno Asset Load] ⚠️ 未配置API Key，跳过数据库读取');
-            return [];
-        }
-
-        const params = new URLSearchParams({
-            service: 'suno',
-            type: 'audio',
-            limit: (options?.limit || 100).toString(),
-            offset: (options?.offset || 0).toString()
-        });
-
-        const apiPath = getAssetsApiPath();
-        console.log('[Suno Asset Load] 请求路径:', `${apiPath}?${params}`);
-
-        const response = await fetch(`${apiPath}?${params}`, {
-            method: 'GET',
-            headers: {
-                'x-api-key': apiKey
-            }
-        });
-
-        console.log('[Suno Asset Load] 响应状态:', response.status, response.statusText);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[Suno Asset Load] API错误响应:', errorText);
-            throw new Error(`API error: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`[Suno Asset Load] ✅ 从数据库加载 ${result.assets?.length || 0} 个资产`);
-
-        if (!result.assets || result.assets.length === 0) {
-            return [];
-        }
-
-        // 转换数据库资产为 SunoMedia 格式
-        const sunoMediaList: SunoMedia[] = result.assets.map((asset: any) => {
-            const assetData = asset.asset_data || {};
-            return {
-                id: asset.task_id || asset.id,
-                video_url: '',
-                audio_url: asset.main_url || '',
-                image_url: assetData.image_url || '',
-                image_large_url: assetData.image_large_url || '',
-                is_video_pending: false,
-                major_model_version: assetData.model_version || '',
-                model_name: assetData.model_name || '',
-                metadata: {
-                    tags: assetData.tags || '',
-                    prompt: asset.prompt || '',
-                    gpt_description_prompt: asset.prompt || '',
-                    type: assetData.metadata_type || 'gen',
-                    duration: assetData.duration || 0,
-                    refund_credits: false,
-                    stream: false
-                },
-                is_liked: false,
-                user_id: asset.user_id || '',
-                display_name: '',
-                handle: '',
-                is_handle_updated: false,
-                is_trashed: false,
-                created_at: assetData.created_at || asset.created_at,
-                status: 'complete',
-                title: assetData.title || '',
-                play_count: 0,
-                upvote_count: 0,
-                is_public: false
-            };
-        });
-
-        console.log(`[Suno Asset Load] ✅ 转换完成:`, {
-            总数: sunoMediaList.length,
-            示例: sunoMediaList[0] ? {
-                id: sunoMediaList[0].id,
-                title: sunoMediaList[0].title,
-                tags: sunoMediaList[0].metadata?.tags
-            } : '无'
-        });
-
-        return sunoMediaList;
-
-    } catch (error) {
-        console.error('[Suno Asset Load] ❌ 加载失败:', error);
-        return [];
-    }
-}  
+import { saveSunoAudioToCOS } from "./sunoStorage";
 
 const getUrl=(url:string)=>{
     if(url.indexOf('http')==0) return url;
@@ -314,12 +129,18 @@ async function feedTaskLoop(ids: string[], taskKey: string, retryCount = 0) {
         }
 
         // 处理返回的数据
-        d.forEach((item: SunoMedia) => {
+        for (const item of d) {
+            // 直接保存(Suno URL已持久化,不需要镜像)
             sunoS.save(item);
 
-            // Phase 1: 当音乐生成完成时，保存到数据库
+            // 当音乐生成完成时,保存URL到COS JSON文件
             if (item.status === "complete") {
-                saveSunoAssetToDatabase(item).catch(err => {
+                console.log('[Suno Asset Save] Suno URL已持久化,保存到COS JSON文件', {
+                    id: item.id,
+                    audio_url: item.audio_url
+                });
+
+                saveSunoAudioToCOS(item).catch(err => {
                     console.warn('[Suno Asset Save] 保存失败（不影响用户体验）:', err);
                 });
             }
@@ -327,7 +148,7 @@ async function feedTaskLoop(ids: string[], taskKey: string, retryCount = 0) {
             if (item.status === "complete" || item.status === "error") {
                 ids = ids.filter(v => v !== item.id);
             }
-        });
+        }
 
         homeStore.setMyData({ act: 'FeedTask' });
 

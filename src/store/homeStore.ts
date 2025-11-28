@@ -66,9 +66,9 @@ const getGptInt= ():gptConfigType =>{
 }
 
 const  getDefault=()=>{
-const amodel = homeStore.myData.session.amodel??'gpt-5'
+const amodel = homeStore.myData.session.amodel??'gpt-5.1'
 let v:gptConfigType={
-        model: amodel,
+		model: amodel,
         max_tokens:4096,
         userModel:'',
         talkCount:10,
@@ -143,8 +143,9 @@ export interface gptServerType{
     TTS_VOICE?:string
     REALTIME_SYSMSG?:string
     REALTIME_MODEL?:string
-    REALTIME_IS_WHISPER?:boolean 
+    REALTIME_IS_WHISPER?:boolean
     TAB_MUSIC?:string
+    USER_UUID?:string  // 用户UUID,用于COS存储隔离
 
 }
 
@@ -187,7 +188,8 @@ let v:gptServerType={
         VIDU_KEY:'',
         TRIPO_SERVER:'',
         TRIPO_KEY:'',
-        TAB_MODEL:'image'
+        TAB_MODEL:'image',
+        USER_UUID:''  // 用户UUID默认为空
     }
     return v ;
 }

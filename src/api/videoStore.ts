@@ -1,4 +1,5 @@
 import { ss } from '@/utils/storage';
+import type { VideoRecord } from './videoStorage';
 
 /**
  * 统一视频任务类型 - 符合第一性原理
@@ -7,10 +8,11 @@ import { ss } from '@/utils/storage';
 export interface UnifiedVideoTask {
   // 核心标识
   id: string;
-  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2' | 'minimax';
+  service: 'vidu' | 'runway' | 'pika' | 'kling' | 'runwayml' | 'sora2' | 'minimax' | 'luma';
 
   // 核心内容
-  url: string;                    // 视频URL (原始URL,暂不上传云存储)
+  url: string;                    // 视频URL (COS URL或原始URL)
+  original_url?: string;          // 原始外部URL
   poster?: string;                // 封面图URL
   status: 'pending' | 'processing' | 'success' | 'failed';
   prompt: string;
@@ -219,6 +221,78 @@ export class UnifiedVideoStore {
   }
 
   /**
+   * 获取合并后的视频列表（COS JSON + localStorage）
+   * COS数据优先，使用 id 去重
+   */
+  async getAllWithCOS(): Promise<UnifiedVideoTask[]> {
+    try {
+      console.log('[Video Store] 🔄 开始合并COS和本地数据...');
+
+      // 动态导入 loadVideosFromCOS 避免循环依赖
+      const { loadVideosFromCOS } = await import('./videoStorage');
+
+      // 并行加载COS和本地数据
+      const [cosVideos, localVideos] = await Promise.all([
+        loadVideosFromCOS({ limit: 200 }),
+        Promise.resolve(this.getAll())
+      ]);
+
+      console.log(`[Video Store] 数据源统计:
+  - COS: ${cosVideos.length} 个
+  - 本地: ${localVideos.length} 个`);
+
+      // 使用 Map 进行去重合并，COS数据优先
+      const videoMap = new Map<string, UnifiedVideoTask>();
+
+      // 1. 先加载COS数据（高优先级）- 转换为UnifiedVideoTask格式
+      cosVideos.forEach((cosVideo: VideoRecord) => {
+        const task: UnifiedVideoTask = {
+          id: cosVideo.id,
+          service: cosVideo.service as any,
+          model: cosVideo.model,
+          prompt: cosVideo.prompt,
+          url: cosVideo.cos_url,
+          original_url: cosVideo.original_url,
+          poster: cosVideo.poster_url,
+          status: cosVideo.status as any,
+          duration: cosVideo.duration,
+          aspect_ratio: cosVideo.aspect_ratio,
+          created_at: new Date(cosVideo.created_at).getTime(),
+          updated_at: new Date().getTime(),
+          extra: { ...cosVideo.metadata, source: 'cos' }
+        };
+        videoMap.set(task.id, task);
+      });
+
+      // 2. 加载本地数据（如果 id 不存在才添加）
+      localVideos.forEach(video => {
+        if (!videoMap.has(video.id)) {
+          videoMap.set(video.id, { ...video, extra: { ...video.extra, source: 'local' } });
+        }
+      });
+
+      // 3. 转换为数组并按创建时间排序
+      const merged = Array.from(videoMap.values());
+      merged.sort((a, b) => b.created_at - a.created_at);
+
+      console.log(`[Video Store] ✅ 合并完成: ${merged.length} 个视频 (已去重)`);
+
+      return merged;
+    } catch (error) {
+      console.error('[Video Store] ❌ 合并失败，降级到仅使用本地数据:', error);
+      return this.getAll();
+    }
+  }
+
+  /**
+   * 按服务筛选任务(支持COS合并)
+   */
+  async getByServiceWithCOS(service: string): Promise<UnifiedVideoTask[]> {
+    const allVideos = await this.getAllWithCOS();
+    return allVideos.filter(v => v.service === service);
+  }
+
+  /**
    * 获取存储统计信息
    */
   getStats() {
@@ -227,6 +301,7 @@ export class UnifiedVideoStore {
       total: tasks.length,
       byService: {
         vidu: tasks.filter(t => t.service === 'vidu').length,
+        luma: tasks.filter(t => t.service === 'luma').length,
         runway: tasks.filter(t => t.service === 'runway').length,
         pika: tasks.filter(t => t.service === 'pika').length,
         kling: tasks.filter(t => t.service === 'kling').length,

@@ -3,6 +3,7 @@ import { mlog } from './mjapi'
 import { sleep } from './suno'
 import { UnifiedModelStore, type UnifiedModelTask, type ModelTaskStatus } from './modelStore'
 import { smartUploadImage } from './imageUpload'
+import { saveModelToCOS } from './modelStorage'
 
 type TaskType = 'image_to_model' | 'multiview_to_model' | 'convert_model'
 
@@ -379,6 +380,36 @@ export async function tripoFeed(taskId: string, meta: { sourceType: TaskType; no
 
       if (FINAL_STATUS.has(task.status)) {
         glbTaskSuccess = task.status === 'success'
+
+        // 模型生成成功时,保存到COS
+        if (glbTaskSuccess) {
+          console.log('[Tripo Model Save] 模型生成成功,开始下载到COS')
+
+          const modelSnapshot = buildTaskSnapshot(task, meta)
+          saveModelToCOS({
+            id: taskId,
+            service: 'tripo',
+            sourceType: meta.sourceType,
+            modelVersion: meta.modelVersion,
+            prompt: modelSnapshot.prompt,
+            notes: meta.note,
+            original_model_url: modelSnapshot.modelUrl,
+            original_base_model_url: modelSnapshot.baseModelUrl,
+            original_pbr_model_url: modelSnapshot.pbrModelUrl,
+            original_stl_model_url: modelSnapshot.stlModelUrl,
+            original_preview_url: modelSnapshot.preview,
+            status: 'success',
+            progress: modelSnapshot.progress,
+            inputs: meta.inputs,
+            created_at: new Date(modelSnapshot.created_at).toISOString(),
+            metadata: task,
+          }).then(() => {
+            console.log('[Tripo Model Save] ✅ 模型已下载到COS并保存JSON记录')
+          }).catch(err => {
+            console.warn('[Tripo Model Save] ⚠️ 保存失败（不影响用户体验）:', err)
+          })
+        }
+
         break
       }
     }

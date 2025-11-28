@@ -19,13 +19,20 @@ import type { ChatMessage } from './chatgpt'
 import type { RequestProps } from './types'
 import { ideoProxy, ideoProxyFileDo, klingProxy, lumaProxy, minimaxProxy, pikaProxy, pixverseProxy, runwayProxy, runwaymlProxy, sora2Proxy, sunoProxy, tripoProxy, udioProxy, viggleProxy, viggleProxyFileDo } from './myfun'
 import assetsRouter from './api/assets'
-import supabaseUploadRouter from './api/supabase-upload'
+import cosUploadRouter from './api/cos-upload'
+import assetMirrorRouter from './api/asset-mirror'
+import chatStorageRouter from './routes/chat-storage'
+import mjStorageRouter from './api/mj-storage'
+import sunoStorageRouter from './api/suno-storage'
+import videoStorageRouter from './api/video-storage'
+import modelStorageRouter from './api/model-storage'
+import imageStorageRouter from './api/image-storage'
 
 const app = express()
 const router = express.Router()
 const isCloudStorageEnabled = process.env.ENABLE_CLOUD_STORAGE === 'true'
 const isDatabaseEnabled = process.env.ENABLE_DATABASE === 'true'
-const isSupabaseUploadEnabled = process.env.ENABLE_SUPABASE_UPLOAD !== 'false'
+const isCOSEnabled = process.env.ENABLE_TENCENT_COS === 'true'
 
 app.use(express.static('public', {
   // 设置响应头，允许带有查询参数的请求访问静态文件
@@ -59,6 +66,8 @@ router.post('/chat-process', authV2, async (req, res) => { // [authV2, limiter]
       message: prompt,
       lastContext: options,
       process: (chat: ChatMessage) => {
+        // 调试日志: 观察网关/模型实际返回结构，便于前端解析兼容
+        console.log('[Chat Stream] chunk:', JSON.stringify(chat))
         res.write(firstChunk ? JSON.stringify(chat) : `\n${JSON.stringify(chat)}`)
         firstChunk = false
       },
@@ -138,7 +147,7 @@ router.post('/session', async (req, res) => {
       cmodels,
       isUploadR2,
       isDatabaseEnabled,
-      isSupabaseUploadEnabled,
+      isCOSEnabled,
       gptUrl,
       turnstile,
       menuDisable,
@@ -875,18 +884,39 @@ else {
   })
 }
 
-// Supabase 上传接口（可独立控制）
-if (isSupabaseUploadEnabled) {
-  app.use('/api/supabase', supabaseUploadRouter)
+// 腾讯云 COS 上传接口
+if (isCOSEnabled) {
+  app.use('/api/cos', cosUploadRouter)
 }
 else {
-  app.use('/api/supabase', (_req, res) => {
+  app.use('/api/cos', (_req, res) => {
     res.status(503).json({
       success: false,
-      error: 'Supabase upload is disabled in this environment.',
+      error: 'COS upload is disabled. Please enable ENABLE_TENCENT_COS in .env',
     })
   })
 }
+
+// 资产镜像API (下载外部资产到COS)
+app.use('/api/asset-mirror', assetMirrorRouter)
+
+// COS对话历史存储API（始终启用）
+app.use('/api/chat-storage', chatStorageRouter)
+
+// MJ图片URL存储API (COS JSON)
+app.use('/api/mj-storage', mjStorageRouter)
+
+// Suno音频URL存储API (COS JSON)
+app.use('/api/suno-storage', sunoStorageRouter)
+
+// 视频URL存储API (COS JSON + 视频下载)
+app.use('/api/video-storage', videoStorageRouter)
+
+// 3D模型URL存储API (COS JSON + 模型下载)
+app.use('/api/model-storage', modelStorageRouter)
+
+// 通用图片URL存储API (COS JSON)
+app.use('/api/image-storage', imageStorageRouter)
 
 app.set('trust proxy', 1)
 

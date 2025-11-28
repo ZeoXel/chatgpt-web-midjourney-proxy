@@ -84,6 +84,14 @@ watch(() => gptServerStore.myData.OPENAI_API_KEY , (n)=>{
           </n-input>
       </section>
 
+      <section class="mb-4 flex justify-between items-center"  >
+          <n-input  @blur="blurClean"  placeholder="用户UUID (可选，用于COS存储)" v-model:value="gptServerStore.myData.USER_UUID" clearable>
+            <template #prefix>
+              <span class="text-[var(--n-tab-text-color-active)]">用户UUID:</span>
+            </template>
+          </n-input>
+      </section>
+
 
       <div class="flex justify-between items-baseline ">
         <section class="mb-4 flex justify-start items-center">

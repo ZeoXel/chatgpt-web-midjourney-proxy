@@ -14,6 +14,7 @@ import { ChatMessage } from "gpt-tokenizer/esm/GptEncoding";
 import { chatSetting } from "./chat";
 import { MessageApiInjection } from "naive-ui/es/message/src/MessageProvider";
 import { ideoSubmit } from "./ideo";
+import { saveImageToCOS } from "./imageStorage";
 import { error } from "console";
 //import {encode,  encodeChat}  from "gpt-tokenizer"
 //import {encode,  encodeChat} from "gpt-tokenizer/cjs/encoding/cl100k_base.js";
@@ -41,12 +42,14 @@ export const KnowledgeCutOffDate: Record<string, string> = {
 	"gpt-4o-2024-11-20": "2023-10",
 	"gpt-4-turbo": "2023-12",
 	"gpt-4-turbo-preview": "2023-12",
+	"gpt-5.1": "2025-01",
 	"claude-3-opus-20240229": "2023-08",
 	"claude-3-sonnet-20240229": "2023-08",
 	"claude-3-haiku-20240307": "2023-08",
 	"claude-3-5-sonnet-20240620": "2024-04",
 	"claude-3-5-sonnet-20241022": "2024-04",
 	"claude-3-7-sonnet-20250219": "2024-04",
+	"claude-sonnet-4-5-20250929": "2024-10",
 	"gemini-pro": "2023-12",
 	"gemini-pro-vision": "2023-12",
 	"gpt-4.5-preview-2025-02-27": "2024-10",
@@ -54,6 +57,8 @@ export const KnowledgeCutOffDate: Record<string, string> = {
 	"deepseek-v3": "2023-12",
 	"deepseek-r1": "2023-12",
 	"gemini-pro-1.5": "2024-04",
+	"gemini-3-pro-preview": "2025-01",
+	"grok-4.1": "2024-10",
 };
 
 const getUrl = (url: string) => {
@@ -625,7 +630,7 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			homeStore.setMyData({ act: "updateChat", actData: chat });
 			mlog(`✅ 已触发 updateChat 事件`);
 
-			// 保存所有图片到数据库
+			// 保存所有图片到数据库和COS
 			for (let i = 0; i < d.data.length; i++) {
 				const imgData = d.data[i];
 				const imgChat = {
@@ -634,7 +639,25 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 					opt: { imageUrl: imgData.url },
 				};
 				saveDallAssetToDatabase(imgChat, data.data).catch((err) => {
-					console.warn(`[DALL-E Asset Save] 保存第${i + 1}张图片失败:`, err);
+					console.warn(`[DALL-E Asset Save] 保存第${i + 1}张图片到数据库失败:`, err);
+				});
+
+				// 保存到COS
+				saveImageToCOS({
+					id: imgChat.myid,
+					service: data.data.model || 'dall-e-3',
+					model: data.data.model,
+					prompt: data.data.prompt,
+					original_url: imgData.url,
+					status: 'success',
+					created_at: new Date().toISOString(),
+					metadata: {
+						revised_prompt: imgData.revised_prompt,
+						size: data.data.size,
+						quality: data.data.quality,
+					}
+				}).catch((err) => {
+					console.warn(`[Image COS Save] 保存第${i + 1}张图片到COS失败:`, err);
 				});
 			}
 		} catch (e: any) {
@@ -890,8 +913,9 @@ Latex block: $$e=mc^2$$`;
 };
 
 export const isNewModel = (model: string) => {
-	// O1模型需要特殊的非流式处理，但GPT-5应该使用标准流式
-	return model.startsWith("o1-");
+	// 已不再区分模型，所有 Chat 请求统一走非流式路径
+	// 保留函数以兼容现有调用，但始终返回 true
+	return true;
 };
 export const subModel = async (opt: subModelType) => {
 	//
@@ -919,118 +943,35 @@ export const subModel = async (opt: subModelType) => {
 		model = model.replace("gpt-4-gizmo-", "");
 	}
 
-	let body: any = {
+	// 统一使用非流式调用，所有 Chat 请求都从 /v1/chat/completions 一次性获取完整结果
+	// 为兼容不同网关/模型，实现如下策略：
+	// 1. 对所有模型使用标准的 max_tokens
+	// 2. 对 gpt-5* / o1-* 额外附加 max_completion_tokens，保证新模型也能正常工作
+	const body: any = {
 		max_tokens,
 		model,
-		temperature,
+		//temperature,
 		top_p,
 		presence_penalty,
 		frequency_penalty,
 		messages: opt.message,
-		stream: true,
+		stream: false,
 	};
-	if (isNewModel(model)) {
-		body = {
-			max_completion_tokens: max_tokens,
-			model,
-			//temperature,
-			top_p,
-			presence_penalty,
-			frequency_penalty,
-			messages: opt.message,
-			stream: false,
-		};
-	}
-	if (body.stream) {
-		let headers = {
-			"Content-Type": "application/json",
-			//,'Authorization': 'Bearer ' +gptServerStore.myData.OPENAI_API_KEY
-			Accept: "text/event-stream ",
-		};
-		headers = { ...headers, ...getHeaderAuthorization() };
-
-		try {
-			let is_reasoning_content = false;
-
-			await fetchSSE(gptGetUrl("/v1/chat/completions"), {
-				method: "POST",
-				headers: headers,
-				signal: opt.signal,
-				onMessage: async (data: string) => {
-					//mlog('🐞测试'  ,  data )  ;
-					if (data == "[DONE]") opt.onMessage({ text: "", isFinish: true });
-					else {
-						try {
-							const obj = JSON.parse(data);
-							// 安全检查：确保choices数组存在且不为空
-							if (
-								!obj.choices ||
-								!Array.isArray(obj.choices) ||
-								obj.choices.length === 0
-							) {
-								mlog("⚠️ GPT响应格式异常，choices为空:", obj);
-								return;
-							}
-
-							const choice = obj.choices[0];
-							// 安全检查：确保delta对象存在
-							if (!choice || typeof choice !== "object") {
-								mlog("⚠️ GPT响应格式异常，choice对象无效:", choice);
-								return;
-							}
-
-							if (choice.delta?.reasoning_content) {
-								if (!is_reasoning_content) {
-									opt.onMessage({ text: "\n<think>\n", isFinish: false });
-								}
-								opt.onMessage({
-									text: choice.delta.reasoning_content,
-									isFinish: choice.finish_reason != null,
-								});
-								is_reasoning_content = true;
-							} else {
-								if (is_reasoning_content) {
-									opt.onMessage({ text: "\n</think>\n", isFinish: false });
-								}
-								is_reasoning_content = false;
-								opt.onMessage({
-									text: choice.delta?.content ?? "",
-									isFinish: choice.finish_reason != null,
-								});
-							}
-						} catch (parseError) {
-							mlog("❌ JSON解析错误:", parseError, "Raw data:", data);
-							// 解析失败时不中断流，继续处理后续数据
-							return;
-						}
-					}
-				},
-				onError(e) {
-					//console.log('eee>>', e )
-					mlog("❌未错误", e);
-					opt.onError && opt.onError(e);
-				},
-				body: JSON.stringify(body),
-			});
-		} catch (error) {
-			mlog("❌未错误2", error);
-			opt.onError && opt.onError(error);
-		}
-	} else {
-		try {
-			mlog("🐞非流输出", body);
-			opt.onMessage({ text: t("mj.thinking"), isFinish: false });
-			let obj: any = await gptFetch("/v1/chat/completions", body);
-			//mlog('结果 >>',obj   )
-			opt.onMessage({
-				text: obj.choices[0].message.content ?? "",
-				isFinish: true,
-				isAll: true,
-			});
-		} catch (error) {
-			mlog("❌未错误2", error);
-			opt.onError && opt.onError(error);
-		}
+	if (model.startsWith('gpt-5') || model.startsWith('o1-'))
+		body.max_completion_tokens = max_tokens;
+	try {
+		mlog("🐞非流输出", body);
+		opt.onMessage({ text: t("mj.thinking"), isFinish: false });
+		const obj: any = await gptFetch("/v1/chat/completions", body);
+		//mlog('结果 >>',obj   )
+		opt.onMessage({
+			text: obj?.choices?.[0]?.message?.content ?? "",
+			isFinish: true,
+			isAll: true,
+		});
+	} catch (error) {
+		mlog("❌未错误2", error);
+		opt.onError && opt.onError(error);
 	}
 };
 
@@ -1235,6 +1176,20 @@ export const openaiSetting = (q: any, ms: MessageApiInjection) => {
 		blurClean();
 		gptServerStore.setMyData(gptServerStore.myData);
 	}
+
+	// 处理UUID参数
+	if (q.uuid) {
+		mlog("q.uuid", q.uuid);
+		const uuid = String(q.uuid).trim();
+		// 验证UUID格式
+		const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		if (uuidRegex.test(uuid)) {
+			gptServerStore.setMyData({ USER_UUID: uuid });
+			mlog("UUID已保存:", uuid);
+		} else {
+			mlog("UUID格式无效:", uuid);
+		}
+	}
 };
 export const blurClean = () => {
 	mlog("blurClean");
@@ -1254,6 +1209,10 @@ export const blurClean = () => {
 		myTrim(gptServerStore.myData.UPLOADER_URL.trim(), "/"),
 		"\\",
 	);
+	// 清理UUID
+	if (gptServerStore.myData.USER_UUID) {
+		gptServerStore.myData.USER_UUID = gptServerStore.myData.USER_UUID.trim();
+	}
 };
 
 export const countTokens = async (

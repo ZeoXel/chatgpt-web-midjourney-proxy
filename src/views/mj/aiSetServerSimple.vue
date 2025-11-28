@@ -84,14 +84,6 @@ initializeDefaultUrl()
   <div id="setserver-simple">
     <div class="w-full max-h-[400px] overflow-y-auto overflow-x-hidden">
       <div class="p-4 space-y-6">
-        <div class="text-center text-lg font-medium mb-4">
-          {{ $t('mj.setOpen') }} - 简化配置
-        </div>
-
-        <div class="text-sm text-gray-500 mb-4">
-          通过一站式中转站统一管理所有AI模型，简化配置流程。配置后将自动应用到所有支持的AI服务。
-        </div>
-
         <!-- 核心密钥配置 -->
         <section class="space-y-4">
           <NDivider title-placement="left">
@@ -113,6 +105,22 @@ initializeDefaultUrl()
             />
             <div class="text-xs text-gray-400 mt-1">
               此密钥将自动应用到所有AI服务（OpenAI、Claude、Midjourney、Luma、Runway、Kling、Pika、Suno、Vidu等）
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">
+              用户UUID（可选）
+            </label>
+            <NInput
+              v-model:value="gptServerStore.myData.USER_UUID"
+              placeholder="用于对话历史和资产的云存储隔离"
+              clearable
+              class="w-full"
+              @blur="blurClean"
+            />
+            <div class="text-xs text-gray-400 mt-1">
+              用于腾讯云COS存储的用户隔离，首次访问时会从URL自动读取并保存
             </div>
           </div>
 

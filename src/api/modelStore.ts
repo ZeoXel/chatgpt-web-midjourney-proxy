@@ -1,4 +1,5 @@
 import { ss } from '@/utils/storage'
+import type { ModelRecord } from './modelStorage'
 
 export type ModelTaskStatus = 'pending' | 'processing' | 'success' | 'failed'
 
@@ -69,6 +70,64 @@ export class UnifiedModelStore {
     catch (error) {
       console.error('Failed to read model tasks', error)
       return []
+    }
+  }
+
+  /**
+   * 获取合并后的模型列表（COS JSON + localStorage）
+   */
+  async getAllWithCOS(): Promise<UnifiedModelTask[]> {
+    try {
+      console.log('[Model Store] 🔄 开始合并COS和本地数据...')
+
+      const { loadModelsFromCOS } = await import('./modelStorage')
+
+      const [cosModels, localModels] = await Promise.all([
+        loadModelsFromCOS({ limit: 200 }),
+        Promise.resolve(this.getAll())
+      ])
+
+      console.log(`[Model Store] 数据源统计:
+  - COS: ${cosModels.length} 个
+  - 本地: ${localModels.length} 个`)
+
+      const modelMap = new Map<string, UnifiedModelTask>()
+
+      // COS数据优先
+      cosModels.forEach((cosModel: ModelRecord) => {
+        const task: UnifiedModelTask = {
+          id: cosModel.id,
+          service: cosModel.service as 'tripo',
+          sourceType: cosModel.sourceType as any,
+          status: cosModel.status as any,
+          modelVersion: cosModel.modelVersion,
+          prompt: cosModel.prompt,
+          notes: cosModel.notes,
+          preview: cosModel.cos_preview_url,
+          modelUrl: cosModel.cos_model_url,
+          created_at: new Date(cosModel.created_at).getTime(),
+          updated_at: Date.now(),
+          extra: { ...cosModel.metadata, source: 'cos' }
+        }
+        modelMap.set(task.id, task)
+      })
+
+      // 本地数据补充
+      localModels.forEach(model => {
+        if (!modelMap.has(model.id)) {
+          modelMap.set(model.id, { ...model, extra: { ...model.extra, source: 'local' } })
+        }
+      })
+
+      const merged = Array.from(modelMap.values())
+      merged.sort((a, b) => b.created_at - a.created_at)
+
+      console.log(`[Model Store] ✅ 合并完成: ${merged.length} 个模型`)
+
+      return merged
+    } catch (error) {
+      console.error('[Model Store] ❌ 合并失败:', error)
+      return this.getAll()
     }
   }
 

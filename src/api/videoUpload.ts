@@ -1,6 +1,6 @@
 /**
- * 视频上传服务（简化版 - 不使用 Supabase）
- * 使用本地 Blob URL 或项目上传接口
+ * 视频上传服务
+ * 使用腾讯云 COS 或本地 Blob URL
  */
 
 import { mlog } from './mjapi';
@@ -17,19 +17,18 @@ export interface VideoUploadResult {
 }
 
 /**
- * 上传视频到项目后端
+ * 上传视频到腾讯云 COS
  * @param file 视频文件
  * @returns Promise<VideoUploadResult>
  */
-async function uploadVideoToBackend(file: File): Promise<VideoUploadResult> {
+async function uploadVideoToCOS(file: File): Promise<VideoUploadResult> {
   try {
     const formData = new FormData();
     formData.append('file', file);
 
-    mlog('📤 开始上传视频到 Supabase 云存储...');
+    mlog('📤 开始上传视频到腾讯云 COS...');
 
-    // 使用 Supabase 上传接口
-    const response = await fetch('/api/supabase/upload', {
+    const response = await fetch('/api/cos/upload', {
       method: 'POST',
       body: formData,
     });
@@ -41,13 +40,13 @@ async function uploadVideoToBackend(file: File): Promise<VideoUploadResult> {
     const data = await response.json();
 
     if (!data.success || !data.url) {
-      throw new Error(data.error || 'Supabase 上传失败');
+      throw new Error(data.error || 'COS 上传失败');
     }
 
-    mlog('✅ Supabase 视频上传成功:', data.url);
+    mlog('✅ 腾讯云 COS 视频上传成功:', data.url);
 
     return {
-      url: data.url, // Supabase 返回的是完整的公网 URL
+      url: data.url,
       type: 'url',
       size: file.size,
       bucket: data.bucket,
@@ -56,7 +55,7 @@ async function uploadVideoToBackend(file: File): Promise<VideoUploadResult> {
       filename: file.name,
     };
   } catch (error: any) {
-    mlog('❌ Supabase 上传失败，降级到 Blob URL:', error);
+    mlog('❌ COS 上传失败，降级到 Blob URL:', error);
     throw error;
   }
 }
@@ -109,11 +108,11 @@ export async function smartUploadVideo(
     throw new Error(`不支持的视频格式，仅支持：${validFormats.join(', ')}`);
   }
 
-  // 3. 尝试上传到后端，失败则使用 Blob URL
+  // 3. 尝试上传到腾讯云 COS，失败则使用 Blob URL
   try {
-    return await uploadVideoToBackend(file);
+    return await uploadVideoToCOS(file);
   } catch (error) {
-    mlog('⚠️ 后端上传失败，使用本地 Blob URL');
+    mlog('⚠️ COS 上传失败，使用本地 Blob URL');
     return createBlobURL(file);
   }
 }

@@ -1,7 +1,7 @@
 /**
- * 图片上传服务（简化版）
+ * 图片上传服务
  * 支持两种上传方式：
- * 1. Supabase Storage（优先，返回公网 URL）
+ * 1. 腾讯云 COS（优先，返回公网 URL）
  * 2. 压缩 Base64（兜底方案）
  */
 
@@ -16,16 +16,16 @@ export interface UploadResult {
 }
 
 /**
- * 上传图片到 Supabase Storage
+ * 上传图片到腾讯云 COS
  * @param file 图片文件
  * @returns Promise<UploadResult>
  */
-async function uploadToSupabase(file: File): Promise<UploadResult> {
+async function uploadToCOS(file: File): Promise<UploadResult> {
   try {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/supabase/upload', {
+    const response = await fetch('/api/cos/upload', {
       method: 'POST',
       body: formData,
     });
@@ -38,10 +38,10 @@ async function uploadToSupabase(file: File): Promise<UploadResult> {
     const data = await response.json();
 
     if (!data.success || !data.url) {
-      throw new Error(data.error || 'Supabase 上传失败');
+      throw new Error(data.error || 'COS 上传失败');
     }
 
-    mlog('✅ Supabase Storage 上传成功:', data.url);
+    mlog('✅ 腾讯云 COS 上传成功:', data.url);
 
     return {
       url: data.url,
@@ -49,7 +49,7 @@ async function uploadToSupabase(file: File): Promise<UploadResult> {
       size: file.size,
     };
   } catch (error) {
-    mlog('❌ Supabase Storage 上传失败:', error);
+    mlog('❌ 腾讯云 COS 上传失败:', error);
     throw error;
   }
 }
@@ -89,7 +89,7 @@ async function compressToBase64(file: File): Promise<UploadResult> {
 
 /**
  * 智能上传图片（自动选择最佳方式）
- * 优先级：Supabase Storage > 压缩 Base64
+ * 优先级：腾讯云 COS > 压缩 Base64
  * @param file 图片文件
  * @returns Promise<UploadResult>
  */
@@ -116,16 +116,16 @@ export async function smartUploadImage(file: File): Promise<UploadResult> {
     throw new Error(`不支持的图片格式，仅支持：${validFormats.join(', ')}`);
   }
 
-  // 3. 策略 1: 尝试上传到 Supabase Storage
+  // 3. 策略 1: 尝试上传到腾讯云 COS
   try {
-    mlog('📤 尝试上传到 Supabase Storage...');
-    return await uploadToSupabase(file);
+    mlog('📤 尝试上传到腾讯云 COS...');
+    return await uploadToCOS(file);
   } catch (error: any) {
-    // 如果是配置缺失或存储桶不存在，记录并降级
-    if (error.message?.includes('SUPABASE') || error.message?.includes('不存在')) {
-      mlog('⚠️ Supabase 未配置或存储桶不存在，使用压缩 Base64');
+    // 如果是配置缺失或COS不可用，记录并降级
+    if (error.message?.includes('COS') || error.message?.includes('disabled')) {
+      mlog('⚠️ COS 未配置或不可用，使用压缩 Base64');
     } else {
-      mlog('⚠️ Supabase 上传失败，降级到压缩 Base64:', error.message);
+      mlog('⚠️ COS 上传失败，降级到压缩 Base64:', error.message);
     }
   }
 

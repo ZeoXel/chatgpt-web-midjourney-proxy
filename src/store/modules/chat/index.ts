@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { defaultState, getLocalState, setLocalState, setLocalStateWithDB, setLastChatUuid, getLastChatUuid, getLocalStateWithDB, deleteChatFromDatabase } from './helper'
+import { defaultState, getLocalState, setLocalState, setLocalStateWithDB, setLastChatUuid, getLastChatUuid, getLocalStateWithDB } from './helper'
 import { router } from '@/router'
 import { homeStore } from '@/store/homeStore'
 import { sleep } from '@/api/suno'
@@ -72,21 +72,11 @@ export const useChatStore = defineStore('chat-store', {
     },
 
     async deleteHistory(index: number) {
-      // 先获取要删除的对话 UUID（在删除前获取）
-      const deletedUuid = this.history[index]?.uuid
-
       // 删除本地数据
       this.history.splice(index, 1)
       this.chat.splice(index, 1)
 
-      // 异步删除数据库数据（不阻塞）
-      if (deletedUuid) {
-        deleteChatFromDatabase(deletedUuid).catch(err => {
-          console.warn('[Chat Store] 数据库删除失败（不影响用户体验）:', err)
-        })
-      }
-
-      // 立即保存更新后的状态到本地和数据库
+      // 立即保存更新后的状态到本地和COS (会自动同步删除)
       this.recordState()
 
       if (this.history.length === 0) {
@@ -212,6 +202,25 @@ export const useChatStore = defineStore('chat-store', {
       if (chatIndex !== -1) {
         this.chat[chatIndex].data[index] = { ...this.chat[chatIndex].data[index], ...chat }
         this.recordState()
+      }
+    },
+
+    // 更新聊天消息(仅UI,不触发COS保存) - 用于任务进行中的状态更新
+    updateChatSomeByUuidNoSave(uuid: number, index: number, chat: Partial<Chat.Chat>) {
+      if (!uuid || uuid === 0) {
+        if (this.chat.length) {
+          this.chat[0].data[index] = { ...this.chat[0].data[index], ...chat }
+          // 仅保存到localStorage,不触发COS保存
+          setLocalState(this.$state)
+        }
+        return
+      }
+
+      const chatIndex = this.chat.findIndex(item => item.uuid === uuid)
+      if (chatIndex !== -1) {
+        this.chat[chatIndex].data[index] = { ...this.chat[chatIndex].data[index], ...chat }
+        // 仅保存到localStorage,不触发COS保存
+        setLocalState(this.$state)
       }
     },
 

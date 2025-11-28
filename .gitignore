@@ -33,4 +33,4 @@ coverage
 /service/uploads
 
 # Documentation with sensitive examples
-/doc
+/doc.env

@@ -45,11 +45,46 @@ export default defineConfig((env) => {
       port: 3001,
       open: false,
       proxy: {
-        // 新增：Supabase 上传 API（不 rewrite）
-        '/api/supabase': {
+        // 新增：COS对话存储 API（不 rewrite）
+        '/api/chat-storage': {
           target: viteEnv.VITE_APP_API_BASE_URL,
           changeOrigin: true,
           // 不进行 rewrite，保留完整路径
+        },
+        // 新增：COS上传 API（不 rewrite）
+        '/api/cos': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：资产镜像 API（不 rewrite）
+        '/api/asset-mirror': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：MJ存储 API (COS JSON)
+        '/api/mj-storage': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：Suno存储 API (COS JSON)
+        '/api/suno-storage': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：视频存储 API (COS JSON + 视频下载)
+        '/api/video-storage': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：3D模型存储 API (COS JSON + 模型下载)
+        '/api/model-storage': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
+        },
+        // 新增：通用图片存储 API (COS JSON)
+        '/api/image-storage': {
+          target: viteEnv.VITE_APP_API_BASE_URL,
+          changeOrigin: true,
         },
         // 新增：资产存储 API（不 rewrite）
         '/api/assets': {

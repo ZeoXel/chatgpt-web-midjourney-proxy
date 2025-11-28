@@ -23,7 +23,7 @@ const ms = useMessage()
 const chatStore = useChatStore()
 
 const { isMobile } = useBasicLayout()
-const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } = useChat()
+const { addChat, updateChat, updateChatSome, updateChatSomeNoSave, getChatByUuidAndIndex } = useChat()
 const { scrollRef, scrollToBottom, scrollToBottomIfAtBottom } = useScroll()
 const { usingContext, toggleUsingContext } = useUsingContext()
 
@@ -275,6 +275,15 @@ watch(()=>homeStore.myData.act,(n)=>{
         mlog('draw', homeStore.myData.actData.drawText );
         handleSubmit();
     }
+    // updateTask: 任务进行中,只更新UI,不触发COS保存
+    if(n=='updateTask'){
+        let dchat= homeStore.myData.actData as Chat.Chat;
+        if(  dchat.uuid && dchat.index ) {
+            dchat.dateTime= new Date().toLocaleString();
+            updateChatSomeNoSave( +dchat.uuid, +dchat.index, dchat );
+        }
+    }
+    // updateChat: 任务完成,触发完整的状态保存(包括COS)
     if(n=='updateChat'){
         let dchat= homeStore.myData.actData as Chat.Chat;
         mlog("动作更新",'updateChat' ,  dchat.uuid,dchat.index );

@@ -4,6 +4,8 @@ import { ViduTask, viduStore } from "./viduStore";
 import { sleep } from "./suno";
 import { UnifiedVideoStore } from "./videoStore";
 import { convertViduToUnified } from "./videoAdapter";
+import { mirrorVideoUrl } from "./assetMirror";
+import { saveVideoToCOS } from "./videoStorage";
 
 // 获取认证头部 - NewAPI网关版本
 function getHeaderAuthorization() {
@@ -254,15 +256,63 @@ export const viduGetTask = async (task_id: string): Promise<ViduTask | null> => 
           url: updatedTask.url
         });
 
-        // 保存到旧Store (保留兼容性)
-        viduStore.save(updatedTask);
+        // 视频生成成功时,下载到COS并保存JSON记录
+        if (state === 'success' && videoUrl) {
+          console.log('[Vidu Video Save] 视频生成成功,开始下载到COS:', videoUrl);
 
-        // ✅ 新增: 同时保存到统一Store
-        const unifiedStore = new UnifiedVideoStore();
-        const unifiedTask = convertViduToUnified(updatedTask);
-        mlog('🔄 [Vidu] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
-        unifiedStore.save(unifiedTask);
-        mlog('✅ [Vidu] Updated in unified store, total tasks:', unifiedStore.getAll().length);
+          // 异步保存到COS (不阻塞用户体验)
+          saveVideoToCOS({
+            id: task_id,
+            service: 'vidu',
+            model: task.model,
+            prompt: task.prompt,
+            original_url: videoUrl,
+            duration: task.duration,
+            aspect_ratio: task.aspect_ratio,
+            status: 'success',
+            created_at: task.created_at || new Date().toISOString(),
+            metadata: {
+              resolution: task.resolution,
+              seed: task.seed,
+              credits: taskData.credits,
+            }
+          }).then(() => {
+            console.log('[Vidu Video Save] ✅ 视频已下载到COS并保存JSON记录');
+          }).catch(err => {
+            console.warn('[Vidu Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+          });
+
+          // 仍然调用旧的镜像逻辑(兼容性)
+          mirrorVideoUrl(updatedTask).then(mirroredTask => {
+            // 保存镜像后的任务(URL已替换为COS)
+            viduStore.save(mirroredTask);
+
+            // 同时保存到统一Store
+            const unifiedStore = new UnifiedVideoStore();
+            const unifiedTask = convertViduToUnified(mirroredTask);
+            unifiedStore.save(unifiedTask);
+
+            mlog('[Vidu Mirror] ✅ 视频镜像成功:', mirroredTask.url);
+          }).catch(err => {
+            mlog('[Vidu Mirror] ⚠️ 镜像失败,使用原URL:', err);
+            // 镜像失败仍保存原数据
+            viduStore.save(updatedTask);
+
+            const unifiedStore = new UnifiedVideoStore();
+            const unifiedTask = convertViduToUnified(updatedTask);
+            unifiedStore.save(unifiedTask);
+          });
+        } else {
+          // 未成功的直接保存
+          viduStore.save(updatedTask);
+
+          // ✅ 同时保存到统一Store
+          const unifiedStore = new UnifiedVideoStore();
+          const unifiedTask = convertViduToUnified(updatedTask);
+          mlog('🔄 [Vidu] Updating unified store:', unifiedTask.id, 'status:', unifiedTask.status);
+          unifiedStore.save(unifiedTask);
+          mlog('✅ [Vidu] Updated in unified store, total tasks:', unifiedStore.getAll().length);
+        }
 
         mlog('🎯 [Vidu] Returning updatedTask with state:', updatedTask.state);
         return updatedTask;

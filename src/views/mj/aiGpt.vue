@@ -13,26 +13,28 @@ import { useMessage  } from "naive-ui";
 import { t } from "@/locales";
 
 const emit = defineEmits(['finished']);
-const { addChat , updateChatSome } = useChat() 
+const { addChat , updateChatSome, updateChatSomeNoSave } = useChat() 
 const chatStore = useChatStore()
 const st=ref({uuid:'1002', index:-1 });
 const controller = ref<AbortController>( );;// new AbortController();
 const dataSources = computed(() => chatStore.getChatByUuid(+st.value.uuid))
-const ms= useMessage();
-const textRz= ref<string[]>([]);
-const goFinish= (  )=>{
-    //let dindex = st.value.index>=0? st.value.index : dataSources.value.length - 1;
-    //return ;
-    updateChatSome( +st.value.uuid,  st.value.index , { dateTime: new Date().toLocaleString(),loading: false })
-    //scrollToBottom();
-    emit('finished');
-  
-    homeStore.setMyData({act:'scrollToBottomIfAtBottom'});
-    mlog('🐞 goFinish2',st.value.uuid);
-    // setTimeout(() => {
-        
-    //    if(textRz.value.length>0 )  textRz.value = [];
-    // }, 200 ); 
+const ms = useMessage();
+const textRz = ref<string[]>([]);
+const goFinish = () => {
+	// 在结束时，确保最终文本和 loading 状态一起写回到会话
+	const finalText = textRz.value.length > 0 ? textRz.value.join('') : undefined
+	const patch: Partial<Chat.Chat> = {
+		dateTime: new Date().toLocaleString(),
+		loading: false,
+	}
+	if (finalText !== undefined)
+		patch.text = finalText
+
+	updateChatSome(+st.value.uuid, st.value.index, patch)
+
+	emit('finished')
+	homeStore.setMyData({ act: 'scrollToBottomIfAtBottom' })
+	mlog('🐞 goFinish2', st.value.uuid)
 }
 
 const getMessage= async (start=1000,loadingCnt=3)=>{
@@ -40,14 +42,15 @@ const getMessage= async (start=1000,loadingCnt=3)=>{
 }
 
 
-watch( ()=>textRz.value, (n)=>{
-    //mlog('🐞 textRz',n);
-    if(n.length==0) return ;
-    updateChatSome( +st.value.uuid, st.value.index , { dateTime: new Date().toLocaleString(),text: n.join('') })
-    //scrollToBottom();
-    homeStore.setMyData({act:'scrollToBottomIfAtBottom'})
-    //homeStore.setMyData({act:'scrollToBottom'})
-},{deep:true}) 
+watch(() => textRz.value, (n) => {
+	//mlog('🐞 textRz',n);
+	if (n.length == 0) return;
+	// 文本变化时实时更新UI
+	updateChatSome(+st.value.uuid, st.value.index, { dateTime: new Date().toLocaleString(), text: n.join('') })
+	//scrollToBottom();
+	homeStore.setMyData({ act: 'scrollToBottomIfAtBottom' })
+	//homeStore.setMyData({act:'scrollToBottom'})
+}, { deep: true }) 
 const { uuid } = useRoute().params as { uuid: string }
 watch(()=>homeStore.myData.act, async (n)=>{
 

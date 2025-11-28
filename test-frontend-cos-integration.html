@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COS集成测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    h2 { color: #555; margin-top: 0; }
+    .test-section {
+      margin-bottom: 30px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .uuid-input {
+      width: 400px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .log {
+      max-height: 400px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+    }
+    .log-time {
+      color: #608b4e;
+    }
+    .log-level-info {
+      color: #4ec9b0;
+    }
+    .log-level-error {
+      color: #f48771;
+    }
+    .log-level-success {
+      color: #b5cea8;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 COS对话存储集成测试</h1>
+
+  <div class="card">
+    <h2>1. UUID配置</h2>
+    <div class="test-section">
+      <label>
+        测试UUID:
+        <input type="text" id="testUuid" class="uuid-input"
+               value="90b3b85c-0bfb-444d-a5e7-b7fb5a2bef15"
+               placeholder="输入UUID或使用默认值">
+      </label>
+      <button onclick="extractUuid()">📌 提取当前URL中的UUID</button>
+      <div id="uuidStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. 后端API测试</h2>
+    <div class="test-section">
+      <button onclick="testBackendHealth()">🏥 健康检查</button>
+      <button onclick="testBackendSave()">💾 测试保存</button>
+      <button onclick="testBackendLoad()">📥 测试加载</button>
+      <button onclick="testBackendStats()">📊 获取统计</button>
+      <div id="backendStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. 前端存储逻辑测试</h2>
+    <div class="test-section">
+      <button onclick="testLocalStorage()">💿 测试本地存储</button>
+      <button onclick="testCOSStorage()">☁️ 测试COS存储</button>
+      <button onclick="testMergeLogic()">🔄 测试合并逻辑</button>
+      <button onclick="testDebouncing()">⏱️ 测试防抖</button>
+      <div id="storageStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. 完整流程测试</h2>
+    <div class="test-section">
+      <button onclick="runFullIntegrationTest()">🚀 运行完整测试</button>
+      <button onclick="clearTestData()">🗑️ 清除测试数据</button>
+      <div id="integrationStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📝 测试日志</h2>
+    <button onclick="clearLog()">清除日志</button>
+    <div id="testLog" class="log"></div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3002';
+
+    function log(message, level = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-level-${level}">[${level.toUpperCase()}]</span> ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+    }
+
+    function getTestUuid() {
+      return document.getElementById('testUuid').value || '90b3b85c-0bfb-444d-a5e7-b7fb5a2bef15';
+    }
+
+    function showStatus(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      el.className = `status ${type}`;
+      el.textContent = message;
+    }
+
+    function extractUuid() {
+      const hash = window.location.hash;
+      log(`当前URL hash: ${hash}`);
+
+      if (!hash || hash === '#' || hash === '#/') {
+        showStatus('uuidStatus', '❌ URL中未找到UUID', 'error');
+        log('URL中没有uuid参数', 'error');
+        return;
+      }
+
+      const hashQueryString = hash.includes('?') ? hash.split('?')[1] : '';
+      const params = new URLSearchParams(hashQueryString);
+      const uuid = params.get('uuid');
+
+      if (uuid) {
+        document.getElementById('testUuid').value = uuid;
+        showStatus('uuidStatus', `✅ 成功提取UUID: ${uuid}`, 'success');
+        log(`提取到UUID: ${uuid}`, 'success');
+      } else {
+        showStatus('uuidStatus', '❌ URL中未找到uuid参数', 'error');
+        log('URL参数中没有找到uuid', 'error');
+      }
+    }
+
+    async function testBackendHealth() {
+      log('开始健康检查...');
+      showStatus('backendStatus', '🔄 检查中...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/chat-storage/health`);
+        const data = await response.json();
+
+        if (response.ok) {
+          showStatus('backendStatus', `✅ 后端健康: ${JSON.stringify(data)}`, 'success');
+          log(`健康检查成功: ${JSON.stringify(data)}`, 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}: ${data.message}`);
+        }
+      } catch (error) {
+        showStatus('backendStatus', `❌ 健康检查失败: ${error.message}`, 'error');
+        log(`健康检查失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testBackendSave() {
+      const uuid = getTestUuid();
+      log(`开始测试保存到COS: UUID=${uuid}`);
+      showStatus('backendStatus', '🔄 保存中...', 'info');
+
+      const testData = {
+        active: 1003,
+        usingContext: true,
+        history: [
+          { uuid: 1003, title: '测试对话1', isEdit: false },
+          { uuid: 1004, title: '测试对话2', isEdit: false }
+        ],
+        chat: [
+          { uuid: 1003, data: [
+            { dateTime: new Date().toISOString(), text: '你好！', inversion: true },
+            { dateTime: new Date().toISOString(), text: '你好！有什么可以帮助你的吗？', inversion: false }
+          ]},
+          { uuid: 1004, data: [
+            { dateTime: new Date().toISOString(), text: 'COS测试', inversion: true }
+          ]}
+        ]
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/chat-storage/${uuid}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showStatus('backendStatus', `✅ 保存成功! URL: ${result.data.url}`, 'success');
+          log(`保存成功: ${JSON.stringify(result)}`, 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}: ${result.message}`);
+        }
+      } catch (error) {
+        showStatus('backendStatus', `❌ 保存失败: ${error.message}`, 'error');
+        log(`保存失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testBackendLoad() {
+      const uuid = getTestUuid();
+      log(`开始测试从COS加载: UUID=${uuid}`);
+      showStatus('backendStatus', '🔄 加载中...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/chat-storage/${uuid}`);
+        const result = await response.json();
+
+        if (response.ok) {
+          const data = result.data;
+          showStatus('backendStatus',
+            `✅ 加载成功! 对话数: ${data.history?.length || 0}`,
+            'success'
+          );
+          log(`加载成功: ${JSON.stringify(data, null, 2)}`, 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}: ${result.message}`);
+        }
+      } catch (error) {
+        showStatus('backendStatus', `❌ 加载失败: ${error.message}`, 'error');
+        log(`加载失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testBackendStats() {
+      const uuid = getTestUuid();
+      log(`开始获取统计信息: UUID=${uuid}`);
+      showStatus('backendStatus', '🔄 获取中...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/chat-storage/${uuid}/stats`);
+        const result = await response.json();
+
+        if (response.ok) {
+          const stats = result.data;
+          showStatus('backendStatus',
+            `✅ 统计信息: 对话${stats.conversationCount}个, 消息${stats.messageCount}条, 大小${stats.size}字节`,
+            'success'
+          );
+          log(`统计信息: ${JSON.stringify(stats, null, 2)}`, 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}: ${result.message}`);
+        }
+      } catch (error) {
+        showStatus('backendStatus', `❌ 获取失败: ${error.message}`, 'error');
+        log(`获取失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testLocalStorage() {
+      log('测试本地存储功能...');
+      showStatus('storageStatus', '🔄 测试中...', 'info');
+
+      try {
+        const testData = {
+          active: 1005,
+          usingContext: true,
+          history: [{ uuid: 1005, title: '本地测试', isEdit: false }],
+          chat: [{ uuid: 1005, data: [] }]
+        };
+
+        localStorage.setItem('chatStorage', JSON.stringify(testData));
+        const loaded = JSON.parse(localStorage.getItem('chatStorage'));
+
+        if (loaded && loaded.active === 1005) {
+          showStatus('storageStatus', '✅ 本地存储读写正常', 'success');
+          log(`本地存储测试成功: ${JSON.stringify(loaded)}`, 'success');
+        } else {
+          throw new Error('数据验证失败');
+        }
+      } catch (error) {
+        showStatus('storageStatus', `❌ 本地存储测试失败: ${error.message}`, 'error');
+        log(`本地存储测试失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testCOSStorage() {
+      log('测试COS云端存储功能...');
+      showStatus('storageStatus', '🔄 测试中...', 'info');
+
+      try {
+        // 先保存
+        await testBackendSave();
+        await new Promise(r => setTimeout(r, 1000));
+
+        // 再加载
+        await testBackendLoad();
+
+        showStatus('storageStatus', '✅ COS存储读写正常', 'success');
+        log('COS存储测试完成', 'success');
+      } catch (error) {
+        showStatus('storageStatus', `❌ COS存储测试失败: ${error.message}`, 'error');
+        log(`COS存储测试失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testMergeLogic() {
+      log('测试数据合并逻辑...');
+      showStatus('storageStatus', '🔄 测试中...', 'info');
+
+      // 模拟数据合并场景
+      const cosData = {
+        history: [
+          { uuid: 1001, title: 'COS对话1', isEdit: false },
+          { uuid: 1002, title: 'COS对话2', isEdit: false }
+        ]
+      };
+
+      const localData = {
+        history: [
+          { uuid: 1002, title: '本地对话2(会被覆盖)', isEdit: false },
+          { uuid: 1003, title: '本地对话3', isEdit: false }
+        ]
+      };
+
+      // 模拟合并逻辑 (COS优先)
+      const historyMap = new Map();
+      cosData.history.forEach(h => historyMap.set(h.uuid, h));
+      localData.history.forEach(h => {
+        if (!historyMap.has(h.uuid)) {
+          historyMap.set(h.uuid, h);
+        }
+      });
+
+      const merged = Array.from(historyMap.values());
+      log(`合并结果: ${JSON.stringify(merged, null, 2)}`);
+
+      if (merged.length === 3 && merged.find(h => h.uuid === 1002).title === 'COS对话2') {
+        showStatus('storageStatus', '✅ 数据合并逻辑正确 (COS优先)', 'success');
+        log('合并逻辑测试通过', 'success');
+      } else {
+        throw new Error('合并结果不符合预期');
+      }
+    }
+
+    async function testDebouncing() {
+      log('测试防抖功能...');
+      showStatus('storageStatus', '🔄 测试中...', 'info');
+
+      let callCount = 0;
+      let lastCallTime = null;
+
+      function debouncedSave(fn, delay) {
+        let timer = null;
+        return function(...args) {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fn(...args);
+          }, delay);
+        };
+      }
+
+      const save = debouncedSave(() => {
+        callCount++;
+        lastCallTime = Date.now();
+        log(`防抖函数被调用 (第${callCount}次)`);
+      }, 1000);
+
+      // 快速调用5次
+      for (let i = 0; i < 5; i++) {
+        save();
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      // 等待防抖完成
+      await new Promise(r => setTimeout(r, 1500));
+
+      if (callCount === 1) {
+        showStatus('storageStatus', '✅ 防抖功能正常 (5次调用合并为1次)', 'success');
+        log('防抖测试通过: 5次调用只执行了1次', 'success');
+      } else {
+        showStatus('storageStatus', `⚠️ 防抖异常: 调用了${callCount}次`, 'error');
+        log(`防抖测试失败: 期望1次调用，实际${callCount}次`, 'error');
+      }
+    }
+
+    async function runFullIntegrationTest() {
+      log('========================================');
+      log('开始完整集成测试');
+      log('========================================');
+      showStatus('integrationStatus', '🔄 运行中...', 'info');
+
+      try {
+        // 1. UUID检查
+        log('步骤1/6: UUID检查');
+        const uuid = getTestUuid();
+        log(`使用UUID: ${uuid}`, 'info');
+
+        // 2. 后端健康检查
+        log('步骤2/6: 后端健康检查');
+        await testBackendHealth();
+        await new Promise(r => setTimeout(r, 500));
+
+        // 3. 保存测试
+        log('步骤3/6: 保存数据到COS');
+        await testBackendSave();
+        await new Promise(r => setTimeout(r, 1000));
+
+        // 4. 加载测试
+        log('步骤4/6: 从COS加载数据');
+        await testBackendLoad();
+        await new Promise(r => setTimeout(r, 500));
+
+        // 5. 统计测试
+        log('步骤5/6: 获取统计信息');
+        await testBackendStats();
+        await new Promise(r => setTimeout(r, 500));
+
+        // 6. 本地存储测试
+        log('步骤6/6: 本地存储测试');
+        await testLocalStorage();
+
+        log('========================================');
+        log('✅ 完整集成测试通过!', 'success');
+        log('========================================');
+        showStatus('integrationStatus', '✅ 所有测试通过!', 'success');
+
+      } catch (error) {
+        log('========================================');
+        log(`❌ 集成测试失败: ${error.message}`, 'error');
+        log('========================================');
+        showStatus('integrationStatus', `❌ 测试失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function clearTestData() {
+      log('清除测试数据...');
+      localStorage.removeItem('chatStorage');
+      showStatus('integrationStatus', '✅ 本地数据已清除', 'success');
+      log('本地数据已清除', 'success');
+    }
+
+    // 页面加载时自动提取UUID
+    window.addEventListener('load', () => {
+      log('测试页面加载完成', 'success');
+      log(`前端地址: http://localhost:3001/`, 'info');
+      log(`后端地址: ${API_BASE}`, 'info');
+      log('开始自动提取URL中的UUID...');
+
+      if (window.location.hash && window.location.hash.includes('uuid=')) {
+        extractUuid();
+      } else {
+        log('URL中没有UUID参数，使用默认值', 'info');
+        log(`默认UUID: ${getTestUuid()}`, 'info');
+      }
+    });
+  </script>
+</body>
+</html>

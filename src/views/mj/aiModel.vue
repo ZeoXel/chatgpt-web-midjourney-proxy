@@ -14,11 +14,18 @@ const chatSet = new chatSetting(uuid == null ? 1002 : uuid)
 
 const nGptStore = ref(chatSet.getGptConfig())
 if (nGptStore.value.model === 'gpt-3.5-turbo' || nGptStore.value.model === 'gpt-5-nano' || nGptStore.value.model === 'gpt-5-mini')
-  nGptStore.value.model = 'gpt-5'
+  nGptStore.value.model = 'gpt-5.1'
 
 const config = ref({
-  model: ['gpt-5','o1','gemini-2.5-pro','claude-sonnet-4-5-20250929','grok-4'],
-  maxToken: 16384,
+	// 内置常用模型列表，可通过自定义模型与服务端 cmodels 扩展或覆盖
+	model: [
+		'gpt-5.1',
+		'o1',
+		'gemini-3-pro-preview',
+		'claude-sonnet-4-5-20250929',
+		'grok-4.1',
+	],
+	maxToken: 16384,
 })
 const st = ref({ openMore: false, isShow: false, server: '' })
 const voiceList = computed(() => {
@@ -60,7 +67,7 @@ const modellist = computed(() => { //
     rz = rz.filter(v => !delModel.includes(v.value))
     addModel.map(o => rz.push({ label: o, value: o }))
     if (rz.length === 0)
-      rz.push({ label: 'gpt-5', value: 'gpt-5' })
+	      rz.push({ label: 'gpt-5.1', value: 'gpt-5.1' })
   }
 
   const uniqueArray: { label: string; value: string }[] = Array.from(

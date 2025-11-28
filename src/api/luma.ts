@@ -2,6 +2,8 @@ import { gptServerStore, homeStore, useAuthStore } from "@/store";
 import { mlog } from "./mjapi";
 import { LumaMedia, lumaHkStore, lumaStore } from "./lumaStore";
 import { sleep } from "./suno";
+import { mirrorVideoUrl } from "./assetMirror";
+import { saveVideoToCOS } from "./videoStorage";
 
 
 
@@ -104,10 +106,48 @@ export const FeedLumaTask= async(id:string)=>{
         let d:LumaMedia = await lumaFetch( url );
         if(d.id){
             d.last_feed = new Date().getTime()
-            lumaS.save(d);
-            homeStore.setMyData({act:'FeedLumaTask'});
-            if( d.state=='completed' && d.video && d.video?.download_url  ){ //有的时候  completed 但是 没链接
+
+            // 视频生成完成时,下载到COS并保存JSON记录
+            if( d.state=='completed' && d.video && d.video?.download_url ){
+                console.log('[Luma Video Save] 视频生成成功,开始下载到COS:', d.video.download_url);
+
+                // 异步保存到COS (不阻塞用户体验)
+                saveVideoToCOS({
+                    id: d.id,
+                    service: 'luma',
+                    model: d.model || 'luma-dream-machine',
+                    prompt: d.prompt || '',
+                    original_url: d.video.download_url,
+                    poster_url: d.video.thumbnail,
+                    duration: d.video.duration,
+                    aspect_ratio: d.aspect_ratio,
+                    status: 'success',
+                    created_at: d.created_at || new Date().toISOString(),
+                    metadata: {
+                        loop: d.loop,
+                    }
+                }).then(() => {
+                    console.log('[Luma Video Save] ✅ 视频已下载到COS并保存JSON记录');
+                }).catch(err => {
+                    console.warn('[Luma Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
+
+                // 仍然调用旧的镜像逻辑(兼容性)
+                mirrorVideoUrl(d).then(mirroredData => {
+                    // 保存镜像后的数据(URL已替换为COS)
+                    lumaS.save(mirroredData);
+                    mlog('[Luma Mirror] ✅ 视频镜像成功:', mirroredData.video?.download_url);
+                }).catch(err => {
+                    mlog('[Luma Mirror] ⚠️ 镜像失败,使用原URL:', err);
+                    // 镜像失败仍保存原数据
+                    lumaS.save(d);
+                });
+                homeStore.setMyData({act:'FeedLumaTask'});
                 break;
+            } else {
+                // 未完成的直接保存
+                lumaS.save(d);
+                homeStore.setMyData({act:'FeedLumaTask'});
             }
         }
         await sleep(5*1000);

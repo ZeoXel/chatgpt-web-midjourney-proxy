@@ -425,37 +425,137 @@ export const migrateToNewGallery = async (ChatState: Chat.ChatState): Promise<vo
 // ==================== 阶段2: 数据库集成 ====================
 
 /**
- * 从数据库获取画廊图片（扩展版）
- * 支持从数据库和localStorage两个数据源加载
+ * 从COS获取画廊图片（新版）
+ * 支持从COS assets/mj + assets/image + localStorage三个数据源加载
  */
 export const getGalleryImagesWithDB = async (): Promise<GalleryImage[]> => {
     try {
-        console.log('🎨 [Gallery DB] 开始加载画廊（MJ DB + DALL-E DB + localStorage）...');
+        console.log('🎨 [Gallery COS] 开始加载画廊（COS MJ + COS Image + localStorage）...');
 
-        // 并行加载三个数据源：MJ数据库 + DALL-E数据库 + localStorage
-        const [mjDbAssets, dallDbAssets, localImages] = await Promise.all([
-            loadMJFromDatabase(),
-            loadDallFromDatabase(),
+        // 并行加载三个数据源：COS MJ + COS通用图片 + localStorage
+        const [mjCosImages, cosImages, localImages] = await Promise.all([
+            loadMJFromCOS(),
+            loadImagesFromCOS(),
             getGalleryImages() // 原有localStorage加载
         ]);
 
-        console.log(`📊 [Gallery DB] 数据源统计:
-  - MJ数据库: ${mjDbAssets.length} 张
-  - DALL-E数据库: ${dallDbAssets.length} 张
+        console.log(`📊 [Gallery COS] 数据源统计:
+  - COS MJ: ${mjCosImages.length} 张
+  - COS Image: ${cosImages.length} 张
   - 本地: ${localImages.length} 张`);
 
-        // 合并三个数据源并去重（DB优先）
-        const merged = mergeGalleryImages(mjDbAssets, dallDbAssets, localImages);
+        // 合并三个数据源并去重（COS优先）
+        const merged = mergeGalleryImages(mjCosImages, cosImages, localImages);
 
-        console.log(`✅ [Gallery DB] 合并完成: ${merged.length} 张图片 (已去重)`);
+        console.log(`✅ [Gallery COS] 合并完成: ${merged.length} 张图片 (已去重)`);
 
         return merged;
     } catch (error) {
-        console.error('❌ [Gallery DB] 加载错误:', error);
+        console.error('❌ [Gallery COS] 加载错误:', error);
         // 降级到仅本地数据
-        console.log('⚠️ [Gallery DB] 降级到仅使用本地数据');
+        console.log('⚠️ [Gallery COS] 降级到仅使用本地数据');
         return await getGalleryImages();
     }
+}
+
+/**
+ * 从COS加载MJ图片，转换为GalleryImage格式
+ */
+async function loadMJFromCOS(): Promise<GalleryImage[]> {
+    try {
+        console.log('📡 [MJ COS Gallery] 正在从COS加载MJ图片...');
+
+        // 动态导入以避免循环依赖
+        const { loadMJImagesFromCOS } = await import('./mjStorage');
+
+        const cosImages = await loadMJImagesFromCOS({ limit: 200 });
+
+        console.log(`🔄 [MJ COS Gallery] 转换 ${cosImages.length} 个MJ图片为画廊格式`);
+
+        const converted = cosImages.map(img => convertMJCOSToGalleryImage(img));
+
+        console.log(`✅ [MJ COS Gallery] MJ数据加载完成:`, {
+            总数: converted.length,
+            示例: converted[0] ? {
+                id: converted[0].id,
+                prompt: converted[0].prompt?.substring(0, 20) + '...'
+            } : '无'
+        });
+
+        return converted;
+    } catch (error) {
+        console.warn('⚠️ [MJ COS Gallery] MJ数据加载失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 从COS加载通用图片，转换为GalleryImage格式
+ */
+async function loadImagesFromCOS(): Promise<GalleryImage[]> {
+    try {
+        console.log('📡 [Image COS Gallery] 正在从COS加载通用图片...');
+
+        // 动态导入以避免循环依赖
+        const { loadImagesFromCOS: loadCOSImages } = await import('./imageStorage');
+
+        const cosImages = await loadCOSImages({ limit: 200 });
+
+        console.log(`🔄 [Image COS Gallery] 转换 ${cosImages.length} 个通用图片为画廊格式`);
+
+        const converted = cosImages.map(img => convertImageCOSToGalleryImage(img));
+
+        console.log(`✅ [Image COS Gallery] 通用图片数据加载完成:`, {
+            总数: converted.length,
+            示例: converted[0] ? {
+                id: converted[0].id,
+                service: (img: any) => img.service,
+                prompt: converted[0].prompt?.substring(0, 20) + '...'
+            } : '无'
+        });
+
+        return converted;
+    } catch (error) {
+        console.warn('⚠️ [Image COS Gallery] 通用图片数据加载失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 将MJ COS记录转换为GalleryImage格式
+ */
+function convertMJCOSToGalleryImage(img: any): GalleryImage {
+    return {
+        id: img.id,
+        type: 'mj-upscale',
+        url: img.original_url || img.url,
+        action: img.action || 'UPSCALE',
+        model: 'midjourney',
+        timestamp: new Date(img.created_at).getTime(),
+        mjID: img.id,
+        prompt: img.prompt || ''
+    };
+}
+
+/**
+ * 将通用Image COS记录转换为GalleryImage格式
+ */
+function convertImageCOSToGalleryImage(img: any): GalleryImage {
+    // 根据service判断类型
+    let type: 'mj-upscale' | 'dalle' | 'other' = 'other';
+    if (img.service === 'dall-e' || img.service?.startsWith('dall-e')) {
+        type = 'dalle';
+    }
+
+    return {
+        id: img.id,
+        type,
+        url: img.cos_url || img.original_url,
+        action: img.service?.toUpperCase() || 'GENERATE',
+        model: img.model || img.service || 'unknown',
+        timestamp: new Date(img.created_at).getTime(),
+        prompt: img.prompt || ''
+    };
 }
 
 /**
