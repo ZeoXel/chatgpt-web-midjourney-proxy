@@ -31,7 +31,9 @@ export const useChatStore = defineStore('chat-store', {
      * 在应用启动时调用
      */
     async loadFromDatabase() {
-      if (!homeStore.myData.session?.isDatabaseEnabled) {
+      // 修改条件: 支持COS存储或Supabase数据库
+      const isStorageEnabled = homeStore.myData.session?.isDatabaseEnabled || homeStore.myData.session?.isCOSEnabled
+      if (!isStorageEnabled) {
         return
       }
       try {
