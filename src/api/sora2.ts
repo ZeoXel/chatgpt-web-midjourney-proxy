@@ -177,11 +177,16 @@ export const sora2Feed = async(id:string)=>{
             // 轮询时使用静默模式，不显示错误弹窗
             let a = await sora2Fetch('/v1/videos/' + id, undefined, { silent: true })
             let task = a as Sora2Task;
+
+            // ✅ 详细日志：打印完整的API响应
+            console.log('[Sora2] 📦 API响应 (第' + (i+1) + '次轮询):', JSON.stringify(task, null, 2));
             mlog("sora2 task", a)
 
             task.last_feed = new Date().getTime()
-            if (!task.url && task.video_url)
+            if (!task.url && task.video_url) {
+                console.log('[Sora2] 🔄 从video_url复制到url:', task.video_url);
                 task.url = task.video_url;
+            }
             if (typeof task.progress === 'string') {
                 const parsed = Number(task.progress);
                 task.progress = Number.isNaN(parsed) ? task.progress : parsed;
@@ -206,29 +211,47 @@ export const sora2Feed = async(id:string)=>{
             homeStore.setMyData({act:'Sora2Feed'});
 
             // 视频生成成功时,下载到COS并保存JSON记录
-            mlog('🔍 [Sora2] Checking COS save conditions:', {
+            console.log('[Sora2] 🔍 检查COS保存条件:', {
                 id: task.id,
                 status: task.status,
+                '状态是completed?': task.status === 'completed',
                 hasUrl: !!task.url,
                 url: task.url,
-                video_url: task.video_url
+                video_url: task.video_url,
+                '条件满足?': task.status === 'completed' && !!task.url
             });
 
             if(task.status === 'completed' && task.url) {
-                console.log('[Sora2 Video Save] ✅ 条件满足,视频生成成功,开始下载到COS:', task.url);
+                console.log('[Sora2 Video Save] ✅✅✅ 条件满足!开始保存到COS:', task.url);
+
+                // ✅ 获取正确的prompt (可能在existingTask中)
+                const actualPrompt = task.prompt || existingTask?.prompt || '';
+
+                // ✅ 正确处理created_at时间戳
+                const createdAtISO = task.created_at
+                    ? new Date(task.created_at).toISOString()
+                    : new Date().toISOString();
+
+                console.log('[Sora2 Video Save] 📋 保存参数:', {
+                    id: task.id,
+                    prompt: actualPrompt,
+                    url: task.url,
+                    created_at: createdAtISO,
+                    created_at_raw: task.created_at
+                });
 
                 // 异步保存到COS (不阻塞用户体验)
                 saveVideoToCOS({
                     id: task.id,
                     service: 'sora2',
                     model: task.model || 'sora-2',
-                    prompt: task.prompt || '',
+                    prompt: actualPrompt,
                     original_url: task.url,
                     poster_url: task.thumbnail,
                     duration: task.seconds ? parseFloat(task.seconds) : undefined,
                     aspect_ratio: task.size,
                     status: 'success',
-                    created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString(),
+                    created_at: createdAtISO,
                     metadata: {
                         watermark: task.watermark,
                         size: task.size,
@@ -236,10 +259,11 @@ export const sora2Feed = async(id:string)=>{
                 }).then(() => {
                     console.log('[Sora2 Video Save] ✅ 视频已下载到COS并保存JSON记录');
                 }).catch(err => {
-                    console.warn('[Sora2 Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                    console.error('[Sora2 Video Save] ❌ 保存失败:', err);
+                    console.error('[Sora2 Video Save] 错误详情:', JSON.stringify(err, null, 2));
                 });
             } else {
-                mlog('⏭️ [Sora2] COS保存条件不满足,跳过');
+                console.log('[Sora2] ⏭️ COS保存条件不满足,跳过 (status=' + task.status + ', hasUrl=' + !!task.url + ')');
             }
 
             if(task.status === 'completed' || task.status === 'failed'){

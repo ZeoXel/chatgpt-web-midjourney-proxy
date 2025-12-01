@@ -9,35 +9,49 @@ import { mlog } from '@/api';
 
 const ms = useMessage();
 const store = new UnifiedVideoStore();
-const list = ref(store.getAll());
+const list = ref<any[]>([]);
 
-// 刷新列表 - 显示所有服务的任务
-const refresh = () => {
-  mlog('🔄 [UnifiedVideoList] Refreshing all tasks...');
+// 刷新列表 - 从COS和localStorage合并加载
+const refresh = async () => {
+  mlog('🔄 [UnifiedVideoList] Refreshing all tasks from COS + localStorage...');
 
-  // ❌ 移除cleanup调用 - cleanup应该由定时任务触发,而不是每次刷新时清理
-  // 原因: 会导致从COS复原的数据被立即清空
-  // store.cleanup();
+  try {
+    // ✅ 使用 getAllWithCOS() 合并COS和本地数据
+    const allTasks = await store.getAllWithCOS();
+    list.value = allTasks;
 
-  // 重新获取所有数据
-  const allTasks = store.getAll();
-  list.value = allTasks;
+    mlog('📦 [UnifiedVideoList] Total tasks:', allTasks.length);
 
-  mlog('📦 [UnifiedVideoList] Total tasks:', allTasks.length);
+    // 输出每个任务的简要信息和时间戳
+    if (list.value.length > 0) {
+      const serviceCount: Record<string, number> = {};
+      const sourceCount: Record<string, number> = { cos: 0, local: 0 };
 
-  // 输出每个任务的简要信息和时间戳
-  if (list.value.length > 0) {
-    const serviceCount: Record<string, number> = {};
-    list.value.forEach((task, index) => {
-      serviceCount[task.service] = (serviceCount[task.service] || 0) + 1;
-      const date = new Date(task.created_at);
-      mlog(`  ${index+1}. [${task.service}] ${task.id.substring(0, 8)}... status=${task.status} created=${date.toLocaleString()} (${task.created_at})`);
-    });
+      list.value.forEach((task, index) => {
+        serviceCount[task.service] = (serviceCount[task.service] || 0) + 1;
 
-    // 输出各服务统计
-    Object.entries(serviceCount).forEach(([service, count]) => {
-      mlog(`  📊 ${service}: ${count} tasks`);
-    });
+        // 统计数据来源
+        const source = task.extra?.source || 'unknown';
+        if (source === 'cos' || source === 'local') {
+          sourceCount[source]++;
+        }
+
+        const date = new Date(task.created_at);
+        mlog(`  ${index+1}. [${task.service}] ${task.id.substring(0, 8)}... status=${task.status} source=${source} created=${date.toLocaleString()}`);
+      });
+
+      // 输出各服务统计
+      Object.entries(serviceCount).forEach(([service, count]) => {
+        mlog(`  📊 ${service}: ${count} tasks`);
+      });
+
+      // 输出数据来源统计
+      mlog(`  📊 数据来源: COS ${sourceCount.cos}个, 本地 ${sourceCount.local}个`);
+    }
+  } catch (error) {
+    console.error('[UnifiedVideoList] ❌ 刷新失败:', error);
+    // 降级到仅使用本地数据
+    list.value = store.getAll();
   }
 };
 

@@ -8,12 +8,36 @@ import { homeStore } from '@/store'
 import { t } from '@/locales'
 
 const store = new UnifiedModelStore()
-const list = ref(store.getAll())
+const list = ref<any[]>([])
 const ms = useMessage()
 
-const refresh = () => {
-  store.cleanup()
-  list.value = store.getAll()
+// ✅ 修改为异步函数,从COS和localStorage合并加载
+const refresh = async () => {
+  console.log('🔄 [UnifiedModelList] Refreshing from COS + localStorage...')
+
+  try {
+    // ✅ 使用 getAllWithCOS() 合并COS和本地数据
+    const allModels = await store.getAllWithCOS()
+    list.value = allModels
+
+    console.log('📦 [UnifiedModelList] Total models:', allModels.length)
+
+    // 输出数据来源统计
+    if (allModels.length > 0) {
+      const sourceCount: Record<string, number> = { cos: 0, local: 0 }
+      allModels.forEach(model => {
+        const source = model.extra?.source || 'unknown'
+        if (source === 'cos' || source === 'local') {
+          sourceCount[source]++
+        }
+      })
+      console.log(`  📊 数据来源: COS ${sourceCount.cos}个, 本地 ${sourceCount.local}个`)
+    }
+  } catch (error) {
+    console.error('[UnifiedModelList] ❌ 刷新失败:', error)
+    // 降级到仅使用本地数据
+    list.value = store.getAll()
+  }
 }
 
 watch(() => homeStore.myData.act, (act) => {
