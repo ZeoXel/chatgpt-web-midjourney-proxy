@@ -276,9 +276,6 @@ export const minimaxFeed = async (task_id: string, prompt?: string) => {
     try {
       const task = await minimaxGetTask(task_id, { silent: i !== 0 });
 
-      // ✅ 详细日志：打印完整的API响应
-      console.log('[MiniMax] 📦 API响应 (第' + (i+1) + '次轮询):', JSON.stringify(task, null, 2));
-
       task.last_feed = Date.now();
       if (prompt && !task.prompt)
         task.prompt = prompt;
@@ -296,20 +293,8 @@ export const minimaxFeed = async (task_id: string, prompt?: string) => {
       // ✅ 获取视频URL (MiniMax在file.download_url中)
       const videoUrl = task.file_url || task.file?.download_url || '';
 
-      console.log('[MiniMax] 🔍 检查COS保存条件:', {
-        task_id: task.task_id,
-        status: status,
-        original_status: task.status,
-        '状态匹配?': ['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status),
-        hasVideoUrl: !!videoUrl,
-        videoUrl: videoUrl,
-        file_url: task.file_url,
-        'file.download_url': task.file?.download_url,
-        '条件满足?': ['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status) && !!videoUrl
-      });
-
       if (['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status) && videoUrl) {
-        console.log('[MiniMax Video Save] ✅✅✅ 条件满足!开始保存到COS:', videoUrl);
+        console.log('[MiniMax Video Save] ✅ 开始保存到COS:', videoUrl);
 
         // ✅ 获取正确的prompt (可能在参数中传入)
         const actualPrompt = task.prompt || prompt || '';
@@ -321,15 +306,6 @@ export const minimaxFeed = async (task_id: string, prompt?: string) => {
               ? new Date(createdAtTimestamp * 1000).toISOString()  // 秒级时间戳
               : new Date(createdAtTimestamp).toISOString())         // 毫秒或字符串
           : new Date().toISOString();
-
-        console.log('[MiniMax Video Save] 📋 保存参数:', {
-          id: task.task_id,
-          prompt: actualPrompt,
-          url: videoUrl,
-          created_at: createdAtISO,
-          created_at_raw: createdAtTimestamp,
-          file_id: task.file_id || task.file?.file_id
-        });
 
         // 异步保存到COS (不阻塞用户体验)
         saveVideoToCOS({
@@ -345,13 +321,10 @@ export const minimaxFeed = async (task_id: string, prompt?: string) => {
             file_id: task.file_id || task.file?.file_id,
           }
         }).then(() => {
-          console.log('[MiniMax Video Save] ✅ 视频已下载到COS并保存JSON记录');
+          console.log('[MiniMax Video Save] ✅ 保存成功');
         }).catch(err => {
-          console.error('[MiniMax Video Save] ❌ 保存失败:', err);
-          console.error('[MiniMax Video Save] 错误详情:', JSON.stringify(err, null, 2));
+          console.error('[MiniMax Video Save] ❌ 保存失败:', err.message || err);
         });
-      } else {
-        console.log('[MiniMax] ⏭️ COS保存条件不满足,跳过 (status=' + status + ', hasVideoUrl=' + !!videoUrl + ')');
       }
 
       if (['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status))
