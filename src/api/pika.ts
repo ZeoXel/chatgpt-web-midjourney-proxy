@@ -5,6 +5,7 @@ import { RunwayTask, runwayStore } from "./runwayStore";
 import { PikaTask, pikaStore } from "./pikaStore";
 import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
 import { convertPikaToUnified } from "./videoAdapter";
+import { saveVideoToCOS } from "./videoStorage";
 
 function getHeaderAuthorization(){
     let headers={}
@@ -131,6 +132,31 @@ export const pikaFeed= async(id:string)=>{
             mlog('✅ [Pika] Updated, total tasks:', unifiedStore.getAll().length);
 
             homeStore.setMyData({act:'PikaFeed'});
+
+            // 视频生成成功时,下载到COS并保存JSON记录
+            if(task.videos[0].status === 'finished' && task.videos[0].resultUrl) {
+                console.log('[Pika Video Save] 视频生成成功,开始下载到COS:', task.videos[0].resultUrl);
+
+                // 异步保存到COS (不阻塞用户体验)
+                saveVideoToCOS({
+                    id: task.id,
+                    service: 'pika',
+                    model: 'pika-1.5',
+                    prompt: task.data?.prompts?.[0] || task.prompt || '',
+                    original_url: task.videos[0].resultUrl,
+                    duration: task.videos[0].duration,
+                    status: 'success',
+                    created_at: task.created ? new Date(task.created).toISOString() : new Date().toISOString(),
+                    metadata: {
+                        aspectRatio: task.data?.options?.frameRate,
+                    }
+                }).then(() => {
+                    console.log('[Pika Video Save] ✅ 视频已下载到COS并保存JSON记录');
+                }).catch(err => {
+                    console.warn('[Pika Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
+            }
+
             if( task.videos[0].status=='error' || 'finished'== task.videos[0].status ){
                 break;
             }

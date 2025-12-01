@@ -4,6 +4,7 @@ import { sleep } from "./suno";
 import { Sora2Task, sora2Store } from "./sora2Store";
 import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
 import { convertSora2ToUnified } from "./videoAdapter";
+import { saveVideoToCOS } from "./videoStorage";
 
 // 获取认证头部 - 统一使用 NewAPI 网关认证，参考 vidu.ts 的实现
 function getHeaderAuthorization(){
@@ -204,7 +205,45 @@ export const sora2Feed = async(id:string)=>{
 
             homeStore.setMyData({act:'Sora2Feed'});
 
+            // 视频生成成功时,下载到COS并保存JSON记录
+            mlog('🔍 [Sora2] Checking COS save conditions:', {
+                id: task.id,
+                status: task.status,
+                hasUrl: !!task.url,
+                url: task.url,
+                video_url: task.video_url
+            });
+
+            if(task.status === 'completed' && task.url) {
+                console.log('[Sora2 Video Save] ✅ 条件满足,视频生成成功,开始下载到COS:', task.url);
+
+                // 异步保存到COS (不阻塞用户体验)
+                saveVideoToCOS({
+                    id: task.id,
+                    service: 'sora2',
+                    model: task.model || 'sora-2',
+                    prompt: task.prompt || '',
+                    original_url: task.url,
+                    poster_url: task.thumbnail,
+                    duration: task.seconds ? parseFloat(task.seconds) : undefined,
+                    aspect_ratio: task.size,
+                    status: 'success',
+                    created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString(),
+                    metadata: {
+                        watermark: task.watermark,
+                        size: task.size,
+                    }
+                }).then(() => {
+                    console.log('[Sora2 Video Save] ✅ 视频已下载到COS并保存JSON记录');
+                }).catch(err => {
+                    console.warn('[Sora2 Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
+            } else {
+                mlog('⏭️ [Sora2] COS保存条件不满足,跳过');
+            }
+
             if(task.status === 'completed' || task.status === 'failed'){
+                mlog('🏁 [Sora2] 任务结束,退出轮询:', task.status);
                 break;
             }
         }catch(e){

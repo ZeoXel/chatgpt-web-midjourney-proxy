@@ -4,6 +4,7 @@ import { sleep } from "./suno";
 import { RunwayTask, runwayStore } from "./runwayStore";
 import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
 import { convertRunwayToUnified } from "./videoAdapter";
+import { saveVideoToCOS } from "./videoStorage";
 
 /**
  * 获取请求头授权信息 - 参考 sora2.ts 的实现
@@ -255,6 +256,32 @@ export const runwayFeed = async (id: string) => {
             mlog('✅ [Runway] Updated, total tasks:', unifiedStore.getAll().length);
 
             homeStore.setMyData({ act: 'RunwayFeed' });
+
+            // 视频生成成功时,下载到COS并保存JSON记录
+            if (task.status === 'SUCCEEDED' && task.artifacts && task.artifacts.length > 0 && task.artifacts[0].url) {
+                const videoUrl = task.artifacts[0].url;
+                console.log('[Runway Video Save] 视频生成成功,开始下载到COS:', videoUrl);
+
+                // 异步保存到COS (不阻塞用户体验)
+                saveVideoToCOS({
+                    id: task.id,
+                    service: 'runway',
+                    model: task.taskType || 'runway-aleph',
+                    prompt: task.name || '',
+                    original_url: videoUrl,
+                    duration: task.options?.seconds,
+                    status: 'success',
+                    created_at: task.createdAt || new Date().toISOString(),
+                    metadata: {
+                        taskType: task.taskType,
+                        progressText: task.progressText,
+                    }
+                }).then(() => {
+                    console.log('[Runway Video Save] ✅ 视频已下载到COS并保存JSON记录');
+                }).catch(err => {
+                    console.warn('[Runway Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
+            }
 
             // 任务完成或失败时退出轮询
             if (task.status === 'FAILED' || task.status === 'SUCCEEDED') {

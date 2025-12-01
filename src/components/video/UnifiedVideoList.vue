@@ -15,7 +15,9 @@ const list = ref(store.getAll());
 const refresh = () => {
   mlog('🔄 [UnifiedVideoList] Refreshing all tasks...');
 
-  store.cleanup();
+  // ❌ 移除cleanup调用 - cleanup应该由定时任务触发,而不是每次刷新时清理
+  // 原因: 会导致从COS复原的数据被立即清空
+  // store.cleanup();
 
   // 重新获取所有数据
   const allTasks = store.getAll();

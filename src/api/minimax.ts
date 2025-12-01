@@ -6,6 +6,7 @@ import { sleep } from "./suno";
 import { UnifiedVideoStore } from "./videoStore";
 import type { UnifiedVideoTask } from "./videoStore";
 import { convertMinimaxToUnified } from "./videoAdapter";
+import { saveVideoToCOS } from "./videoStorage";
 
 function getHeaderAuthorization() {
   let headers: Record<string, string> = {};
@@ -285,7 +286,31 @@ export const minimaxFeed = async (task_id: string, prompt?: string) => {
 
       homeStore.setMyData({ act: 'MiniMaxFeed' });
 
+      // 视频生成成功时,下载到COS并保存JSON记录
       const status = (task.task_status || task.status || '').toLowerCase();
+      if (['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status) && task.file_url) {
+        console.log('[MiniMax Video Save] 视频生成成功,开始下载到COS:', task.file_url);
+
+        // 异步保存到COS (不阻塞用户体验)
+        saveVideoToCOS({
+          id: task.task_id,
+          service: 'minimax',
+          model: 'MiniMax-Hailuo-2.3',
+          prompt: task.prompt || '',
+          original_url: task.file_url,
+          duration: task.duration,
+          status: 'success',
+          created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString(),
+          metadata: {
+            file_id: task.file_id,
+          }
+        }).then(() => {
+          console.log('[MiniMax Video Save] ✅ 视频已下载到COS并保存JSON记录');
+        }).catch(err => {
+          console.warn('[MiniMax Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+        });
+      }
+
       if (['succeed', 'succeeded', 'success', 'finished', 'completed'].includes(status))
         break;
 

@@ -4,6 +4,7 @@ import { KlingTask, klingStore } from "./klingStore";
 import { sleep } from "./suno";
 import { UnifiedVideoStore, UnifiedVideoTask } from "./videoStore";
 import { convertKlingToUnified } from "./videoAdapter";
+import { saveVideoToCOS } from "./videoStorage";
 
 
 
@@ -143,6 +144,33 @@ export const klingFeed= async(id:string,cat:string,prompt:string)=>{
             mlog('✅ [Kling] Updated, total tasks:', unifiedStore.getAll().length);
 
             homeStore.setMyData({act:'KlingFeed'});
+
+            // 视频生成成功时,下载到COS并保存JSON记录
+            if(task.data.task_status === 'succeed' && task.data.task_result?.videos?.[0]?.url) {
+                const videoUrl = task.data.task_result.videos[0].url;
+                console.log('[Kling Video Save] 视频生成成功,开始下载到COS:', videoUrl);
+
+                // 异步保存到COS (不阻塞用户体验)
+                saveVideoToCOS({
+                    id: task.data.task_id,
+                    service: 'kling',
+                    model: 'kling-1.5',
+                    prompt: task.prompt || '',
+                    original_url: videoUrl,
+                    poster_url: task.data.task_result.videos[0].thumbnail,
+                    duration: task.data.task_result.videos[0].duration,
+                    status: 'success',
+                    created_at: task.data.created_at ? new Date(task.data.created_at * 1000).toISOString() : new Date().toISOString(),
+                    metadata: {
+                        cat: task.cat,
+                    }
+                }).then(() => {
+                    console.log('[Kling Video Save] ✅ 视频已下载到COS并保存JSON记录');
+                }).catch(err => {
+                    console.warn('[Kling Video Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                });
+            }
+
             if(  task.data.task_status =='failed' || 'succeed'== task.data.task_status ){
                 break;
             }
