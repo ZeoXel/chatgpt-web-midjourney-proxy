@@ -12,8 +12,6 @@ const config = ref({
 	model: [
 		{ label: "nano-banana", value: "nano-banana" },
 		{ label: "Nano Banana Pro", value: "nano-banana-2" },
-		{ label: "seedream 4.0", value: "doubao-seedream-4-0-250828" },
-		{ label: "seedream 3.0", value: "seedream-3.0" },
 	],
 });
 interface myFile {
@@ -196,9 +194,7 @@ const dimensionsList = computed(() => {
 	}
 	if (
 		f.value.model == "nano-banana" ||
-		f.value.model == "nano-banana-2" ||
-		f.value.model == "doubao-seedream-4-0-250828" ||
-		f.value.model == "seedream-3.0"
+		f.value.model == "nano-banana-2"
 	) {
 		// 根据 API 文档提供完整的 aspect_ratio 选项
 		return [
@@ -263,9 +259,7 @@ const isCanImageEdit = computed(() => {
 	if (f.value.model.indexOf("kontext") > -1) return true;
 	if (
 		f.value.model == "nano-banana" ||
-		f.value.model == "nano-banana-2" ||
-		f.value.model == "doubao-seedream-4-0-250828" ||
-		f.value.model == "seedream-3.0"
+		f.value.model == "nano-banana-2"
 	)
 		return true;
 	return false;

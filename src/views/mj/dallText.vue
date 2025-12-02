@@ -140,15 +140,15 @@ load();
     <div v-if="uniqueImageUrls.length > 0"
          :key="`images-${chat.myid}-${st.forceUpdateKey}`"
          :class="[
-           uniqueImageUrls.length === 1 ? 'flex justify-center max-w-[400px]' : 'grid grid-cols-2 gap-1 max-w-[500px]',
+           uniqueImageUrls.length === 1 ? 'flex justify-center max-w-[500px]' : 'grid grid-cols-2 gap-1 max-w-[500px]',
            uniqueImageUrls.length === 4 ? 'grid-rows-2' : ''
          ]" >
          <div v-for="(v,k) in uniqueImageUrls" :key="`img-${chat.myid}-${k}-${v.url}`"
               :class="[
                 'relative overflow-hidden rounded-sm',
-                uniqueImageUrls.length === 1 ? 'w-full max-w-[400px] aspect-square' : 'aspect-square'
+                uniqueImageUrls.length === 1 ? 'w-full max-w-[500px]' : ''
               ]" >
-             <NImage  :src="v.url" class="w-full h-full object-cover"/>
+             <NImage  :src="v.url" class="w-full h-auto object-contain"/>
             <a class="absolute top-[8px] right-[8px] cursor-pointer bg-white bg-opacity-50 rounded-full p-1 hover:bg-opacity-80"
                target="_blank" :href="v.url" :download="`image-${k+1}.jpg`">
                 <SvgIcon icon="mdi:download" />

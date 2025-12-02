@@ -441,6 +441,13 @@ export async function getDallAssetsFromDatabase(options?: {
  */
 const convertSizeToAspectRatio = (size: string): string => {
 	const sizeMap: Record<string, string> = {
+		// 即梦新标准尺寸 (高分辨率)
+		"2048x2048": "1:1",
+		"2304x1728": "4:3",
+		"1728x2304": "3:4",
+		"2560x1440": "16:9",
+		"1440x2560": "9:16",
+		// 原有尺寸映射
 		"1024x1024": "1:1",
 		"1536x1024": "3:2", // 4:3 和 3:2 都映射到这个尺寸
 		"1024x1536": "2:3", // 3:4 和 2:3 都映射到这个尺寸
@@ -501,7 +508,9 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 		let useFormData = false;
 
 		// 转换参数
-		const aspectRatio = data.data.size
+		// 即梦模型直接使用 size，nano-banana 使用 aspect_ratio
+		const isSeeDream = data.data.model === "doubao-seedream-4-0-250828" || data.data.model === "seedream-3.0";
+		const aspectRatio = !isSeeDream && data.data.size
 			? convertSizeToAspectRatio(data.data.size)
 			: "1:1";
 		const imageSize = data.data.quality
@@ -525,7 +534,13 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			formData.append("model", data.data.model);
 			formData.append("prompt", data.data.prompt);
 			formData.append("response_format", "url");
-			formData.append("aspect_ratio", aspectRatio);
+
+			// 即梦模型使用 size，nano-banana 使用 aspect_ratio
+			if (isSeeDream) {
+				formData.append("size", data.data.size || "1024x1024");
+			} else {
+				formData.append("aspect_ratio", aspectRatio);
+			}
 
 			// 添加 image_size (仅 nano-banana-2)
 			if (imageSize) {
@@ -566,8 +581,14 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 				model: data.data.model,
 				prompt: data.data.prompt,
 				response_format: "url",
-				aspect_ratio: aspectRatio,
 			};
+
+			// 即梦模型使用 size，nano-banana 使用 aspect_ratio
+			if (isSeeDream) {
+				requestData.size = data.data.size || "1024x1024";
+			} else {
+				requestData.aspect_ratio = aspectRatio;
+			}
 
 			// 添加 image_size (仅 nano-banana-2)
 			if (imageSize) {

@@ -112,6 +112,13 @@ const checkAvailability = async () => {
   if (hasChecked.value || checking.value || expireState.value || !props.task.url)
     return;
 
+  // ✅ COS URL跳过可用性检查 (CORS配置可能未完全生效,但视频可正常播放)
+  const isCOSUrl = props.task.url.includes('cos.lsaigc.com') || props.task.url.includes('cos.') && props.task.url.includes('.myqcloud.com');
+  if (isCOSUrl) {
+    hasChecked.value = true;
+    return;
+  }
+
   checking.value = true;
   hasChecked.value = true; // ✅ 标记为已检查,防止重复
 

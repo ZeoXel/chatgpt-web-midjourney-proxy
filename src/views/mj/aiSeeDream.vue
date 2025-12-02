@@ -161,18 +161,26 @@ const qualityOption=  computed(()=>{
 const dimensionsList= computed(()=>{
     // 即梦4和即梦3支持的尺寸
     if(f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
-        return [{
-                "label": "2K (高质量)",
-                "value": "2K"
-            }, {
-                "label": "1024x1024",
-                "value": "1024x1024"
-            }, {
-                "label": "1792x1024",
-                "value": "1792x1024"
-            }, {
-                "label": "1024x1792",
-                "value": "1024x1792"
+        return [
+            {
+                "label": "1:1 - 2048x2048",
+                "value": "2048x2048"
+            },
+            {
+                "label": "4:3 - 2304x1728",
+                "value": "2304x1728"
+            },
+            {
+                "label": "3:4 - 1728x2304",
+                "value": "1728x2304"
+            },
+            {
+                "label": "16:9 - 2560x1440",
+                "value": "2560x1440"
+            },
+            {
+                "label": "9:16 - 1440x2560",
+                "value": "1440x2560"
             }
         ];
     }
