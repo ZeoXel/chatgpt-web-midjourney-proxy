@@ -10,8 +10,8 @@ import { checkBalance } from "@/utils/balanceGuard";
 const ms = useMessage();
 const config = ref({
 	model: [
-		{ label: "nano-banana", value: "nano-banana" },
 		{ label: "Nano Banana Pro", value: "nano-banana-2" },
+		{ label: "nano-banana", value: "nano-banana" },
 	],
 });
 interface myFile {
@@ -21,7 +21,9 @@ interface myFile {
 const st = ref({ isGo: false, quality: "medium" });
 const fsRef = ref();
 const base64Array = ref<myFile[]>([]);
-const f = ref({ size: "1024x1024", prompt: "", model: "nano-banana", n: 1 });
+// 对 nano-banana 系列，size 使用比例字符串（如 "1:1"）作为内部值
+// 其他模型仍使用像素尺寸字符串（如 "1024x1024"）
+const f = ref({ size: "1:1", prompt: "", model: "nano-banana-2", n: 1 });
 const isDisabled = computed(() => {
 	if (st.value.isGo) {
 		//console.log('st.value.isGo',st.value.isGo);
@@ -39,6 +41,19 @@ const isDisabled = computed(() => {
 const create = async () => {
 	if (!homeStore.myData.hasBalance) {
 		ms.info("账户余额不足，无法使用图片生成功能");
+		return;
+	}
+
+	// nano-banana-2 在 4K 画质下，部分尺寸组合在当前网关上可能不被支持
+	// 避免直接出现 Failed to fetch，这里做一次前端保护性校验
+	if (
+		f.value.model === "nano-banana-2" &&
+		st.value.quality === "high" &&
+		f.value.size !== "1:1"
+	) {
+		ms.error(
+			"nano-banana-2 在 4K 画质下，当前尺寸组合可能不被网关支持，请尝试改为 1:1 或降低画质后重试。",
+		);
 		return;
 	}
 
@@ -102,8 +117,9 @@ watch(
 			const data = homeStore.myData.actData;
 			if (data && data.config) {
 				const config = data.config;
-				f.value.model = config.model || "nano-banana";
-				f.value.size = config.size || "1024x1024";
+				f.value.model = config.model || "nano-banana-2";
+				// nano-banana 系列现在内部使用比例字符串作为 size
+				f.value.size = config.size || (f.value.model === "nano-banana" || f.value.model === "nano-banana-2" ? "1:1" : "1024x1024");
 				f.value.prompt = config.prompt || "";
 				f.value.n = config.n || 1;
 				st.value.quality = config.quality || "medium";
@@ -159,6 +175,7 @@ const qualityOption = computed(() => {
 		{ label: "Low", value: "low" },
 	];
 });
+
 const dimensionsList = computed(() => {
 	if (f.value.model == "dall-e-2") {
 		return [
@@ -197,40 +214,47 @@ const dimensionsList = computed(() => {
 		f.value.model == "nano-banana-2"
 	) {
 		// 根据 API 文档提供完整的 aspect_ratio 选项
-		return [
+		const opts = [
 			{
 				label: "1:1 (正方形)",
-				value: "1024x1024",
+				value: "1:1",
 			},
 			{
 				label: "4:3 (横向)",
-				value: "1536x1024",
+				value: "4:3",
 			},
 			{
 				label: "3:4 (纵向)",
-				value: "1024x1536",
+				value: "3:4",
 			},
 			{
 				label: "16:9 (超宽屏)",
-				value: "1792x1024",
+				value: "16:9",
 			},
 			{
 				label: "9:16 (竖屏)",
-				value: "1024x1792",
+				value: "9:16",
 			},
 			{
 				label: "3:2 (经典横向)",
-				value: "1536x1024",
+				value: "3:2",
 			},
 			{
 				label: "2:3 (经典纵向)",
-				value: "1024x1536",
+				value: "2:3",
 			},
 			{
 				label: "21:9 (电影宽屏)",
-				value: "1920x1080",
+				value: "21:9",
 			},
 		];
+
+		// nano-banana-2 在 4K(High) 画质下，经验证只有 1:1 组合正常
+		// 这里在前端直接收窄可选尺寸，避免用户选到无效比例
+		if (f.value.model === "nano-banana-2" && st.value.quality === "high") {
+			return opts.filter((item) => item.value === "1024x1024");
+		}
+		return opts;
 	}
 	return [
 		{
@@ -250,6 +274,12 @@ const dimensionsList = computed(() => {
 watch(
 	() => f.value.model,
 	(n) => {
+		// nano-banana 系列使用比例字符串作为内部值
+		if (n === "nano-banana" || n === "nano-banana-2") {
+			f.value.size = "1:1";
+			return;
+		}
+		// 其他模型仍使用像素尺寸字符串
 		f.value.size = "1024x1024";
 	},
 );

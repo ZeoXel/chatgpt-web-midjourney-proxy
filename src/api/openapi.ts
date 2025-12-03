@@ -440,6 +440,9 @@ export async function getDallAssetsFromDatabase(options?: {
  * 例如: "1024x1024" -> "1:1", "1792x1024" -> "16:9"
  */
 const convertSizeToAspectRatio = (size: string): string => {
+	// 如果本身就是比例字符串（如 "4:3"），直接返回
+	if (size.includes(":")) return size;
+
 	const sizeMap: Record<string, string> = {
 		// 即梦新标准尺寸 (高分辨率)
 		"2048x2048": "1:1",
