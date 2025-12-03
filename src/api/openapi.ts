@@ -508,9 +508,10 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 		let useFormData = false;
 
 		// 转换参数
-		// 即梦模型直接使用 size，nano-banana 使用 aspect_ratio
+		// 即梦与 nano-banana 统一使用 aspect_ratio 映射，
+		// 但即梦模型仍然保留 size 以兼容现有网关实现
 		const isSeeDream = data.data.model === "doubao-seedream-4-0-250828" || data.data.model === "seedream-3.0";
-		const aspectRatio = !isSeeDream && data.data.size
+		const aspectRatio = data.data.size
 			? convertSizeToAspectRatio(data.data.size)
 			: "1:1";
 		const imageSize = data.data.quality
@@ -535,9 +536,12 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			formData.append("prompt", data.data.prompt);
 			formData.append("response_format", "url");
 
-			// 即梦模型使用 size，nano-banana 使用 aspect_ratio
+			// 尺寸参数
+			// 即梦模型: 同时传入 size 与 aspect_ratio，兼容新尺寸比例
+			// nano-banana 系列: 仅使用 aspect_ratio
 			if (isSeeDream) {
 				formData.append("size", data.data.size || "1024x1024");
+				formData.append("aspect_ratio", aspectRatio);
 			} else {
 				formData.append("aspect_ratio", aspectRatio);
 			}
@@ -583,9 +587,12 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 				response_format: "url",
 			};
 
-			// 即梦模型使用 size，nano-banana 使用 aspect_ratio
+			// 尺寸参数
+			// 即梦模型: 同时传入 size 与 aspect_ratio，兼容新尺寸比例
+			// nano-banana 系列: 仅使用 aspect_ratio
 			if (isSeeDream) {
 				requestData.size = data.data.size || "1024x1024";
+				requestData.aspect_ratio = aspectRatio;
 			} else {
 				requestData.aspect_ratio = aspectRatio;
 			}
