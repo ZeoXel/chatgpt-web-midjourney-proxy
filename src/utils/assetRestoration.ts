@@ -38,24 +38,25 @@ export interface AssetRestorationResult {
 
 /**
  * 带缓存的异步数据加载器
+ *
+ * 注意: 禁用localStorage缓存以避免存储溢出
+ * 各模块(MJ/Suno/Video)有自己的store管理,不需要额外缓存
  */
 async function loadWithCache<T>(
   cacheKey: string,
   loader: () => Promise<T>,
   dataKey: string
 ): Promise<T | null> {
-  // 1. 尝试从缓存加载
-  const cached = getCache<T>(cacheKey)
-  if (cached) {
-    console.log(`[Asset Restoration] 📦 使用缓存: ${dataKey}`)
-    return cached
-  }
+  // 🔥 禁用localStorage缓存，直接从COS加载
+  // 原因:
+  // 1. 资产数据量大,会填满localStorage (10MB限制)
+  // 2. 各模块已有自己的store管理
+  // 3. COS加载速度足够快(通常<500ms)
 
-  // 2. 从COS加载
   try {
     const data = await loader()
-    // 保存到缓存
-    setCache(cacheKey, data)
+    console.log(`[Asset Restoration] ✅ 从COS加载: ${dataKey}`)
+    // ❌ 不再保存到localStorage: setCache(cacheKey, data)
     return data
   } catch (error) {
     console.error(`[Asset Restoration] ❌ ${dataKey}加载失败:`, error)
@@ -88,12 +89,13 @@ export async function restoreAllAssets(): Promise<AssetRestorationResult> {
     console.log('[Asset Restoration] 🔄 开始复原资产...', { userUuid })
 
     // 2. 并行加载所有资产类型(带缓存)
+    // 注意: 限制数量以避免LocalStorage溢出
     const [mjImages, images, music, videos, models] = await Promise.all([
-      loadWithCache(CACHE_KEYS.MJ_IMAGES, () => loadMJImagesFromCOS({ limit: 200 }), 'MJ图片'),
-      loadWithCache(CACHE_KEYS.IMAGES, () => loadImagesFromCOS({ limit: 200 }), '通用图片'),
-      loadWithCache(CACHE_KEYS.MUSIC, () => loadSunoAudiosFromCOS({ limit: 100 }), '音乐'),
-      loadWithCache(CACHE_KEYS.VIDEOS, () => loadVideosFromCOS({ limit: 100 }), '视频'),
-      loadWithCache(CACHE_KEYS.MODELS, () => loadModelsFromCOS({ limit: 50 }), '3D模型')
+      loadWithCache(CACHE_KEYS.MJ_IMAGES, () => loadMJImagesFromCOS({ limit: 20 }), 'MJ图片'),
+      loadWithCache(CACHE_KEYS.IMAGES, () => loadImagesFromCOS({ limit: 20 }), '通用图片'),
+      loadWithCache(CACHE_KEYS.MUSIC, () => loadSunoAudiosFromCOS({ limit: 20 }), '音乐'),
+      loadWithCache(CACHE_KEYS.VIDEOS, () => loadVideosFromCOS({ limit: 20 }), '视频'),
+      loadWithCache(CACHE_KEYS.MODELS, () => loadModelsFromCOS({ limit: 20 }), '3D模型')
     ])
 
     // 3. 处理MJ图片

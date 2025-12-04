@@ -324,7 +324,28 @@ const submit= (model:string, message:any[] ,  opt?:any )=>{
             ,uuid:st.value.uuid //当前会话
             ,onMessage:(d)=>{
                 mlog('🐞消息',d);
-                
+
+                // 处理 gpt-4o-image 模型的图片响应
+                if(d.isAll && d.text){
+                    try {
+                        const imageData = JSON.parse(d.text);
+                        if(imageData.isImage && imageData.imageUrls){
+                            // 图片响应，更新 chat.opt
+                            updateChatSome(+st.value.uuid, st.value.index, {
+                                text: imageData.text,
+                                opt: {
+                                    imageUrls: imageData.imageUrls,
+                                    imageUrl: imageData.imageUrls[0]?.url
+                                },
+                                loading: false
+                            });
+                            return;
+                        }
+                    } catch(e) {
+                        // 不是JSON格式，按普通文本处理
+                    }
+                }
+
                 if(d.isAll){
                     textRz.value= [d.text];
                 }else{

@@ -868,6 +868,7 @@ export const isDallImageModel = (model: string | undefined) => {
 	if (model.indexOf("flux") > -1) return true;
 	if (model.indexOf("ideogram") > -1) return true;
 	if (model.indexOf("gpt-image") > -1) return true;
+	if (model.indexOf("gpt-4o-image") > -1) return true; // 支持通过Chat API生成图片
 	if (model === "nano-banana" || model === "nano-banana-2") return true;
 	if (model.indexOf("seedream") > -1) return true;
 	return ["dall-e-2", "dall-e-3", "ideogram"].indexOf(model) > -1;
@@ -994,7 +995,42 @@ export const subModel = async (opt: subModelType) => {
 		mlog("🐞非流输出", body);
 		opt.onMessage({ text: t("mj.thinking"), isFinish: false });
 		const obj: any = await gptFetch("/v1/chat/completions", body);
-		//mlog('结果 >>',obj   )
+
+		// 处理 gpt-4o-image 模型的图片响应
+		if (model.indexOf("gpt-4o-image") > -1) {
+			const content = obj?.choices?.[0]?.message?.content;
+
+			// 检查是否返回了图片（content 可能是数组格式）
+			if (Array.isArray(content)) {
+				// 提取图片URL和文本
+				const imageUrls: any[] = [];
+				let textContent = "";
+
+				content.forEach((item: any) => {
+					if (item.type === "image_url" && item.image_url?.url) {
+						imageUrls.push({ url: item.image_url.url });
+					} else if (item.type === "text" && item.text) {
+						textContent += item.text;
+					}
+				});
+
+				// 如果有图片，通过特殊格式返回
+				if (imageUrls.length > 0) {
+					const imageData = {
+						text: textContent || "图片已生成",
+						imageUrls: imageUrls,
+						isImage: true,
+					};
+					opt.onMessage({
+						text: JSON.stringify(imageData),
+						isFinish: true,
+						isAll: true,
+					});
+					return;
+				}
+			}
+		}
+
 		opt.onMessage({
 			text: obj?.choices?.[0]?.message?.content ?? "",
 			isFinish: true,
