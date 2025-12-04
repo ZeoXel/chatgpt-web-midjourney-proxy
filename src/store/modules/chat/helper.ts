@@ -91,8 +91,36 @@ export async function getLocalStateWithDB(): Promise<Chat.ChatState> {
   }
 }
 
+/**
+ * 保存状态到LocalStorage
+ * 注意: 自动限制数据量以避免超出10MB限制
+ */
 export function setLocalState(state: Chat.ChatState) {
-  ss.set(LOCAL_NAME, state)
+  // 🔥 优化: 只保存最近的对话到LocalStorage
+  // 原因:
+  // 1. LocalStorage有10MB限制
+  // 2. 完整数据在COS，这里只是缓存
+  // 3. 用户主要访问最近的对话
+
+  const MAX_LOCAL_CHATS = 3  // 只保留最近3个对话
+  const MAX_LOCAL_MESSAGES = 50  // 每个对话最多50条消息
+
+  const optimizedState = {
+    ...state,
+    // 只保留最近的对话
+    history: state.history.slice(-MAX_LOCAL_CHATS),
+    // 只保留对应的聊天记录，并限制消息数量
+    chat: state.chat
+      .slice(-MAX_LOCAL_CHATS)
+      .map(c => ({
+        ...c,
+        data: c.data.slice(-MAX_LOCAL_MESSAGES)
+      }))
+  }
+
+  console.log(`[Local State] 优化保存: ${state.history.length} → ${optimizedState.history.length} 个对话`)
+
+  ss.set(LOCAL_NAME, optimizedState)
 }
 
 /**
