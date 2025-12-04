@@ -2,7 +2,8 @@
 import { ref, watch } from 'vue'
 import { SvgIcon } from '@/components/common';
 //import {   FeedTask} from '@/api/suno';
-import {   sunoStore, SunoMedia} from '@/api/sunoStore';  
+import {   sunoStore, SunoMedia} from '@/api/sunoStore';
+import { deleteSunoAudioFromCOS } from '@/api/sunoStorage';
 
 import playui from './playui.vue';
 import { homeStore } from '@/store';
@@ -75,14 +76,22 @@ const update = (v:any )=>{
      sp.value=v
       
 }
-const deleteGo=(v:SunoMedia)=>{
+const deleteGo = async (v: SunoMedia) => {
     mlog('deleteGo', v)
-   
-    if(csuno.delete(v)) {
-        ms.success( t('common.deleteSuccess'))
-        initLoad();
-    }
 
+    try {
+        // 删除COS资产 (JSON记录 + 实际文件)
+        await deleteSunoAudioFromCOS(v.id);
+
+        // 删除本地存储
+        csuno.delete(v);
+
+        ms.success(t('common.deleteSuccess'));
+        initLoad();
+    } catch (error: any) {
+        console.error('[Suno Delete] ❌ 删除失败:', error);
+        ms.error(`删除失败: ${error.message || '未知错误'}`);
+    }
 }
 initLoad();
 </script>

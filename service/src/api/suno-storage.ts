@@ -225,18 +225,42 @@ router.delete('/delete', async (req: any, res: any) => {
     // 加载现有音频列表
     const audios = await loadSunoAudios(userUuid);
 
-    // 删除指定音频
-    const newAudios = audios.filter(a => a.id !== audioId);
+    // 找到要删除的音频
+    const audioToDelete = audios.find(a => a.id === audioId);
 
-    if (newAudios.length === audios.length) {
+    if (!audioToDelete) {
       return res.status(404).json({
         success: false,
         error: '音频不存在',
       });
     }
 
+    // 删除指定音频
+    const newAudios = audios.filter(a => a.id !== audioId);
+
     // 保存到COS
     await saveSunoAudios(userUuid, newAudios);
+
+    // 🔥 删除COS上的实际文件
+    if (audioToDelete.audio_url || audioToDelete.image_url || audioToDelete.image_large_url) {
+      try {
+        const deleteResponse = await fetch('http://localhost:3002/api/asset-cleanup/delete-from-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userUuid,
+            record: audioToDelete,
+          }),
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log(`[Suno Storage] ✅ COS文件删除成功: ${deleteResult.deletedCount} 个文件`);
+        }
+      } catch (error) {
+        console.warn('[Suno Storage] ⚠️ COS文件删除请求失败:', error);
+      }
+    }
 
     return res.json({
       success: true,

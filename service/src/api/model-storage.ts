@@ -315,7 +315,7 @@ router.get('/list', async (req: any, res: any) => {
 
 /**
  * DELETE /api/model-storage/delete
- * 删除模型记录(不删除COS文件,因为可能被多个记录引用)
+ * 删除模型记录并删除COS文件
  *
  * Body:
  * {
@@ -335,16 +335,44 @@ router.delete('/delete', async (req: any, res: any) => {
     }
 
     const models = await loadModels(userUuid);
-    const newModels = models.filter(m => m.id !== modelId);
 
-    if (newModels.length === models.length) {
+    // 找到要删除的模型
+    const modelToDelete = models.find(m => m.id === modelId);
+
+    if (!modelToDelete) {
       return res.status(404).json({
         success: false,
         error: '模型记录不存在',
       });
     }
 
+    const newModels = models.filter(m => m.id !== modelId);
     await saveModels(userUuid, newModels);
+
+    // 🔥 删除COS上的实际文件（模型文件 + 预览图 + 其他格式）
+    const hasFiles = modelToDelete.cos_model_url || modelToDelete.cos_base_model_url ||
+                     modelToDelete.cos_pbr_model_url || modelToDelete.cos_stl_model_url ||
+                     modelToDelete.cos_preview_url;
+
+    if (hasFiles) {
+      try {
+        const deleteResponse = await fetch('http://localhost:3002/api/asset-cleanup/delete-from-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userUuid,
+            record: modelToDelete,
+          }),
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log(`[Model Storage] ✅ COS文件删除成功: ${deleteResult.deletedCount} 个文件`);
+        }
+      } catch (error) {
+        console.warn('[Model Storage] ⚠️ COS文件删除请求失败:', error);
+      }
+    }
 
     console.log(`[Model Storage] 删除模型记录: ${modelId}`);
 

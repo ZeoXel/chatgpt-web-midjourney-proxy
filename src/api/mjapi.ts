@@ -290,24 +290,37 @@ export const flechTask= ( chat:Chat.Chat)=>{
 
             // 如果是成功完成,保存URL到COS JSON文件(不下载图片)
             if(ts.status === 'SUCCESS' && ts.progress === '100%' && ts.imageUrl) {
-                console.log('[MJ Asset Save] MJ URL已持久化,保存到COS JSON文件', {
-                    action: ts.action,
-                    imageUrl: ts.imageUrl
-                });
+                // 🔥 防止重复保存：检查是否已保存到COS
+                const alreadySaved = chat.opt?.savedToCOS === true;
 
-                // 保存到COS JSON文件（不阻塞，异步执行）
-                saveMJImageToCOS({
-                    id: chat.mjID || '',
-                    task_id: chat.mjID || '',
-                    prompt: chat.opt?.prompt || chat.opt?.promptEn || chat.requestOptions?.prompt || '',
-                    image_url: ts.imageUrl,
-                    action: ts.action,
-                    status: ts.status,
-                    created_at: new Date().toISOString(),
-                    metadata: chat.opt,
-                }).catch(err => {
-                    console.warn('[MJ Asset Save] ⚠️ 保存失败（不影响用户体验）:', err);
-                });
+                if (!alreadySaved) {
+                    console.log('[MJ Asset Save] MJ URL已持久化,保存到COS JSON文件', {
+                        action: ts.action,
+                        imageUrl: ts.imageUrl,
+                        mjID: chat.mjID
+                    });
+
+                    // 保存到COS JSON文件（不阻塞，异步执行）
+                    saveMJImageToCOS({
+                        id: chat.mjID || '',
+                        task_id: chat.mjID || '',
+                        prompt: chat.opt?.prompt || chat.opt?.promptEn || chat.requestOptions?.prompt || '',
+                        image_url: ts.imageUrl,
+                        action: ts.action,
+                        status: ts.status,
+                        created_at: new Date().toISOString(),
+                        metadata: chat.opt,
+                    }).then(() => {
+                        // ✅ 标记为已保存，防止重复
+                        chat.opt = chat.opt || {};
+                        chat.opt.savedToCOS = true;
+                        console.log('[MJ Asset Save] ✅ 已标记为保存完成:', chat.mjID);
+                    }).catch(err => {
+                        console.warn('[MJ Asset Save] ⚠️ 保存失败（不影响用户体验）:', err);
+                    });
+                } else {
+                    console.log('[MJ Asset Save] ⏭️ 跳过重复保存:', chat.mjID);
+                }
             }
         } else {
             // 任务进行中,只更新前端UI,不触发COS保存

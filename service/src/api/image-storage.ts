@@ -288,7 +288,7 @@ router.patch('/update-cos-urls', async (req: any, res: any) => {
 
 /**
  * DELETE /api/image-storage/delete
- * 删除图片记录
+ * 删除图片记录并删除COS文件
  */
 router.delete('/delete', async (req: any, res: any) => {
   try {
@@ -306,18 +306,42 @@ router.delete('/delete', async (req: any, res: any) => {
     // 1. 加载现有记录
     const images = await loadImages(userUuid);
 
-    // 2. 删除指定记录
-    const filteredImages = images.filter(v => v.id !== id);
+    // 找到要删除的图片
+    const imageToDelete = images.find(v => v.id === id);
 
-    if (filteredImages.length === images.length) {
+    if (!imageToDelete) {
       return res.status(404).json({
         success: false,
         error: '记录不存在',
       });
     }
 
+    // 2. 删除指定记录
+    const filteredImages = images.filter(v => v.id !== id);
+
     // 3. 保存回COS
     await saveImages(userUuid, filteredImages);
+
+    // 🔥 删除COS上的实际文件
+    if (imageToDelete.cos_url || imageToDelete.original_url) {
+      try {
+        const deleteResponse = await fetch('http://localhost:3002/api/asset-cleanup/delete-from-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userUuid,
+            record: imageToDelete,
+          }),
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log(`[Image Storage] ✅ COS文件删除成功: ${deleteResult.deletedCount} 个文件`);
+        }
+      } catch (error) {
+        console.warn('[Image Storage] ⚠️ COS文件删除请求失败:', error);
+      }
+    }
 
     return res.json({
       success: true,

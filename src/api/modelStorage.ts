@@ -111,3 +111,42 @@ export async function loadModelsFromCOS(options?: {
     return [];
   }
 }
+
+/**
+ * 删除模型记录
+ */
+export async function deleteModelFromCOS(modelId: string): Promise<boolean> {
+  const userUuid = getUserUuid();
+
+  if (!userUuid) {
+    console.warn('[Model COS Storage] 未找到userUuid');
+    return false;
+  }
+
+  try {
+    const response = await fetch('/api/model-storage/delete', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userUuid,
+        modelId,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`删除失败: ${response.status} - ${JSON.stringify(error)}`);
+    }
+
+    const result = await response.json();
+    console.log(`[Model COS Storage] ✅ 删除成功: ${modelId}, 剩余 ${result.total} 个`);
+
+    return true;
+
+  } catch (error: any) {
+    console.error('[Model COS Storage] ❌ 删除失败:', error.message);
+    return false;
+  }
+}

@@ -27,6 +27,7 @@ import sunoStorageRouter from './api/suno-storage'
 import videoStorageRouter from './api/video-storage'
 import modelStorageRouter from './api/model-storage'
 import imageStorageRouter from './api/image-storage'
+import assetCleanupRouter from './api/asset-cleanup'
 
 const app = express()
 const router = express.Router()
@@ -917,6 +918,9 @@ app.use('/api/model-storage', modelStorageRouter)
 
 // 通用图片URL存储API (COS JSON)
 app.use('/api/image-storage', imageStorageRouter)
+
+// COS资产清理API (删除实际文件)
+app.use('/api/asset-cleanup', assetCleanupRouter)
 
 app.set('trust proxy', 1)
 

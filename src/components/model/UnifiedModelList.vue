@@ -4,6 +4,7 @@ import { NEmpty, useMessage } from 'naive-ui'
 import UnifiedModelCard from './UnifiedModelCard.vue'
 import { UnifiedModelStore } from '@/api/modelStore'
 import { convertModel, fetchTripoTaskStatus, refreshTripoTask } from '@/api/tripo'
+import { deleteModelFromCOS } from '@/api/modelStorage'
 import { homeStore } from '@/store'
 import { t } from '@/locales'
 
@@ -45,10 +46,20 @@ watch(() => homeStore.myData.act, (act) => {
     refresh()
 })
 
-const handleDelete = (id: string) => {
-  if (store.delete(id)) {
+const handleDelete = async (id: string) => {
+  try {
+    // 删除COS资产 (JSON记录 + 实际文件)
+    await deleteModelFromCOS(id)
+
+    // 删除本地存储
+    store.delete(id)
+
     ms.success(t('common.deleteSuccess'))
     refresh()
+  }
+  catch (error: any) {
+    console.error('[Model Delete] ❌ 删除失败:', error)
+    ms.error(`删除失败: ${error.message || '未知错误'}`)
   }
 }
 

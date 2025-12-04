@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { LazyImg, Waterfall } from 'vue-waterfall-plugin-next'
 import 'vue-waterfall-plugin-next/dist/style.css'
-//import { ajax } from '@/api' 
+//import { ajax } from '@/api'
 import {ref,nextTick} from "vue"
-import {NSpin ,NEmpty,NImage, NTag } from 'naive-ui' 
+import {NSpin ,NEmpty,NImage, NTag, NButton, NPopconfirm, useMessage } from 'naive-ui'
+import { deleteMJImageFromCOS } from '@/api/mjStorage' 
 //import {copyText3} from "@/utils/format";
 //import { copyText } from 'vue3-clipboard'
 //import { copyToClip } from "@/utils/copy";
@@ -21,15 +22,53 @@ const chatStore = useChatStore()
 
 const { isMobile } = useBasicLayout()
 
+const message = useMessage()
+
 const emit = defineEmits(['close']);
 //import {hom}
 
-const st =ref({show:true ,showImg:'' ,isLoad:false });
+const st =ref({show:true ,showImg:'' ,isLoad:false, deleting: false });
 
 const showImg= ref<typeof NImage>();
- 
+
 
 const list = ref<any[]>([])
+
+// 删除图片
+const handleDelete = async (item: any, event: Event) => {
+  event.stopPropagation(); // 防止触发图片点击事件
+
+  if (st.value.deleting) {
+    return; // 防止重复点击
+  }
+
+  try {
+    st.value.deleting = true;
+
+    console.log('[Gallery Delete] 开始删除图片:', {
+      mjID: item.mjID,
+      prompt: item.prompt?.substring(0, 50)
+    });
+
+    // 调用删除API（会自动删除JSON记录和COS文件）
+    await deleteMJImageFromCOS(item.mjID);
+
+    // 从列表中移除
+    const index = list.value.findIndex(img => img.mjID === item.mjID);
+    if (index > -1) {
+      list.value.splice(index, 1);
+      console.log('[Gallery Delete] ✅ 已从列表移除');
+    }
+
+    message.success('删除成功');
+
+  } catch (error: any) {
+    console.error('[Gallery Delete] ❌ 删除失败:', error);
+    message.error(`删除失败: ${error.message || '未知错误'}`);
+  } finally {
+    st.value.deleting = false;
+  }
+}
 
 const breakpoints= {
   2000: { //当屏幕宽度小于等于1200
@@ -405,6 +444,7 @@ loadImg();
         </div>
       </div>
 
+      <!-- 悬停信息栏 -->
       <div class="absolute w-full bottom-0 backdrop-blur-sm text-white/70 invisible group-hover/item:visible">
         <div class="p-3">
             <div class="line-clamp-2 text-[13px]">
@@ -414,8 +454,33 @@ loadImg();
                 <NTag v-else type="success" size="small" round >{{ item.action }}</NTag>
             </div>
             <div class="line-clamp-1 text-[12px] text-right">{{ new Date( item.time).toLocaleString() }}</div>
-            <div class="space-x-2"></div>
         </div>
+      </div>
+
+      <!-- 删除按钮 -->
+      <div class="absolute top-2 right-2 invisible group-hover/item:visible">
+        <NPopconfirm
+          @positive-click="(e) => handleDelete(item, e)"
+          positive-text="确认"
+          negative-text="取消"
+        >
+          <template #trigger>
+            <NButton
+              size="small"
+              type="error"
+              circle
+              :loading="st.deleting"
+              @click.stop
+            >
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                  <path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clip-rule="evenodd" />
+                </svg>
+              </template>
+            </NButton>
+          </template>
+          <span>确定要删除这张图片吗？</span>
+        </NPopconfirm>
       </div>
     </div>
   </template>

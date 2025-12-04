@@ -6,6 +6,7 @@ import { NEmpty, useMessage } from 'naive-ui';
 import { homeStore } from '@/store';
 import { t } from '@/locales';
 import { mlog } from '@/api';
+import { deleteVideoFromCOS } from '@/api/videoStorage';
 
 const ms = useMessage();
 const store = new UnifiedVideoStore();
@@ -64,11 +65,20 @@ const feedEvents = ['ViduFeed', 'RunwayFeed', 'PikaFeed', 'KlingFeed', 'RunwayML
   }
 });
 
-// 删除任务
-const handleDelete = (id: string) => {
-  if (store.delete(id)) {
+// 删除任务 (包含COS资产删除)
+const handleDelete = async (id: string) => {
+  try {
+    // 删除COS资产 (JSON记录 + 实际文件)
+    await deleteVideoFromCOS(id);
+
+    // 删除本地存储
+    store.delete(id);
+
     ms.success(t('common.deleteSuccess'));
     refresh();
+  } catch (error: any) {
+    console.error('[Video Delete] ❌ 删除失败:', error);
+    ms.error(`删除失败: ${error.message || '未知错误'}`);
   }
 };
 

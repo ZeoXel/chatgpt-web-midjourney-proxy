@@ -276,7 +276,7 @@ router.get('/list', async (req: any, res: any) => {
 
 /**
  * DELETE /api/video-storage/delete
- * 删除视频记录(不删除COS文件,因为可能被多个记录引用)
+ * 删除视频记录并删除COS文件
  *
  * Body:
  * {
@@ -296,16 +296,40 @@ router.delete('/delete', async (req: any, res: any) => {
     }
 
     const videos = await loadVideos(userUuid);
-    const newVideos = videos.filter(v => v.id !== videoId);
 
-    if (newVideos.length === videos.length) {
+    // 找到要删除的视频
+    const videoToDelete = videos.find(v => v.id === videoId);
+
+    if (!videoToDelete) {
       return res.status(404).json({
         success: false,
         error: '视频记录不存在',
       });
     }
 
+    const newVideos = videos.filter(v => v.id !== videoId);
     await saveVideos(userUuid, newVideos);
+
+    // 🔥 删除COS上的实际文件（视频 + 封面图）
+    if (videoToDelete.cos_url || videoToDelete.poster_url) {
+      try {
+        const deleteResponse = await fetch('http://localhost:3002/api/asset-cleanup/delete-from-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userUuid,
+            record: videoToDelete,
+          }),
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log(`[Video Storage] ✅ COS文件删除成功: ${deleteResult.deletedCount} 个文件`);
+        }
+      } catch (error) {
+        console.warn('[Video Storage] ⚠️ COS文件删除请求失败:', error);
+      }
+    }
 
     console.log(`[Video Storage] 删除视频记录: ${videoId}`);
 

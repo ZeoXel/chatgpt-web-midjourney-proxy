@@ -115,10 +115,7 @@ router.post('/save', async (req: any, res: any) => {
     // 加载现有图片列表
     const images = await loadMJImages(userUuid);
 
-    // 查找是否已存在
-    const existingIndex = images.findIndex(img => img.id === image.id);
-
-    // 添加或更新
+    // 构建新图片对象
     const newImage: MJImage = {
       id: image.id,
       task_id: image.task_id || image.id,
@@ -130,12 +127,20 @@ router.post('/save', async (req: any, res: any) => {
       metadata: image.metadata,
     };
 
+    // 🔥 增强去重：检查ID或URL是否已存在
+    const existingIndex = images.findIndex(img =>
+      img.id === newImage.id ||
+      (img.image_url && newImage.image_url && img.image_url === newImage.image_url)
+    );
+
     if (existingIndex >= 0) {
+      // 更新现有记录
       images[existingIndex] = newImage;
-      console.log('[MJ Storage] 更新现有图片');
+      console.log('[MJ Storage] 更新现有图片:', newImage.id);
     } else {
+      // 新增记录
       images.unshift(newImage); // 新图片添加到开头
-      console.log('[MJ Storage] 添加新图片');
+      console.log('[MJ Storage] 添加新图片:', newImage.id);
     }
 
     // 保存到COS
@@ -220,18 +225,45 @@ router.delete('/delete', async (req: any, res: any) => {
     // 加载现有图片列表
     const images = await loadMJImages(userUuid);
 
-    // 删除指定图片
-    const newImages = images.filter(img => img.id !== imageId);
+    // 找到要删除的图片（保存记录以便删除COS文件）
+    const imageToDelete = images.find(img => img.id === imageId);
 
-    if (newImages.length === images.length) {
+    if (!imageToDelete) {
       return res.status(404).json({
         success: false,
         error: '图片不存在',
       });
     }
 
+    // 删除指定图片
+    const newImages = images.filter(img => img.id !== imageId);
+
     // 保存到COS
     await saveMJImages(userUuid, newImages);
+
+    // 🔥 删除COS上的实际文件（如果有COS URL）
+    if (imageToDelete.image_url) {
+      try {
+        const deleteResponse = await fetch('http://localhost:3002/api/asset-cleanup/delete-from-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userUuid,
+            record: imageToDelete,
+          }),
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log(`[MJ Storage] ✅ COS文件删除成功: ${deleteResult.deletedCount} 个文件`);
+        } else {
+          console.warn('[MJ Storage] ⚠️ COS文件删除失败');
+        }
+      } catch (error) {
+        console.warn('[MJ Storage] ⚠️ COS文件删除请求失败:', error);
+        // 不抛出错误，JSON记录已删除即可
+      }
+    }
 
     return res.json({
       success: true,
