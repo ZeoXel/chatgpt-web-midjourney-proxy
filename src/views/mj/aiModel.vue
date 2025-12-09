@@ -24,6 +24,10 @@ const config = ref({
 		'gemini-3-pro-preview',
 		'claude-sonnet-4-5-20250929',
 		'grok-4.1',
+		// 图片生成模型
+		'nano-banana',
+		'nano-banana-2',
+		'dall-e-3',
 	],
 	maxToken: 16384,
 })

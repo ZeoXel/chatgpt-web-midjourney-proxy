@@ -3,6 +3,7 @@ import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { UnifiedVideoTask, UnifiedVideoStore } from '@/api/videoStore';
 import { NButton, NButtonGroup, NPopconfirm, useMessage, NTooltip } from 'naive-ui';
 import { SvgIcon } from '@/components/common';
+import { copyToClip } from '@/utils/copy';
 import { t } from '@/locales';
 
 const props = defineProps<{
@@ -84,26 +85,23 @@ const handleVideoError = () => {
 
 const copyPrompt = async () => {
   const text = props.task?.prompt || '';
-  if (!text) {
+  if (!text)
     return;
-  }
   try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+    // 统一使用项目内的复制工具，规避 https/权限问题
+    await copyToClip(text);
+    message.success(t('vidu.actions.copySuccess') || '提示词已复制');
+  }
+  catch (e) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        message.success(t('vidu.actions.copySuccess') || '提示词已复制');
+        return;
+      }
     }
-    message.success('提示词已复制');
-  } catch (e) {
-    message.error('复制失败');
+    catch {}
+    message.error(t('common.copyFailed') || '复制失败');
   }
 };
 

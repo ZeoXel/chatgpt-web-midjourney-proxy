@@ -4,10 +4,10 @@ import { useRoute } from 'vue-router'
 import { useChat } from '../chat/hooks/useChat' 
 import {  homeStore, useChatStore } from '@/store'
 import { getInitChat, mlog, subModel,getSystemMessage , localSaveAny, canVisionModel
-    ,isTTS, subTTS, file2blob, whisperUpload, getHistoryMessage, checkDisableGpt4, chatSetting, 
+    ,isTTS, subTTS, file2blob, whisperUpload, getHistoryMessage, checkDisableGpt4, chatSetting,
     canBase64Model,
     isCanBase64Model,
-    isNewModel} from '@/api'
+    isNewModel, isDallImageModel, subGPT, subImageChat} from '@/api'
 //import { isNumber } from '@/utils/is'
 import { useMessage  } from "naive-ui";
 import { t } from "@/locales";
@@ -71,11 +71,99 @@ watch(()=>homeStore.myData.act, async (n)=>{
             ms.error( t('mj.disableGpt4') );
             return false;
         }
-        
+
+        // 检测是否为图片生成模型
+        if (isDallImageModel(model)) {
+            mlog('检测到图片生成模型:', model);
+            // 创建用户消息
+            let promptMsg = getInitChat(dd.prompt);
+            addChat(+uuid2, promptMsg);
+            homeStore.setMyData({act:'scrollToBottom'});
+
+            // 创建AI响应占位
+            let outMsg: Chat.Chat = {
+                dateTime: new Date().toLocaleString(),
+                text: t('mj.thinking'),
+                loading: true,
+                inversion: false,
+                error: false,
+                conversationOptions: null,
+                requestOptions: { prompt: dd.prompt, options: {} },
+                uuid: +uuid2,
+                model,
+                myid: `${Date.now()}`
+            };
+
+            if (nGptStore.gpts) {
+                outMsg.logo = nGptStore.gpts.logo;
+            }
+
+            addChat(+uuid2, outMsg);
+            st.value.index = dataSources.value.length - 1;
+            homeStore.setMyData({act:'scrollToBottom'});
+
+            // 如果有上传的图片，使用 Chat 格式的图片编辑 API
+            if (dd.fileBase64 && dd.fileBase64.length > 0) {
+                mlog('检测到参考图，使用 Chat 格式图片编辑 API');
+                try {
+                    await subImageChat(model, dd.prompt, dd.fileBase64, outMsg);
+                    mlog('图片编辑完成');
+
+                    // 确保loading状态被正确清除
+                    updateChatSome(+uuid2, st.value.index, { loading: false });
+                    homeStore.setMyData({ isLoader: false });
+                    emit('finished');
+                } catch (error) {
+                    mlog('图片编辑失败:', error);
+                    updateChatSome(+uuid2, st.value.index, {
+                        text: `图片编辑失败: ${error}`,
+                        loading: false,
+                        error: true
+                    });
+                    homeStore.setMyData({ isLoader: false });
+                    emit('finished');
+                }
+                return;
+            }
+
+            // 没有参考图，使用标准的图片生成 API
+            let imageData: any = {
+                model: model,
+                prompt: dd.prompt,
+                size: '1024x1024', // 默认尺寸
+                quality: 'medium',
+                n: 1
+            };
+
+            // 调用图片生成API
+            try {
+                await subGPT({
+                    action: 'gpt.dall-e-3',
+                    data: imageData
+                }, outMsg);
+                mlog('图片生成完成');
+
+                // 确保loading状态被正确清除
+                updateChatSome(+uuid2, st.value.index, { loading: false });
+                homeStore.setMyData({ isLoader: false });
+                emit('finished');
+            } catch (error) {
+                mlog('图片生成失败:', error);
+                updateChatSome(+uuid2, st.value.index, {
+                    text: `图片生成失败: ${error}`,
+                    loading: false,
+                    error: true
+                });
+                homeStore.setMyData({ isLoader: false });
+                emit('finished');
+            }
+            return;
+        }
+
         let promptMsg = getInitChat(dd.prompt );
-        if( dd.fileBase64 && dd.fileBase64.length>0 ){ 
+        if( dd.fileBase64 && dd.fileBase64.length>0 ){
             if( !canVisionModel(model)  )  model= canBase64Model(model)//model='gpt-4-vision-preview';
-        
+
             try{
                     let images= await localSaveAny( JSON.stringify({fileName: dd.fileName, fileBase64: dd.fileBase64 }) ) ;
                     mlog('key', images );
@@ -324,28 +412,7 @@ const submit= (model:string, message:any[] ,  opt?:any )=>{
             ,uuid:st.value.uuid //当前会话
             ,onMessage:(d)=>{
                 mlog('🐞消息',d);
-
-                // 处理 gpt-4o-image 模型的图片响应
-                if(d.isAll && d.text){
-                    try {
-                        const imageData = JSON.parse(d.text);
-                        if(imageData.isImage && imageData.imageUrls){
-                            // 图片响应，更新 chat.opt
-                            updateChatSome(+st.value.uuid, st.value.index, {
-                                text: imageData.text,
-                                opt: {
-                                    imageUrls: imageData.imageUrls,
-                                    imageUrl: imageData.imageUrls[0]?.url
-                                },
-                                loading: false
-                            });
-                            return;
-                        }
-                    } catch(e) {
-                        // 不是JSON格式，按普通文本处理
-                    }
-                }
-
+                
                 if(d.isAll){
                     textRz.value= [d.text];
                 }else{

@@ -868,10 +868,105 @@ export const isDallImageModel = (model: string | undefined) => {
 	if (model.indexOf("flux") > -1) return true;
 	if (model.indexOf("ideogram") > -1) return true;
 	if (model.indexOf("gpt-image") > -1) return true;
-	if (model.indexOf("gpt-4o-image") > -1) return true; // 支持通过Chat API生成图片
 	if (model === "nano-banana" || model === "nano-banana-2") return true;
 	if (model.indexOf("seedream") > -1) return true;
 	return ["dall-e-2", "dall-e-3", "ideogram"].indexOf(model) > -1;
+};
+
+/**
+ * 支持 Chat 格式的图片编辑/生成
+ * 使用 /v1/chat/completions 端点，支持多模态输入
+ */
+export const subImageChat = async (
+	model: string,
+	prompt: string,
+	imageUrls: string[],
+	chat: Chat.Chat
+) => {
+	try {
+		// 构建 messages，使用 Chat 格式的多模态内容
+		const content: any[] = [
+			{
+				type: "text",
+				text: prompt
+			}
+		];
+
+		// 添加所有参考图片
+		imageUrls.forEach(url => {
+			content.push({
+				type: "image_url",
+				image_url: {
+					url: url
+				}
+			});
+		});
+
+		const messages = [
+			{
+				role: "user",
+				content: content
+			}
+		];
+
+		const body = {
+			model: model,
+			messages: messages,
+			stream: false
+		};
+
+		mlog('Chat格式图片编辑请求:', body);
+
+		const response = await gptFetch("/v1/chat/completions", body);
+		mlog('Chat格式图片编辑响应:', response);
+
+		// 解析响应
+		if (!response || !response.choices || response.choices.length === 0) {
+			throw new Error('响应格式错误');
+		}
+
+		const messageContent = response.choices[0].message.content;
+
+		// 尝试从响应中提取图片 URL
+		// 不同模型的响应格式可能不同，这里做兼容处理
+		let imageUrl = '';
+		let revisedPrompt = messageContent;
+
+		// 尝试解析 JSON 格式的响应
+		try {
+			const parsed = JSON.parse(messageContent);
+			if (parsed.url) {
+				imageUrl = parsed.url;
+				revisedPrompt = parsed.revised_prompt || prompt;
+			}
+		} catch (e) {
+			// 不是 JSON，尝试正则匹配 URL
+			const urlMatch = messageContent.match(/https?:\/\/[^\s]+/);
+			if (urlMatch) {
+				imageUrl = urlMatch[0];
+			}
+		}
+
+		// 更新 chat 对象
+		if (imageUrl) {
+			chat.text = revisedPrompt;
+			chat.opt = {
+				imageUrl: imageUrl,
+				imageUrls: [{ url: imageUrl }]
+			};
+		} else {
+			// 如果没有找到图片 URL，显示原始响应
+			chat.text = messageContent;
+		}
+
+		chat.loading = false;
+		homeStore.setMyData({ act: "updateChat", actData: chat });
+
+		return response;
+	} catch (error) {
+		mlog('Chat格式图片编辑失败:', error);
+		throw error;
+	}
 };
 
 interface subModelType {
@@ -995,42 +1090,7 @@ export const subModel = async (opt: subModelType) => {
 		mlog("🐞非流输出", body);
 		opt.onMessage({ text: t("mj.thinking"), isFinish: false });
 		const obj: any = await gptFetch("/v1/chat/completions", body);
-
-		// 处理 gpt-4o-image 模型的图片响应
-		if (model.indexOf("gpt-4o-image") > -1) {
-			const content = obj?.choices?.[0]?.message?.content;
-
-			// 检查是否返回了图片（content 可能是数组格式）
-			if (Array.isArray(content)) {
-				// 提取图片URL和文本
-				const imageUrls: any[] = [];
-				let textContent = "";
-
-				content.forEach((item: any) => {
-					if (item.type === "image_url" && item.image_url?.url) {
-						imageUrls.push({ url: item.image_url.url });
-					} else if (item.type === "text" && item.text) {
-						textContent += item.text;
-					}
-				});
-
-				// 如果有图片，通过特殊格式返回
-				if (imageUrls.length > 0) {
-					const imageData = {
-						text: textContent || "图片已生成",
-						imageUrls: imageUrls,
-						isImage: true,
-					};
-					opt.onMessage({
-						text: JSON.stringify(imageData),
-						isFinish: true,
-						isAll: true,
-					});
-					return;
-				}
-			}
-		}
-
+		//mlog('结果 >>',obj   )
 		opt.onMessage({
 			text: obj?.choices?.[0]?.message?.content ?? "",
 			isFinish: true,
