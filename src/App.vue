@@ -8,6 +8,7 @@ import aiOther from "@/views/mj/aiOther.vue"
 import { useChatStore, useAuthStore } from '@/store'
 import { checkAndMigrate } from '@/utils/videoMigration'
 import { restoreAllAssets, getRestorationSummary } from '@/utils/assetRestoration'
+import { resumeAllPendingPolls } from '@/utils/videoPollResume'
 import '@/styles/color-override.css'
 
 const { theme, themeOverrides } = useTheme()
@@ -41,6 +42,17 @@ onMounted(async () => {
 
   // 3. 视频数据迁移 (一次性执行)
   checkAndMigrate()
+
+  // 4. 恢复未完成的视频轮询任务
+  console.log('[App] 🔄 检查未完成的视频任务...')
+  resumeAllPendingPolls(3, 30 * 60 * 1000).then(result => {
+    if (result.resumed > 0) {
+      console.log(`[App] ✅ 已恢复 ${result.resumed} 个视频任务的轮询`)
+    }
+    if (result.skipped > 0) {
+      console.log(`[App] ⏭️ 跳过 ${result.skipped} 个超时任务`)
+    }
+  })
 
   console.log('[App] 🎉 应用初始化完成')
 })
