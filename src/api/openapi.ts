@@ -279,7 +279,7 @@ function getAssetsApiPath(): string {
 
 /**
  * 保存DALL-E（智能绘画）资产到数据库
- * 支持模型: nano-banana, nano-banana-2, doubao-seedream-4-0-250828, seedream-3.0
+ * 支持模型: nano-banana, nano-banana-2, doubao-seedream-4-5-251128, doubao-seedream-4-0-250828, seedream-3.0
  */
 async function saveDallAssetToDatabase(
 	chat: Chat.Chat,
@@ -306,6 +306,7 @@ async function saveDallAssetToDatabase(
 		const allowedModels = [
 			"nano-banana",
 			"nano-banana-2",
+			"doubao-seedream-4-5-251128",
 			"doubao-seedream-4-0-250828",
 			"seedream-3.0",
 		];
@@ -498,6 +499,7 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 		data.data.model &&
 		(data.data.model === "nano-banana" ||
 			data.data.model === "nano-banana-2" ||
+			data.data.model === "doubao-seedream-4-5-251128" ||
 			data.data.model === "doubao-seedream-4-0-250828" ||
 			data.data.model === "seedream-3.0")
 	) {
@@ -513,7 +515,7 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 		// 转换参数
 		// 即梦与 nano-banana 统一使用 aspect_ratio 映射，
 		// 但即梦模型仍然保留 size 以兼容现有网关实现
-		const isSeeDream = data.data.model === "doubao-seedream-4-0-250828" || data.data.model === "seedream-3.0";
+		const isSeeDream = data.data.model === "doubao-seedream-4-5-251128" || data.data.model === "doubao-seedream-4-0-250828" || data.data.model === "seedream-3.0";
 		const aspectRatio = data.data.size
 			? convertSizeToAspectRatio(data.data.size)
 			: "1:1";

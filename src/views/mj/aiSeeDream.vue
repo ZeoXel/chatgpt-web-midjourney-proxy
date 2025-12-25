@@ -10,7 +10,8 @@ import { checkBalance } from '@/utils/balanceGuard';
 const ms = useMessage();
 const config = ref( {
 model:[
- {  "label": "即梦 4.0", "value": "doubao-seedream-4-0-250828" }
+ {  "label": "即梦 4.5 (推荐)", "value": "doubao-seedream-4-5-251128" }
+ ,{  "label": "即梦 4.0", "value": "doubao-seedream-4-0-250828" }
  ,{  "label": "即梦 3.0", "value": "seedream-3.0" }
 ]
 });
@@ -21,7 +22,7 @@ interface myFile{
 const st =ref({isGo:false,quality:'medium', watermark: true });
 const fsRef= ref() ;
 const base64Array= ref<myFile[]>([]);
-const f = ref({size:'1024x1024', prompt:'',"model": "doubao-seedream-4-0-250828","n": 1});
+const f = ref({size:'2048x2048', prompt:'',"model": "doubao-seedream-4-5-251128","n": 1});
 const isDisabled= computed(()=>{
     if(st.value.isGo) {
         //console.log('st.value.isGo',st.value.isGo);
@@ -113,7 +114,7 @@ watch(()=>homeStore.myData.act,(n)=>{
         const data = homeStore.myData.actData;
         if(data && data.config) {
             const config = data.config;
-            f.value.model = config.model || 'doubao-seedream-4-0-250828';
+            f.value.model = config.model || 'doubao-seedream-4-5-251128';
             f.value.size = config.size || '1024x1024';
             f.value.prompt = config.prompt || '';
             f.value.n = config.n || 1;
@@ -159,8 +160,8 @@ const qualityOption=  computed(()=>{
 ]
 });
 const dimensionsList= computed(()=>{
-    // 即梦4和即梦3支持的尺寸
-    if(f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
+    // 即梦4.5/即梦4/即梦3支持的尺寸
+    if(f.value.model=='doubao-seedream-4-5-251128' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0'){
         return [
             {
                 "label": "1:1 - 2048x2048",
@@ -198,11 +199,16 @@ const dimensionsList= computed(()=>{
     ]
 })
 watch(()=>f.value.model,(n)=>{
-    f.value.size='1024x1024';
+    // 即梦4.5要求更高分辨率，默认使用2048x2048
+    if(n === 'doubao-seedream-4-5-251128') {
+        f.value.size = '2048x2048';
+    } else {
+        f.value.size = '1024x1024';
+    }
 })
 const isCanImageEdit= computed(()=>{
-    // 即梦4和即梦3都支持图片参考
-    if(f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0') return true;
+    // 即梦4.5/即梦4/即梦3都支持图片参考
+    if(f.value.model=='doubao-seedream-4-5-251128' || f.value.model=='doubao-seedream-4-0-250828' || f.value.model=='seedream-3.0') return true;
     return false;
 })
 
@@ -288,9 +294,9 @@ const selectFile=(input:any)=>{
 <div class="pt-4 text-sm text-gray-500 dark:text-gray-400">
     <p class="mb-2 font-medium">即梦绘图说明：</p>
     <ul class="list-disc list-inside space-y-1.5">
-        <li>支持即梦 4.0 和即梦 3.0 模型</li>
+        <li>支持即梦 4.5（推荐）、4.0 和 3.0 模型</li>
+        <li>即梦 4.5 要求 2K 及以上分辨率，画质更佳</li>
         <li>可上传最多 3 张参考图片进行图生图</li>
-        <li>支持 2K 高质量输出</li>
         <li>可选择是否添加水印</li>
         <li class="text-orange-600 dark:text-orange-400 font-medium">
             <span class="font-bold">多图生成提示：</span>如需生成多张图片，请设置生成数量，<span class="underline">并在提示词中明确说明</span>（例如："生成3张xxx"、"连环画"、"多角度"等），否则可能只返回1张图片

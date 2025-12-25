@@ -31,7 +31,7 @@ interface ProcessResult {
 
 export class AssetProcessor {
   private cosClient: TencentCOSClient;
-  private downloadTimeout: number = 30000; // 30秒超时
+  private downloadTimeout: number = 15000; // 15秒超时（减少以避免Cloudflare 524错误）
   private maxFileSize: number = 100 * 1024 * 1024; // 100MB
   private urlCache: Map<string, string> = new Map(); // URL缓存: 原始URL -> COS URL
 
@@ -111,11 +111,39 @@ export class AssetProcessor {
   }
 
   /**
+   * 检查URL是否可访问
+   */
+  private async checkUrlAccessible(url: string): Promise<boolean> {
+    try {
+      const response = await axios.head(url, {
+        timeout: 5000, // 5秒超时
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        },
+      });
+      return response.status >= 200 && response.status < 400;
+    } catch (error: any) {
+      // 如果HEAD请求失败（某些服务器不支持HEAD），返回true让后续GET请求去处理
+      if (error.response?.status === 405) {
+        return true;
+      }
+      console.warn(`[Asset Check] URL不可访问: ${url}`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * 下载外部资产
    */
   private async downloadAsset(url: string): Promise<{ buffer: Buffer; contentType: string }> {
     try {
       console.log(`[Asset Download] 下载资产: ${url}`);
+
+      // 先检查URL是否可访问
+      const isAccessible = await this.checkUrlAccessible(url);
+      if (!isAccessible) {
+        throw new Error(`资源不可访问或已过期 (URL可能已失效)`);
+      }
 
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
@@ -133,8 +161,20 @@ export class AssetProcessor {
 
       return { buffer, contentType };
     } catch (error: any) {
-      console.error(`[Asset Download] 下载失败: ${url}`, error.message);
-      throw new Error(`下载失败: ${error.message}`);
+      // 提供更明确的错误信息
+      const status = error.response?.status;
+      let errorMsg = error.message;
+
+      if (status === 404) {
+        errorMsg = '资源不存在或已过期 (404)';
+      } else if (status === 403) {
+        errorMsg = '访问被拒绝 (403)';
+      } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        errorMsg = '下载超时，请稍后重试';
+      }
+
+      console.error(`[Asset Download] 下载失败: ${url}`, errorMsg);
+      throw new Error(`下载失败: ${errorMsg}`);
     }
   }
 

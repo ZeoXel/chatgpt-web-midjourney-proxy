@@ -152,9 +152,17 @@ router.post('/save', async (req: any, res: any) => {
 
     if (assetResult.error) {
       console.error(`[Video Storage] 视频下载失败:`, assetResult.error);
-      return res.status(500).json({
+
+      // 判断是否是URL过期/不可访问的问题
+      const isUrlExpired = assetResult.error.includes('404') ||
+                           assetResult.error.includes('过期') ||
+                           assetResult.error.includes('不可访问') ||
+                           assetResult.error.includes('不存在');
+
+      return res.status(isUrlExpired ? 410 : 500).json({
         success: false,
         error: `视频下载失败: ${assetResult.error}`,
+        errorType: isUrlExpired ? 'URL_EXPIRED' : 'DOWNLOAD_ERROR',
       });
     }
 

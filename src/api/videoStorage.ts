@@ -28,6 +28,29 @@ export interface VideoRecord {
 }
 
 /**
+ * 检查URL是否可访问（使用HEAD请求）
+ * @param url 要检查的URL
+ * @param timeout 超时时间(ms)
+ */
+async function checkUrlAccessible(url: string, timeout = 10000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.warn('[Video COS Storage] URL检查失败:', error);
+    return false;
+  }
+}
+
+/**
  * 保存视频到COS并记录到JSON
  * @param video 视频信息
  */
@@ -60,6 +83,13 @@ export async function saveVideoToCOS(video: {
     console.log(`[Video COS Storage] 开始保存视频: ${video.service}/${video.id}`);
     console.log(`[Video COS Storage] 原始URL: ${video.original_url}`);
 
+    // 先检查视频URL是否可访问
+    const isAccessible = await checkUrlAccessible(video.original_url);
+    if (!isAccessible) {
+      console.warn(`[Video COS Storage] ⚠️ 视频URL不可访问,跳过保存: ${video.original_url}`);
+      return;
+    }
+
     const response = await fetch('/api/video-storage/save', {
       method: 'POST',
       headers: {
@@ -84,8 +114,15 @@ export async function saveVideoToCOS(video: {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`保存失败: ${response.status} - ${JSON.stringify(error)}`);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+      // 根据错误类型提供更清晰的提示
+      if (response.status === 410 || errorData.errorType === 'URL_EXPIRED') {
+        console.warn(`[Video COS Storage] ⚠️ 视频URL已过期,无法保存: ${video.id}`);
+        return; // 静默处理URL过期情况
+      }
+
+      throw new Error(`保存失败: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
 
     const result = await response.json();
@@ -99,7 +136,13 @@ export async function saveVideoToCOS(video: {
     });
 
   } catch (error: any) {
-    console.error('[Video COS Storage] ❌ 保存失败:', error.message);
+    // 提供更友好的错误提示
+    const errorMsg = error.message || '未知错误';
+    if (errorMsg.includes('过期') || errorMsg.includes('404') || errorMsg.includes('不可访问')) {
+      console.warn(`[Video COS Storage] ⚠️ 视频链接已过期,跳过保存: ${video.id}`);
+    } else {
+      console.error('[Video COS Storage] ❌ 保存失败:', errorMsg);
+    }
     // 不抛出错误,避免影响用户体验
   }
 }
