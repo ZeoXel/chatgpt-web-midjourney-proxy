@@ -523,14 +523,14 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			? convertQualityToImageSize(data.data.quality, data.data.model)
 			: undefined;
 
-		// 如果有上传的图片，使用 edits 端点
+		// 如果有上传的图片，使用 edits 端点 + FormData
 		if (data.data.base64Array && data.data.base64Array.length > 0) {
 			endpoint = "/v1/images/edits";
 			hasImage = true;
 			useFormData = true; // edits端点需要FormData
 
 			mlog(
-				"nano-banana 包含参考图片:",
+				"智能绘画 包含参考图片:",
 				data.data.base64Array.length,
 				"张，将使用 /v1/images/edits 端点",
 			);
@@ -542,10 +542,11 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			formData.append("response_format", "url");
 
 			// 尺寸参数
-			// 即梦模型: 同时传入 size 与 aspect_ratio，兼容新尺寸比例
-			// nano-banana 系列: 仅使用 aspect_ratio
 			if (isSeeDream) {
-				formData.append("size", data.data.size || "1024x1024");
+				// 即梦4.5 默认使用更高分辨率
+				const isSeedream45 = data.data.model === "doubao-seedream-4-5-251128";
+				const defaultSize = isSeedream45 ? "2048x2048" : "1024x1024";
+				formData.append("size", data.data.size || defaultSize);
 				formData.append("aspect_ratio", aspectRatio);
 			} else {
 				formData.append("aspect_ratio", aspectRatio);
@@ -562,7 +563,11 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 				if (imageItem && imageItem.base64) {
 					// 将base64转换为Blob
 					let base64Data = imageItem.base64;
+					let mimeType = "image/png";
 					if (base64Data.includes(",")) {
+						// 提取 MIME 类型
+						const mimeMatch = base64Data.match(/data:([^;]+);/);
+						if (mimeMatch) mimeType = mimeMatch[1];
 						base64Data = base64Data.split(",")[1];
 					}
 
@@ -573,14 +578,15 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 						byteNumbers[j] = byteCharacters.charCodeAt(j);
 					}
 					const byteArray = new Uint8Array(byteNumbers);
-					const blob = new Blob([byteArray], { type: "image/png" });
+					const blob = new Blob([byteArray], { type: mimeType });
 
 					// 添加图片到FormData（使用相同字段名 "image"）
-					formData.append("image", blob, `image${i}.png`);
+					const ext = mimeType.split("/")[1] || "png";
+					formData.append("image", blob, `image${i}.${ext}`);
 				}
 			}
 			mlog(
-				`nano-banana 已将 ${data.data.base64Array.length} 张图片转换为Blob并添加到FormData`,
+				`智能绘画 已将 ${data.data.base64Array.length} 张图片转换为Blob并添加到FormData`,
 			);
 
 			requestData = formData;
