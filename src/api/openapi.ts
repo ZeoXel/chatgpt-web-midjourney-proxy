@@ -558,6 +558,7 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 			}
 
 			// 处理所有图片数据（支持多图参考）
+			let totalImageSize = 0;
 			for (let i = 0; i < data.data.base64Array.length; i++) {
 				const imageItem = data.data.base64Array[i];
 				if (imageItem && imageItem.base64) {
@@ -571,19 +572,43 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 						base64Data = base64Data.split(",")[1];
 					}
 
-					// 将base64转换为Blob
-					const byteCharacters = atob(base64Data);
-					const byteNumbers = new Array(byteCharacters.length);
-					for (let j = 0; j < byteCharacters.length; j++) {
-						byteNumbers[j] = byteCharacters.charCodeAt(j);
+					// 检查 base64 数据是否有效
+					if (!base64Data || base64Data.length < 100) {
+						console.error(`[智能绘画] ❌ 图片${i} base64数据无效，长度: ${base64Data?.length}`);
+						continue;
 					}
-					const byteArray = new Uint8Array(byteNumbers);
-					const blob = new Blob([byteArray], { type: mimeType });
 
-					// 添加图片到FormData（使用相同字段名 "image"）
-					const ext = mimeType.split("/")[1] || "png";
-					formData.append("image", blob, `image${i}.${ext}`);
+					// 将base64转换为Blob
+					try {
+						const byteCharacters = atob(base64Data);
+						const byteNumbers = new Array(byteCharacters.length);
+						for (let j = 0; j < byteCharacters.length; j++) {
+							byteNumbers[j] = byteCharacters.charCodeAt(j);
+						}
+						const byteArray = new Uint8Array(byteNumbers);
+						const blob = new Blob([byteArray], { type: mimeType });
+						totalImageSize += blob.size;
+
+						// 添加图片到FormData（使用相同字段名 "image"）
+						const ext = mimeType.split("/")[1] || "png";
+						formData.append("image", blob, `image${i}.${ext}`);
+
+						const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+						mlog(`[智能绘画] 图片${i}: 类型=${mimeType}, 大小=${sizeMB}MB`);
+
+						// 警告大图片
+						if (blob.size > 2 * 1024 * 1024) {
+							console.warn(`[智能绘画] ⚠️ 图片${i} 较大 (${sizeMB}MB)，可能导致处理超时`);
+						}
+					} catch (decodeError) {
+						console.error(`[智能绘画] ❌ 图片${i} base64解码失败:`, decodeError);
+					}
 				}
+			}
+
+			// 总大小警告
+			if (totalImageSize > 5 * 1024 * 1024) {
+				console.warn(`[智能绘画] ⚠️ 参考图片总大小 ${(totalImageSize / 1024 / 1024).toFixed(2)}MB，可能导致处理超时`);
 			}
 			mlog(
 				`智能绘画 已将 ${data.data.base64Array.length} 张图片转换为Blob并添加到FormData`,
@@ -730,6 +755,17 @@ export const subGPT = async (data: any, chat: Chat.Chat) => {
 					} else if (apiError.code === "invalid_api_key") {
 						errorMessage += "❌ API Key 无效\n";
 						errorDetail = "请检查 API Key 配置是否正确。";
+					} else if (apiError.message?.includes("Timeout while downloading")) {
+						errorMessage += "❌ 图片处理超时\n";
+						errorDetail = "API 处理参考图片时超时。\n";
+						errorDetail += "💡 建议:\n";
+						errorDetail += "1. 减小参考图片尺寸（建议 < 2MB）\n";
+						errorDetail += "2. 使用 JPG 格式（比 PNG 更小）\n";
+						errorDetail += "3. 稍后重试\n";
+					} else if (apiError.message?.includes("at least 14px")) {
+						errorMessage += "❌ 参考图片太小\n";
+						errorDetail = "参考图片尺寸太小，宽度至少需要 14 像素。\n";
+						errorDetail += "💡 请上传更大尺寸的图片。";
 					} else {
 						errorMessage += `❌ ${apiError.type || "未知错误"}\n`;
 						errorDetail = apiError.message || "请求失败，请稍后重试。";

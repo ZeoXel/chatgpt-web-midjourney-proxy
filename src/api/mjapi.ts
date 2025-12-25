@@ -17,52 +17,273 @@ export interface gptsType{
     bad?:string|number
 }
  //const { addChat, updateChat, updateChatSome, getChatByUuidAndIndex } = useChat()
-export function upImg(file:any   ):Promise<any>
-{
-    const maxSize= homeStore.myData.session.uploadImgSize? (+homeStore.myData.session.uploadImgSize):10
-    return new Promise((h,r)=>{
-        const filename = file.name;
+/**
+ * 图片压缩配置
+ */
+interface CompressOptions {
+    maxWidth?: number;      // 最大宽度，默认 2048
+    maxHeight?: number;     // 最大高度，默认 2048
+    quality?: number;       // 压缩质量 0-1，默认 0.85
+    maxSizeMB?: number;     // 目标最大文件大小(MB)，默认 2
+}
+
+/**
+ * 压缩图片
+ * 使用 Canvas 进行图片压缩，支持调整尺寸和质量
+ */
+export function compressImage(file: File, options: CompressOptions = {}): Promise<string> {
+    const {
+        maxWidth = 2048,
+        maxHeight = 2048,
+        quality = 0.85,
+        maxSizeMB = 2
+    } = options;
+
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e: any) => {
+            img.onload = () => {
+                try {
+                    let { width, height } = img;
+                    const originalSize = file.size / (1024 * 1024);
+
+                    mlog(`[图片压缩] 原始尺寸: ${width}x${height}, 大小: ${originalSize.toFixed(2)}MB`);
+
+                    // 计算缩放比例
+                    let scale = 1;
+                    if (width > maxWidth || height > maxHeight) {
+                        const scaleW = maxWidth / width;
+                        const scaleH = maxHeight / height;
+                        scale = Math.min(scaleW, scaleH);
+                    }
+
+                    // 如果文件较大，进一步缩小尺寸
+                    if (originalSize > maxSizeMB * 2) {
+                        // 大于目标的2倍时，额外缩小
+                        const extraScale = Math.sqrt(maxSizeMB / originalSize);
+                        scale = Math.min(scale, extraScale);
+                    }
+
+                    const newWidth = Math.round(width * scale);
+                    const newHeight = Math.round(height * scale);
+
+                    mlog(`[图片压缩] 目标尺寸: ${newWidth}x${newHeight}, 缩放比例: ${scale.toFixed(2)}`);
+
+                    // 创建 canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject(new Error('无法创建 Canvas 上下文'));
+                        return;
+                    }
+
+                    // 使用高质量缩放
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    // 绘制图片
+                    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+                    // 递归压缩直到满足大小要求
+                    let currentQuality = quality;
+                    let result = canvas.toDataURL('image/jpeg', currentQuality);
+                    let attempts = 0;
+                    const maxAttempts = 5;
+
+                    // 估算 base64 大小 (base64 约增加 33% 大小)
+                    const getBase64SizeMB = (base64: string) => {
+                        // 移除 data:image/jpeg;base64, 前缀
+                        const base64Data = base64.split(',')[1] || base64;
+                        return (base64Data.length * 0.75) / (1024 * 1024);
+                    };
+
+                    while (getBase64SizeMB(result) > maxSizeMB && attempts < maxAttempts && currentQuality > 0.3) {
+                        currentQuality -= 0.15;
+                        result = canvas.toDataURL('image/jpeg', currentQuality);
+                        attempts++;
+                        mlog(`[图片压缩] 尝试 ${attempts}: quality=${currentQuality.toFixed(2)}, 大小=${getBase64SizeMB(result).toFixed(2)}MB`);
+                    }
+
+                    const finalSizeMB = getBase64SizeMB(result);
+                    mlog(`[图片压缩] ✅ 完成: ${newWidth}x${newHeight}, 质量=${currentQuality.toFixed(2)}, 最终大小=${finalSizeMB.toFixed(2)}MB`);
+
+                    resolve(result);
+                } catch (error: any) {
+                    reject(new Error(`压缩失败: ${error.message}`));
+                }
+            };
+
+            img.onerror = () => {
+                reject(new Error('图片加载失败'));
+            };
+
+            img.src = e.target.result;
+        };
+
+        reader.onerror = () => {
+            reject(new Error('文件读取失败'));
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * 将图片转换为 JPEG 格式（不压缩，只转换格式）
+ * 用于将 PNG 等格式统一转为 JPEG，确保 API 兼容性
+ */
+function convertToJpeg(file: File, quality: number = 0.92): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e: any) => {
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject(new Error('无法创建 Canvas'));
+                        return;
+                    }
+
+                    // 填充白色背景（PNG 透明区域）
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // 绘制图片
+                    ctx.drawImage(img, 0, 0);
+
+                    // 转换为 JPEG
+                    const result = canvas.toDataURL('image/jpeg', quality);
+                    mlog(`[格式转换] PNG → JPEG: ${img.width}x${img.height}`);
+                    resolve(result);
+                } catch (error: any) {
+                    reject(error);
+                }
+            };
+            img.onerror = () => reject(new Error('图片加载失败'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * 上传并处理图片
+ * @param file 文件对象
+ * @param enableCompress 是否启用压缩，默认 true（大于 2MB 自动压缩）
+ */
+export function upImg(file: any, enableCompress: boolean = true): Promise<any> {
+    const maxSize = homeStore.myData.session.uploadImgSize ? (+homeStore.myData.session.uploadImgSize) : 10;
+    const compressThreshold = 2; // 超过 2MB 自动压缩
+
+    return new Promise((h, r) => {
+        const filename = file.name.toLowerCase();
         const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
-        if(file.size>(1024*1024 * maxSize)){
-            const errorMsg = t('mjchat.no1m',{m:maxSize});
+        if (file.size > (1024 * 1024 * maxSize)) {
+            const errorMsg = t('mjchat.no1m', { m: maxSize });
             const detailedMsg = `${errorMsg}\n\n当前图片大小：${fileSizeMB}MB\n允许的最大大小：${maxSize}MB\n\n建议：\n1. 使用图片压缩工具压缩图片\n2. 调整图片分辨率\n3. 转换为更高效的格式`;
 
-            // 使用 window.alert 确保用户看到错误信息
             setTimeout(() => {
                 window.alert(detailedMsg);
             }, 0);
 
             r(errorMsg);
-            return ;
+            return;
         }
-        if (! (filename.endsWith('.jpg') ||
+
+        if (!(filename.endsWith('.jpg') ||
             filename.endsWith('.gif') ||
             filename.endsWith('.png') ||
-            filename.endsWith('.jpeg') )) {
+            filename.endsWith('.jpeg'))) {
             const errorMsg = t('mjchat.imgExt');
 
             setTimeout(() => {
-                window.alert(`${errorMsg}\n\n当前文件：${filename}\n支持的格式：JPG, JPEG, PNG, GIF`);
+                window.alert(`${errorMsg}\n\n当前文件：${file.name}\n支持的格式：JPG, JPEG, PNG, GIF`);
             }, 0);
 
             r(errorMsg);
-            return ;
+            return;
         }
+
+        const isGif = filename.endsWith('.gif');
+        const isPng = filename.endsWith('.png');
+        const needsCompress = enableCompress && file.size > (1024 * 1024 * compressThreshold) && !isGif;
+
+        // GIF 直接读取原文件
+        if (isGif) {
+            const reader = new FileReader();
+            reader.onload = (e: any) => h(e.target.result);
+            reader.onerror = () => r('图片读取失败');
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        // 需要压缩的大图片
+        if (needsCompress) {
+            mlog(`[upImg] 图片较大 (${fileSizeMB}MB)，启用自动压缩...`);
+
+            compressImage(file, {
+                maxWidth: 2048,
+                maxHeight: 2048,
+                quality: 0.85,
+                maxSizeMB: 2
+            }).then(compressedBase64 => {
+                mlog(`[upImg] ✅ 压缩完成`);
+                h(compressedBase64);
+            }).catch(error => {
+                mlog(`[upImg] ⚠️ 压缩失败，尝试格式转换: ${error.message}`);
+                // 压缩失败时，至少尝试转换格式
+                convertToJpeg(file).then(h).catch(() => {
+                    // 最终 fallback 到原图
+                    const reader = new FileReader();
+                    reader.onload = (e: any) => h(e.target.result);
+                    reader.onerror = () => r('图片读取失败');
+                    reader.readAsDataURL(file);
+                });
+            });
+            return;
+        }
+
+        // PNG 转换为 JPEG（即使不需要压缩，也转换格式以确保 API 兼容性）
+        if (isPng) {
+            mlog(`[upImg] PNG 图片，转换为 JPEG 格式...`);
+            convertToJpeg(file, 0.92).then(jpegBase64 => {
+                mlog(`[upImg] ✅ 格式转换完成`);
+                h(jpegBase64);
+            }).catch(error => {
+                mlog(`[upImg] ⚠️ 格式转换失败，使用原图: ${error.message}`);
+                const reader = new FileReader();
+                reader.onload = (e: any) => h(e.target.result);
+                reader.onerror = () => r('图片读取失败');
+                reader.readAsDataURL(file);
+            });
+            return;
+        }
+
+        // JPEG 直接读取
         const reader = new FileReader();
-        // 当读取操作完成时触发该事件
-        //reader.onload = (e:any)=> st.value.fileBase64 = e.target.result;
-        reader.onload = (e:any)=>  h( e.target.result);
-        reader.onerror = (e:any) => {
+        reader.onload = (e: any) => h(e.target.result);
+        reader.onerror = (e: any) => {
             const errorMsg = '图片读取失败，请重试';
             setTimeout(() => {
-                window.alert(`${errorMsg}\n\n文件：${filename}\n错误：${e}`);
+                window.alert(`${errorMsg}\n\n文件：${file.name}\n错误：${e}`);
             }, 0);
             r(errorMsg);
         };
         reader.readAsDataURL(file);
-    })
-
+    });
 }
 
 export const clearImageBase64= ( str:string)=>{

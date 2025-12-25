@@ -298,6 +298,9 @@ const selectFile=(input:any)=>{
         <li>即梦 4.5 要求 2K 及以上分辨率，画质更佳</li>
         <li>可上传最多 3 张参考图片进行图生图</li>
         <li>可选择是否添加水印</li>
+        <li class="text-green-600 dark:text-green-400">
+            <span class="font-bold">自动压缩：</span>超过 2MB 的参考图片会自动压缩，避免处理超时
+        </li>
         <li class="text-orange-600 dark:text-orange-400 font-medium">
             <span class="font-bold">多图生成提示：</span>如需生成多张图片，请设置生成数量，<span class="underline">并在提示词中明确说明</span>（例如："生成3张xxx"、"连环画"、"多角度"等），否则可能只返回1张图片
         </li>
