@@ -283,7 +283,8 @@ export default {
         "draw": "Dessin",
         "drawinfo": "Dessin AI avec le Moteur Midjourney",
         "gallery": "Galerie",
-        "galleryInfo": "Ma Galerie"
+        "galleryInfo": "Ma Galerie",
+        "tutorial": "Tutoriel"
     },
     "mjchat": {
         "loading": "Chargement de l'Image",

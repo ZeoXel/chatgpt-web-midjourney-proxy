@@ -283,7 +283,8 @@ export default {
     "draw": "Vẽ",
     "drawinfo": "Vẽ trí tuệ nhân tạo Midjourney",
     "gallery": "sách",
-    "galleryInfo": "Phòng trưng bày của tôi"
+    "galleryInfo": "Phòng trưng bày của tôi",
+    "tutorial": "Hướng dẫn"
   },
   "mjchat": {
     "loading": "Đang tải hình ảnh",

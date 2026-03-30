@@ -282,7 +282,8 @@ export default {
         "draw": "Çizim",
         "drawinfo": "Midjourney Motoru ile Yapay Zeka Çizimi",
         "gallery": "Galeri",
-        "galleryInfo": "Benim Galerim"
+        "galleryInfo": "Benim Galerim",
+        "tutorial": "Eğitim"
     },
     "mjchat": {
         "loading": "Resim Yükleniyor",

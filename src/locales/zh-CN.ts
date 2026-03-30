@@ -108,6 +108,7 @@ export default {
     drawinfo: 'AI绘画 Midjourney引擎',
     gallery: '画廊',
     galleryInfo: '我的画廊',
+    tutorial: '教程',
   },
   mjchat: {
     loading: '正在载入图片',

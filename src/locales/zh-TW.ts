@@ -279,7 +279,8 @@ export default {
     "draw": "繪畫",
     "drawinfo": "AI繪畫 Midjourney引擎",
     "gallery": "畫廊",
-    "galleryInfo": "我的畫廊"
+    "galleryInfo": "我的畫廊",
+    "tutorial": "教程"
   },
   "mjchat": {
     "loading": "正在載入圖片",

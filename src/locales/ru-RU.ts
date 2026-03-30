@@ -286,7 +286,8 @@ export default {
     "draw": "Рисование",
     "drawinfo": "Рисование с использованием искусственного интеллекта Midjourney",
     "gallery": "Галерея",
-    "galleryInfo": "Моя галерея"
+    "galleryInfo": "Моя галерея",
+    "tutorial": "Обучение"
   },
   "mjchat": {
     "loading": "Идет загрузка изображения",

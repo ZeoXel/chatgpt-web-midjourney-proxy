@@ -3,12 +3,14 @@ import { computed,defineAsyncComponent ,ref} from "vue";
 import { SvgIcon ,HoverButton} from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 const { isMobile } = useBasicLayout()
-import { NAvatar } from 'naive-ui'
+import { NAvatar, NModal } from 'naive-ui'
 import { homeStore, useUserStore,useChatStore } from '@/store'
 import defaultAvatar from '@/assets/avatar.jpg'
 import { router } from '@/router'
 import { isDisableMenu } from "@/api";
 import { useRouter } from "vue-router";
+
+const showTutorial = ref(false)
 
 //import gallery from '@/views/gallery/index.vue'
 
@@ -104,9 +106,13 @@ const chatId= computed(()=>chatStore.active??'1002' );
                     </div>
             </a>
 
-            
-
-             
+            <!-- 教程 -->
+            <a @click="showTutorial = true" class="router-link-exact-active h-12 w-12 cursor-pointer rounded-xl duration-300 hover:bg-white dark:hover:bg-[#34373c]" :class="{ 'bg-white dark:bg-[#34373c]': showTutorial }">
+                    <div class="flex h-full justify-center items-center py-1 flex-col">
+                    <SvgIcon icon="ri:play-circle-line" size="2xl" class="flex-1" />
+                     <span class="text-[10px]">{{$t('mjtab.tutorial')}}</span>
+                    </div>
+            </a>
 
         </div>
         <div class="flex flex-col  space-y-2 "> 
@@ -119,6 +125,10 @@ const chatId= computed(()=>chatStore.active??'1002' );
     </div>
 </div>
  <Setting v-if="st.show" v-model:visible="st.show" />
+
+ <NModal v-model:show="showTutorial" preset="card" :title="$t('mjtab.tutorial')" style="max-width: 800px; width: 90vw;" :bordered="false">
+    <video controls autoplay style="width: 100%; border-radius: 8px;" src="https://cos.lsaigc.com/zeocanvas/public/tutorials/创作空间教程.mp4" />
+ </NModal>
 
  <!-- <n-drawer v-model:show="st.showImg" :placement="isMobile?'bottom':'right'"  :class="isMobile?['!h-[90vh]']: ['!w-[80vw]']" style="--n-body-padding:0">
     <n-drawer-content title="GPT store" closable>

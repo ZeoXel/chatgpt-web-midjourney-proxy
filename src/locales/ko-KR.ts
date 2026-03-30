@@ -284,6 +284,7 @@ export default {
     ,"drawinfo": "AI 그림 Midjourney 엔진"
     ,"gallery": "갤러리"
     ,"galleryInfo": "내 갤러리"
+    ,"tutorial": "튜토리얼"
   },
   "mjchat": {
     "loading": "이미지 로드 중"
