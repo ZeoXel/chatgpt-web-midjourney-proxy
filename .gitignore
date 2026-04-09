@@ -29,8 +29,13 @@ coverage
 *.sw?
 
 # Environment variables files
+.env
+.env.*
+!.env.example
 /service/.env
 /service/uploads
 
 # Documentation with sensitive examples
 /doc.env
+.vercel
+.env*.local
